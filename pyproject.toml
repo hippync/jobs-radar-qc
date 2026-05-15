@@ -1,10 +1,14 @@
+[build-system]
+requires = ["setuptools>=77.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "jobs-radar-qc"
 version = "0.1.0"
 description = "Public ATS jobs aggregator for Montreal/Quebec tech scene"
 readme = "README.md"
 requires-python = ">=3.11"
-license = { text = "MIT" }
+license = "MIT"
 authors = [{ name = "Hansy" }]
 
 dependencies = [
@@ -24,6 +28,9 @@ dev = [
     "ruff>=0.3.0",
     "mypy>=1.9.0",
 ]
+
+[tool.setuptools]
+packages = ["agents", "core", "storage"]
 
 [tool.ruff]
 line-length = 100
