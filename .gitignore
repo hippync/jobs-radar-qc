@@ -1,0 +1,47 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+ENV/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+
+# Environment & secrets
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Logs & data
+*.log
+logs/
+data/raw/
+data/cache/
+*.sqlite
+*.db
+
+# Node (pour le frontend Next.js plus tard)
+node_modules/
+.next/
+out/
+.vercel/
+
+# OS
+Thumbs.db
