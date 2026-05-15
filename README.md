@@ -46,11 +46,11 @@ python -m agents.orchestrator
 
 ## Project structure
 
-specs/         # One folder per source: source.md + schema.json + extraction.xml
-agents/        # Generic engine: extractor, normalizer, validator, orchestrator
-core/          # Canonical schema, shared Pydantic models
-storage/       # Supabase client and queries
-tests/         # Unit tests + recorded HTTP fixture
+- specs/         # One folder per source: source.md + schema.json + extraction.xml
+- agents/        # Generic engine: extractor, normalizer, validator, orchestrator
+- core/          # Canonical schema, shared Pydantic models
+- storage/       # Supabase client and queries
+- tests/         # Unit tests + recorded HTTP fixture
 
 ## Status
 
