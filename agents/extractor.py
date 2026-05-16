@@ -64,6 +64,11 @@ def _coerce(value: Any, field_type: str, *, empty_as_null: bool = False) -> Any:
             return datetime.fromtimestamp(int(value) / 1000, tz=timezone.utc).isoformat()
         except (ValueError, TypeError):
             return None
+    if field_type == "date":
+        try:
+            return datetime.strptime(str(value).strip(), "%Y-%m-%d").replace(tzinfo=timezone.utc).isoformat()
+        except (ValueError, TypeError):
+            return None
     if field_type == "bool":
         if isinstance(value, bool):
             return value
@@ -156,9 +161,15 @@ class Extractor:
             log.error("fetch_failed", error=str(exc))
             return []
 
-        jobs_path = endpoint.get("jobs_path")
-        data = response.json()
-        raw_jobs = data if jobs_path is None else data.get(jobs_path, [])
+        if endpoint.get("response_format") == "markdown_table":
+            raw_jobs = self._parse_markdown_table(
+                response.text, endpoint.get("columns", [])
+            )
+        else:
+            jobs_path = endpoint.get("jobs_path")
+            data = response.json()
+            raw_jobs = data if jobs_path is None else data.get(jobs_path, [])
+
         required = self.schema.get("validation", {}).get("required_fields", [])
 
         results = []
@@ -170,6 +181,44 @@ class Extractor:
 
         log.info("fetched", count=len(results))
         return results
+
+    @staticmethod
+    def _parse_markdown_table(text: str, columns: list[str]) -> list[dict]:
+        """Parse a markdown pipe-table into a list of raw job dicts.
+
+        Automatically extracts external_id and source_url from the _detail_url
+        column (a Workable-specific convention). Cells with value '—' become None.
+        Markdown link cells [text](url) are stored as the URL.
+        """
+        rows = []
+        for line in text.splitlines():
+            if not line.startswith("|"):
+                continue
+            cells = [c.strip() for c in line.strip("|").split("|")]
+            if len(cells) != len(columns):
+                continue
+            # Skip separator rows (---|--- pattern) and header rows
+            if any(re.fullmatch(r"[-: ]+", c) for c in cells):
+                continue
+            if cells[0] == columns[0]:
+                continue
+
+            row: dict[str, Any] = {}
+            for col, cell in zip(columns, cells):
+                link = re.fullmatch(r"\[([^\]]+)\]\(([^)]+)\)", cell)
+                row[col] = link.group(2) if link else (None if cell == "—" else cell)
+
+            # Derive external_id and source_url from the detail URL
+            detail_url = row.get("_detail_url") or ""
+            m = re.search(r"/view/([A-F0-9]+)\.md$", detail_url, re.IGNORECASE)
+            if m:
+                row["external_id"] = m.group(1)
+                row["source_url"] = re.sub(
+                    r"/jobs/view/([A-F0-9]+)\.md$", r"/j/\1", detail_url
+                )
+
+            rows.append(row)
+        return rows
 
     def _apply_extraction(self, raw_job: dict, company: dict) -> dict:
         result: dict[str, Any] = {

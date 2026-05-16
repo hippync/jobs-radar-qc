@@ -1,0 +1,27 @@
+{
+  "source": "workable",
+  "display_name": "Workable",
+  "endpoint": {
+    "url_template": "https://apply.workable.com/{company_slug}/jobs.md",
+    "method": "GET",
+    "params": {
+      "location[0][country]": "Canada"
+    },
+    "response_format": "markdown_table",
+    "columns": ["title", "department", "location", "_employment_raw", "_salary", "_posted_raw", "_detail_url"],
+    "jobs_path": null,
+    "rate_limit": {
+      "requests_per_second": 5,
+      "delay_between_companies_ms": 200
+    }
+  },
+  "companies": [
+    { "name": "Tecsys",  "slug": "tecsys"  },
+    { "name": "Nuvei",   "slug": "nuvei"   }
+  ],
+  "validation": {
+    "required_fields": ["external_id", "title", "source_url"],
+    "min_jobs_per_company": 0,
+    "warn_if_empty": true
+  }
+}

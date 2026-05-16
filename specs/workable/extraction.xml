@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Workable extraction rules.
+
+  Source is a Markdown pipe-table (response_format=markdown_table).
+  The extractor parses the table using schema.json "columns" as field names
+  and auto-derives external_id and source_url from the _detail_url cell.
+
+  Key limitations vs JSON sources:
+  - No description_html: description is not included in the list endpoint
+  - tech_stack derived from title only (sources="title")
+  - posted_at is a date only (midnight UTC)
+  - employment_type is often missing (— → null)
+-->
+<extraction source="workable" version="1">
+
+  <constants>
+    <constant name="source"             value="workable" />
+    <constant name="is_active"          value="true"     type="bool" />
+    <constant name="description_html"   value="null"     />
+  </constants>
+
+  <fields>
+    <!-- Auto-derived by the markdown parser from the _detail_url cell -->
+    <field name="external_id" from="external_id"   type="string" />
+    <field name="source_url"  from="source_url"    type="string" />
+
+    <!-- Direct column mappings -->
+    <field name="title"            from="title"            type="string" />
+    <field name="department"       from="department"       type="string" nullable="true" />
+    <field name="location"         from="location"         type="string" nullable="true" />
+    <field name="posted_at"        from="_posted_raw"      type="date"   nullable="true" />
+
+    <!-- Intermediate field for derivation — not written to DB -->
+    <field name="_employment_raw"  from="_employment_raw"  type="string" nullable="true" />
+  </fields>
+
+  <derived>
+
+    <field name="is_qc" type="bool" default="false">
+      <match source="location"
+             pattern="(?i)(montr[eé]al|qu[eé]bec city|laval|longueuil|brossard|sherbrooke|gatineau|\bqc\b)"
+             value="true" />
+    </field>
+
+    <!-- Workplace type is embedded in the location string: "City, Country (Hybrid)" -->
+    <field name="is_remote" type="bool" default="null" nullable="true">
+      <match source="location" pattern="(?i)\(remote\)"   value="true"  />
+      <match source="location" pattern="(?i)\(hybrid\)"   value="null"  />
+      <match source="location" pattern="(?i)\(on.?site\)" value="false" />
+    </field>
+
+    <!-- employment_type: normalize Workable Type column values -->
+    <field name="employment_type" type="string" default="null" nullable="true">
+      <match source="_employment_raw" pattern="(?i)full.?time"           value="full-time"  />
+      <match source="_employment_raw" pattern="(?i)part.?time"           value="part-time"  />
+      <match source="_employment_raw" pattern="(?i)(contract|temp)"      value="contract"   />
+      <match source="_employment_raw" pattern="(?i)(intern|stage)"       value="internship" />
+    </field>
+
+    <field name="seniority" type="string" default="null" nullable="true">
+      <match source="title" pattern="(?i)\b(intern|stage|stagiaire|internship)\b"          value="internship" />
+      <match source="title" pattern="(?i)\b(junior|jr\.?|d[eé]butant)\b"                   value="junior"     />
+      <match source="title" pattern="(?i)\b(staff)\b"                                      value="staff"      />
+      <match source="title" pattern="(?i)\b(principal)\b"                                  value="principal"  />
+      <match source="title" pattern="(?i)\b(tech(nical)?\s+lead|lead\s+(dev|engineer))\b"  value="lead"       />
+      <match source="title" pattern="(?i)\b(senior|sr\.?|exp[eé]riment[eé])\b"             value="senior"     />
+      <match source="title" pattern="(?i)\b(director|directeur)\b"                         value="director"   />
+      <match source="title" pattern="(?i)\b(manager|gestionnaire|responsable)\b"           value="manager"    />
+    </field>
+
+    <!-- tech_stack from title only — no description available for Workable -->
+    <field name="tech_stack" type="list[string]" default="[]" strategy="collect-all">
+      <keywords sources="title" word_boundary="true" case_insensitive="true">
+        <kw canonical="Python">Python</kw>
+        <kw canonical="JavaScript">JavaScript</kw>
+        <kw canonical="TypeScript">TypeScript</kw>
+        <kw canonical="Go">Golang</kw>
+        <kw canonical="Rust">Rust</kw>
+        <kw canonical="Java">Java</kw>
+        <kw canonical="Kotlin">Kotlin</kw>
+        <kw canonical="Scala">Scala</kw>
+        <kw canonical="C#">C#</kw>
+        <kw canonical="C++">C\+\+</kw>
+        <kw canonical="Ruby">Ruby</kw>
+        <kw canonical="PHP">PHP</kw>
+        <kw canonical="Swift">Swift</kw>
+        <kw canonical="React">React</kw>
+        <kw canonical="Next.js">Next\.js</kw>
+        <kw canonical="Vue">Vue(?:\.js)?</kw>
+        <kw canonical="Angular">Angular</kw>
+        <kw canonical="Node.js">Node(?:\.js)?</kw>
+        <kw canonical="Django">Django</kw>
+        <kw canonical="FastAPI">FastAPI</kw>
+        <kw canonical="Spring">Spring(?:\s+Boot)?</kw>
+        <kw canonical=".NET">\.NET</kw>
+        <kw canonical="AWS">AWS</kw>
+        <kw canonical="GCP">GCP</kw>
+        <kw canonical="Azure">Azure</kw>
+        <kw canonical="Kubernetes">Kubernetes</kw>
+        <kw canonical="Docker">Docker</kw>
+        <kw canonical="PostgreSQL">Postgres(?:QL)?</kw>
+        <kw canonical="MySQL">MySQL</kw>
+        <kw canonical="MongoDB">MongoDB</kw>
+        <kw canonical="React Native">React Native</kw>
+        <kw canonical="Flutter">Flutter</kw>
+      </keywords>
+    </field>
+
+  </derived>
+
+</extraction>
