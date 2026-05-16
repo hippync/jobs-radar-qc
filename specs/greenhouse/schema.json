@@ -1,0 +1,28 @@
+{
+  "source": "greenhouse",
+  "display_name": "Greenhouse",
+  "endpoint": {
+    "url_template": "https://boards-api.greenhouse.io/v1/boards/{company_slug}/jobs",
+    "method": "GET",
+    "params": {
+      "content": "true"
+    },
+    "response_format": "json",
+    "jobs_path": "jobs",
+    "rate_limit": {
+      "requests_per_second": 5,
+      "delay_between_companies_ms": 200
+    }
+  },
+  "companies": [
+    { "name": "Broadsign",  "slug": "broadsign"  },
+    { "name": "AppDirect",  "slug": "appdirect"  },
+    { "name": "AlayaCare",  "slug": "alayacare"  },
+    { "name": "Valtech",    "slug": "valtech"    }
+  ],
+  "validation": {
+    "required_fields": ["id", "title", "absolute_url"],
+    "min_jobs_per_company": 0,
+    "warn_if_empty": true
+  }
+}
