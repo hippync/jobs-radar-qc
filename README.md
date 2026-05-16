@@ -123,7 +123,7 @@ tests/
 | Extractor engine | ✅ Live |
 | Supabase storage | ✅ Live |
 | Daily cron (GitHub Actions) | ✅ Live |
-| Lever spec | 🔧 In progress |
+| Lever spec | ✅ Live — 3 QC companies |
 | Workable spec | 📋 Planned |
 | Next.js frontend | 📋 Planned (week 2) |
 
