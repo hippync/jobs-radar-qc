@@ -53,46 +53,46 @@ The Python engine in `pipeline/` is generic and reads any spec. **Adding a new c
 
 ```
 ┌──────────────────────────────────────────────────────────┐
-│                  GitHub Actions (crons)                   │
-│                                                           │
+│                  GitHub Actions (crons)                  │
+│                                                          │
 │   daily_fetch.yml ─── pipeline/orchestrator.py           │
 │   weekly_enrich.yml ── agents/enricher.py (Sundays)      │
 └──────────────────────────────────────────────────────────┘
-              │  daily fetch
-   pipeline/orchestrator.py
-   (runs all specs in parallel)
-              │
-  ┌───────────┼───────────┐
-  ▼           ▼           ▼
-Greenhouse  Lever     Workable  …
-(extractor)(extractor)(extractor)
-  │           │           │
-  └───────────┴───────────┘
-              │
-    Canonical Job schema
-    (is_qc, is_remote,
-     seniority, tech_stack …)
-              │
-              ▼
-    Supabase / PostgreSQL
-    (upsert + mark_inactive)
-              │
-              │  weekly enrichment pass
-              ▼
-    agents/enricher.py
-    WHERE enriched_prompt_hash != current
-              │  Claude Haiku
-              ▼
-    enriched_tech_stack[]
-    (LLM-extracted, versioned by prompt hash)
-              │
-              ▼
-    active_qc_jobs view
-    (merges tech_stack || enriched_tech_stack)
-              │
-              ▼
-    Next.js frontend
-    (job list + filters + /trends radar)
+                            │  daily fetch
+                pipeline/orchestrator.py
+                (runs all specs in parallel)
+                            │
+                ┌───────────┼───────────┐
+                ▼           ▼           ▼
+              Greenhouse  Lever     Workable  …
+              (extractor)(extractor)(extractor)
+                │           │           │
+                └───────────┴───────────┘
+                            │
+                  Canonical Job schema
+                  (is_qc, is_remote,
+                  seniority, tech_stack …)
+                            │
+                            ▼
+                  Supabase / PostgreSQL
+                  (upsert + mark_inactive)
+                            │
+                            │  weekly enrichment pass
+                            ▼
+                  agents/enricher.py
+                  WHERE enriched_prompt_hash != current
+                            │  Claude Haiku
+                            ▼
+                  enriched_tech_stack[]
+                  (LLM-extracted, versioned by prompt hash)
+                            │
+                            ▼
+                  active_qc_jobs view
+                  (merges tech_stack || enriched_tech_stack)
+                            │
+                            ▼
+                  Next.js frontend
+                  (job list + filters + /trends radar)
 ```
 
 ### Extraction pipeline
