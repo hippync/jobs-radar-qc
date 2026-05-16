@@ -25,22 +25,12 @@ async function fetchJobs(filters: SearchParams): Promise<{ jobs: Job[]; total: n
     .order("first_seen_at", { ascending: false })
     .range(from, to);
 
-  if (filters.tech) {
-    query = query.contains("tech_stack", [filters.tech]);
-  }
-  if (filters.source) {
-    query = query.eq("source", filters.source);
-  }
-  if (filters.seniority) {
-    query = query.eq("seniority", filters.seniority);
-  }
-  if (filters.remote === "true") {
-    query = query.eq("is_remote", true);
-  } else if (filters.remote === "false") {
-    query = query.eq("is_remote", false);
-  } else if (filters.remote === "null") {
-    query = query.is("is_remote", null);
-  }
+  if (filters.tech)      query = query.contains("tech_stack", [filters.tech]);
+  if (filters.source)    query = query.eq("source", filters.source);
+  if (filters.seniority) query = query.eq("seniority", filters.seniority);
+  if (filters.remote === "true")  query = query.eq("is_remote", true);
+  else if (filters.remote === "false") query = query.eq("is_remote", false);
+  else if (filters.remote === "null")  query = query.is("is_remote", null);
 
   const { data, count, error } = await query;
   if (error) throw new Error(error.message);
@@ -49,22 +39,16 @@ async function fetchJobs(filters: SearchParams): Promise<{ jobs: Job[]; total: n
 }
 
 async function fetchFilterOptions(): Promise<{ techOptions: string[]; sourceOptions: string[] }> {
-  const { data } = await supabase
-    .from("active_qc_jobs")
-    .select("tech_stack, source");
+  const { data } = await supabase.from("active_qc_jobs").select("tech_stack, source");
 
   const techSet = new Set<string>();
   const sourceSet = new Set<string>();
-
   for (const row of data ?? []) {
     for (const t of row.tech_stack ?? []) techSet.add(t);
     if (row.source) sourceSet.add(row.source);
   }
 
-  return {
-    techOptions: [...techSet].sort(),
-    sourceOptions: [...sourceSet].sort(),
-  };
+  return { techOptions: [...techSet].sort(), sourceOptions: [...sourceSet].sort() };
 }
 
 export default async function Page({
@@ -83,70 +67,109 @@ export default async function Page({
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
   function pageUrl(p: number) {
-    const params = new URLSearchParams();
-    if (filters.tech) params.set("tech", filters.tech);
-    if (filters.source) params.set("source", filters.source);
-    if (filters.remote) params.set("remote", filters.remote);
-    if (filters.seniority) params.set("seniority", filters.seniority);
-    if (p > 1) params.set("page", String(p));
-    const qs = params.toString();
+    const q = new URLSearchParams();
+    if (filters.tech)      q.set("tech", filters.tech);
+    if (filters.source)    q.set("source", filters.source);
+    if (filters.remote)    q.set("remote", filters.remote);
+    if (filters.seniority) q.set("seniority", filters.seniority);
+    if (p > 1) q.set("page", String(p));
+    const qs = q.toString();
     return qs ? `?${qs}` : "/";
   }
 
+  const hasFilters = !!(filters.tech || filters.source || filters.remote || filters.seniority);
+
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-8">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Jobs Radar QC</h1>
-        <p className="mt-1 text-sm text-gray-500">
-          Active tech jobs in Québec — updated daily from Greenhouse, Lever, and Workable.
+    <>
+      {/* Hero header */}
+      <header className="bg-gradient-to-br from-violet-700 to-violet-900">
+        <div className="mx-auto max-w-5xl px-4 py-10">
+          <h1 className="text-3xl font-bold tracking-tight text-white">
+            Jobs Radar QC
+          </h1>
+          <p className="mt-1 text-sm text-violet-200">
+            Active tech jobs in Québec — updated daily from Greenhouse, Lever &amp; Workable.
+          </p>
+          <div className="mt-4 flex items-center gap-3">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-400/20 px-3 py-1 text-xs font-semibold text-amber-200 ring-1 ring-amber-300/30">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+              {total} active job{total !== 1 ? "s" : ""}
+            </span>
+            {hasFilters && (
+              <span className="text-xs text-violet-300">
+                filtered
+              </span>
+            )}
+          </div>
+        </div>
+      </header>
+
+      {/* Sticky filter bar */}
+      <div className="sticky top-0 z-10 border-b border-slate-200 bg-white shadow-sm">
+        <div className="mx-auto max-w-5xl px-4 py-3">
+          <Suspense>
+            <JobFilters techOptions={techOptions} sourceOptions={sourceOptions} />
+          </Suspense>
+        </div>
+      </div>
+
+      {/* Main content */}
+      <main className="mx-auto w-full max-w-5xl px-4 py-6">
+        <p className="mb-4 text-sm text-slate-500">
+          <span className="font-semibold text-violet-700">{total}</span>{" "}
+          job{total !== 1 ? "s" : ""}
+          {filters.tech && (
+            <> with <span className="font-medium text-slate-700">{filters.tech}</span></>
+          )}
+          {filters.seniority && (
+            <> · <span className="font-medium text-slate-700">{filters.seniority}</span></>
+          )}
         </p>
-      </div>
 
-      <div className="mb-6">
-        <Suspense>
-          <JobFilters techOptions={techOptions} sourceOptions={sourceOptions} />
-        </Suspense>
-      </div>
+        {jobs.length === 0 ? (
+          <p className="py-20 text-center text-slate-400">No jobs match your filters.</p>
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {jobs.map((job) => (
+              <JobCard key={job.id} job={job} />
+            ))}
+          </div>
+        )}
 
-      <p className="mb-4 text-sm text-gray-500">
-        {total} job{total !== 1 ? "s" : ""}
-        {filters.tech ? ` with ${filters.tech}` : ""}
-        {filters.seniority ? ` · ${filters.seniority}` : ""}
-      </p>
+        {totalPages > 1 && (
+          <div className="mt-10 flex items-center justify-center gap-3">
+            {page > 1 && (
+              <a
+                href={pageUrl(page - 1)}
+                className="rounded-lg border border-slate-200 px-4 py-2 text-sm text-slate-600 transition hover:border-violet-300 hover:text-violet-700"
+              >
+                ← Prev
+              </a>
+            )}
+            <span className="text-sm text-slate-400">{page} / {totalPages}</span>
+            {page < totalPages && (
+              <a
+                href={pageUrl(page + 1)}
+                className="rounded-lg border border-slate-200 px-4 py-2 text-sm text-slate-600 transition hover:border-violet-300 hover:text-violet-700"
+              >
+                Next →
+              </a>
+            )}
+          </div>
+        )}
 
-      {jobs.length === 0 ? (
-        <p className="py-16 text-center text-gray-400">No jobs match your filters.</p>
-      ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {jobs.map((job) => (
-            <JobCard key={job.id} job={job} />
-          ))}
-        </div>
-      )}
-
-      {totalPages > 1 && (
-        <div className="mt-8 flex items-center justify-center gap-2">
-          {page > 1 && (
-            <a
-              href={pageUrl(page - 1)}
-              className="rounded border border-gray-300 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50"
-            >
-              ← Prev
-            </a>
-          )}
-          <span className="text-sm text-gray-500">
-            {page} / {totalPages}
-          </span>
-          {page < totalPages && (
-            <a
-              href={pageUrl(page + 1)}
-              className="rounded border border-gray-300 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50"
-            >
-              Next →
-            </a>
-          )}
-        </div>
-      )}
-    </main>
+        <p className="mt-12 text-center text-xs text-slate-300">
+          Open source ·{" "}
+          <a
+            href="https://github.com/hippync/jobs-radar-qc"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-violet-400"
+          >
+            github.com/hippync/jobs-radar-qc
+          </a>
+        </p>
+      </main>
+    </>
   );
 }
