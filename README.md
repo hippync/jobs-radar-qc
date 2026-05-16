@@ -38,8 +38,11 @@ The Python engine in `pipeline/` is generic and reads any spec. **Adding a new c
 ```
 ┌─────────────────────────────────────────────────────┐
 │                   GitHub Actions (daily cron)        │
-└───────────────────────┬─────────────────────────────┘
-                        │
+│                                                      │
+│   Step 1: pipeline/orchestrator.py ──────────────┐  │
+│   Step 2: agents/enricher.py (after pipeline)    │  │
+└───────────────────────────────────────────────────┘  │
+                        │  Step 1                      │
               pipeline/orchestrator.py
               (runs all specs in parallel)
                         │
@@ -57,6 +60,15 @@ The Python engine in `pipeline/` is generic and reads any spec. **Adding a new c
                         ▼
               Supabase / PostgreSQL
               (upsert + mark_inactive)
+                        │
+                        │  Step 2 (enrichment pass)
+                        ▼
+              agents/enricher.py
+              WHERE enriched_prompt_hash != current
+                        │  Claude Haiku
+                        ▼
+              enriched_tech_stack[]
+              (LLM-extracted, versioned by prompt hash)
 ```
 
 ### Extraction pipeline
@@ -137,7 +149,25 @@ tests/
 | Lever spec | ✅ Live — 3 QC companies |
 | Workable spec | ✅ Live — 2 QC companies |
 | Next.js frontend | ✅ Live — job list + filters |
-| Agentic layer | 📋 Planned |
+| Enrichment agent — prompt + dry-run | ✅ Step 0 complete |
+| Enrichment agent — Greenhouse + Lever | 🔨 Step 1: in progress |
+| Enrichment agent — Workable (detail fetch) | 📋 Step 2: planned |
+
+---
+
+## Agentic layer
+
+The extraction pipeline is intentionally deterministic — it will never fail because of an LLM call. But regex keyword matching has hard limits: it misses technologies not in the hardcoded list, gets nothing from short titles, and is completely blind to Workable jobs (which have no descriptions in the list endpoint).
+
+The enrichment agent closes that gap with a second pass:
+
+1. **Deterministic first.** The pipeline always runs to completion and writes `tech_stack` from rule-based extraction. The agent enriches afterwards and writes to a separate `enriched_tech_stack` column — a pipeline failure never blocks storage, and an agent failure never corrupts rule-based results.
+
+2. **LLM where regex can't reach.** Claude Haiku reads the full job description and returns technologies from a [canonical list](core/canonical_tech_stack.json). Technologies outside the list are flagged with `?` for review rather than silently dropped.
+
+3. **Versioned prompts.** The prompt lives in [`agents/prompts/tech_extraction.md`](agents/prompts/tech_extraction.md) — editable, diffable, no code changes required. Each enriched job stores a hash of the rendered prompt so re-enrichment is triggered automatically when the prompt changes.
+
+4. **Validate before spending.** [`scripts/test_enrichment.py`](scripts/test_enrichment.py) runs the prompt against real or fixture jobs and prints a side-by-side diff of rule-based vs LLM results, with no DB writes, before any production run.
 
 ---
 

@@ -1,0 +1,10 @@
+{
+  "_description": "Raw strings returned by Claude for parse_llm_response() tests.",
+  "canonical_only": "{\"technologies\": [\"Python\", \"Django\", \"PostgreSQL\", \"Redis\", \"Celery\"]}",
+  "with_unknowns": "{\"technologies\": [\"Python\", \"Django\", \"?Temporal\", \"?MLflow\", \"PostgreSQL\"]}",
+  "markdown_fence": "```json\n{\"technologies\": [\"Go\", \"Kubernetes\", \"Docker\", \"gRPC\"]}\n```",
+  "empty_list": "{\"technologies\": []}",
+  "malformed_no_json": "I found Python, Django, and PostgreSQL in this job description.",
+  "malformed_wrong_key": "{\"techs\": [\"Python\", \"Django\"]}",
+  "extra_whitespace": "  { \"technologies\" :  [ \"TypeScript\" ,  \"React\" ,  \"Node.js\" ]  }  "
+}

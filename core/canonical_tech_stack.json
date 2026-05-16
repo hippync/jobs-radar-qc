@@ -1,0 +1,37 @@
+{
+  "version": "1",
+  "categories": {
+    "languages": [
+      "Python", "JavaScript", "TypeScript", "Go", "Rust",
+      "Java", "Kotlin", "Scala", "C#", "C++",
+      "Ruby", "PHP", "Swift", "Elixir", "Erlang", "R"
+    ],
+    "frontend": [
+      "React", "Next.js", "Vue", "Angular", "Svelte",
+      "Node.js", "Express", "GraphQL", "REST"
+    ],
+    "backend": [
+      "Django", "FastAPI", "Flask", "Rails", "Spring",
+      "Laravel", "ASP.NET", ".NET", "gRPC", "Celery"
+    ],
+    "databases": [
+      "PostgreSQL", "MySQL", "MongoDB", "Redis", "Elasticsearch",
+      "Snowflake", "BigQuery", "DynamoDB", "Cassandra", "ClickHouse"
+    ],
+    "infrastructure": [
+      "AWS", "GCP", "Azure", "Kubernetes", "Docker",
+      "Terraform", "Ansible", "CI/CD", "GitHub Actions"
+    ],
+    "data": [
+      "Spark", "Kafka", "Airflow", "dbt", "Flink",
+      "Temporal", "Databricks", "RabbitMQ",
+      "Pandas", "NumPy", "PyTorch", "TensorFlow", "scikit-learn"
+    ],
+    "mobile": [
+      "React Native", "Flutter", "Android", "iOS"
+    ],
+    "other": [
+      "LLM", "RAG"
+    ]
+  }
+}
