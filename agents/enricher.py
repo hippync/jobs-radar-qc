@@ -1,7 +1,8 @@
-"""Tech stack enrichment agent — Greenhouse + Lever.
+"""Tech stack enrichment agent — Greenhouse, Lever, and Workable.
 
-Reads jobs that haven't been enriched with the current prompt version,
-calls Claude Haiku, and writes enriched_tech_stack to DB.
+For Greenhouse and Lever: descriptions are already stored in description_html.
+For Workable: the list endpoint has no description, so the enricher fetches
+each job's detail page (source_url /j/{ID} → /jobs/view/{ID}.md) on demand.
 
 Sequential with 1.2 s delay between requests to stay under Tier 1 limits
 (50 RPM). Retries up to 3× on 429 / 5xx with exponential backoff. A
@@ -11,16 +12,18 @@ so the same broken description doesn't burn retries on every daily run.
 Usage:
   python -m agents.enricher              # enrich all pending jobs
   python -m agents.enricher --dry-run    # print counts, no API calls
-  python -m agents.enricher --limit 50   # cap at N jobs per run
+  python -m agents.enricher --limit 200  # cap at N jobs per run
 """
 from __future__ import annotations
 
 import argparse
 import asyncio
 import os
+import re
 from datetime import datetime, timezone
 
 import anthropic
+import httpx
 import structlog
 from dotenv import load_dotenv
 
@@ -29,7 +32,7 @@ from storage.supabase_client import get_client
 
 logger = structlog.get_logger()
 
-_SOURCES = ["greenhouse", "lever"]
+_SOURCES = ["greenhouse", "lever", "workable"]
 _MAX_DESC_CHARS = 2000
 _REQUEST_DELAY_S = 1.2
 _MAX_RETRIES = 3
@@ -39,14 +42,13 @@ _MAX_RETRIES = 3
 
 
 def _load_pending(prompt_hash: str, limit: int) -> list[dict]:
-    """Return active GH/Lever jobs not yet enriched with this prompt version."""
+    """Return active jobs not yet enriched with this prompt version."""
     client = get_client()
     response = (
         client.table("jobs")
-        .select("id, title, description_html, tech_stack, source, company")
+        .select("id, title, description_html, tech_stack, source, company, source_url")
         .eq("is_active", True)
         .in_("source", _SOURCES)
-        # include both NULL (never enriched) and stale hash (prompt changed)
         .or_(f"enriched_prompt_hash.is.null,enriched_prompt_hash.neq.{prompt_hash}")
         .order("first_seen_at", desc=False)
         .limit(limit)
@@ -68,18 +70,47 @@ def _write_results(results: list[dict]) -> None:
         ).eq("id", r["id"]).execute()
 
 
+# ─── Workable detail fetch ────────────────────────────────────────────────────
+
+
+def _workable_detail_url(source_url: str) -> str | None:
+    """Convert /j/{ID} to /jobs/view/{ID}.md for Workable detail fetch."""
+    m = re.search(r"/j/([A-F0-9]+)$", source_url, re.IGNORECASE)
+    if not m:
+        return None
+    base = source_url[: m.start()]
+    return f"{base}/jobs/view/{m.group(1)}.md"
+
+
+async def _fetch_workable_description(http: httpx.AsyncClient, source_url: str) -> str:
+    """Fetch a Workable detail page and return the plain-text content."""
+    detail_url = _workable_detail_url(source_url)
+    if not detail_url:
+        return ""
+    try:
+        response = await http.get(detail_url, timeout=15.0)
+        response.raise_for_status()
+        # The .md endpoint returns markdown — strip basic markdown syntax
+        # (headers, bullets, bold) so the LLM gets clean prose.
+        text = re.sub(r"^#{1,6}\s+", "", response.text, flags=re.MULTILINE)
+        text = re.sub(r"\*\*([^*]+)\*\*", r"\1", text)
+        text = re.sub(r"\*([^*]+)\*", r"\1", text)
+        text = re.sub(r"^[-*]\s+", "", text, flags=re.MULTILINE)
+        text = re.sub(r"\s+", " ", text).strip()
+        return text
+    except httpx.HTTPError as exc:
+        logger.warning("workable_fetch_failed", url=detail_url, error=str(exc)[:80])
+        return ""
+
+
 # ─── Claude helpers ──────────────────────────────────────────────────────────
 
 
-def _build_user_message(job: dict) -> str:
-    raw = job.get("description_html") or ""
-    if raw:
-        text = strip_html(raw)
-        if len(text) > _MAX_DESC_CHARS:
-            text = text[:_MAX_DESC_CHARS] + "…"
-    else:
-        text = "(no description available)"
-    return f"Title: {job['title']}\n\nDescription:\n{text}"
+def _build_user_message(title: str, description: str) -> str:
+    text = description.strip() if description else "(no description available)"
+    if len(text) > _MAX_DESC_CHARS:
+        text = text[:_MAX_DESC_CHARS] + "…"
+    return f"Title: {title}\n\nDescription:\n{text}"
 
 
 async def _call_with_retry(
@@ -142,25 +173,32 @@ async def main() -> None:
     results: list[dict] = []
     errors = 0
 
-    for i, job in enumerate(jobs):
-        if i > 0:
-            await asyncio.sleep(_REQUEST_DELAY_S)
+    async with httpx.AsyncClient(headers={"User-Agent": "jobs-radar-qc/0.1"}) as http:
+        for i, job in enumerate(jobs):
+            if i > 0:
+                await asyncio.sleep(_REQUEST_DELAY_S)
 
-        log = logger.bind(source=job["source"], company=job["company"], title=job["title"])
+            log = logger.bind(source=job["source"], company=job["company"], title=job["title"])
 
-        try:
-            known, unknown = await _call_with_retry(
-                ai_client, model, system_prompt, _build_user_message(job)
-            )
-            results.append({"id": job["id"], "known": known, "prompt_hash": prompt_hash})
-            log.info("enriched", known=len(known), unknown=len(unknown))
+            try:
+                if job["source"] == "workable":
+                    raw_desc = await _fetch_workable_description(http, job["source_url"])
+                else:
+                    raw = job.get("description_html") or ""
+                    raw_desc = strip_html(raw) if raw else ""
 
-        except Exception as exc:
-            errors += 1
-            log.warning("enrichment_failed", error=str(exc)[:120])
-            # Mark as attempted to prevent retry loops on permanently broken descriptions.
-            # enriched_tech_stack = [] means the view falls back to rule-based tech_stack.
-            results.append({"id": job["id"], "known": [], "prompt_hash": prompt_hash})
+                user_message = _build_user_message(job["title"], raw_desc)
+                known, unknown = await _call_with_retry(
+                    ai_client, model, system_prompt, user_message
+                )
+                results.append({"id": job["id"], "known": known, "prompt_hash": prompt_hash})
+                log.info("enriched", known=len(known), unknown=len(unknown))
+
+            except Exception as exc:
+                errors += 1
+                log.warning("enrichment_failed", error=str(exc)[:120])
+                # Mark as attempted to prevent retry loops on permanently broken jobs.
+                results.append({"id": job["id"], "known": [], "prompt_hash": prompt_hash})
 
     if results:
         _write_results(results)
