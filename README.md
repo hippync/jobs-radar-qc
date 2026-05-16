@@ -10,7 +10,7 @@
 
 ## Why this exists
 
-I'm an ÉTS software engineering student doing an internship at BNC. Every week I spent 20–30 minutes manually checking a dozen company career pages to track what the Quebec tech market was actually hiring for — not what LinkedIn says, but what's live on Greenhouse, Lever, and Workable right now. This project automates that completely, and adds a tech-stack radar so I can see which technologies are growing across the market without reading every job posting.
+I'm a software engineering student doing an internship in Quebec. Every week I spent 20–30 minutes manually checking a dozen company career pages to track what the Quebec tech market was actually hiring for — not what LinkedIn says, but what's live on Greenhouse, Lever, and Workable right now. This project automates that completely, and adds a tech-stack radar so I can see which technologies are growing across the market without reading every job posting.
 
 ---
 
