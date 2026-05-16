@@ -5,7 +5,7 @@ import asyncio
 
 import structlog
 
-from agents.extractor import SPECS_DIR, Extractor
+from pipeline.extractor import SPECS_DIR, Extractor
 from storage.jobs_repository import mark_inactive, upsert_jobs
 
 logger = structlog.get_logger()

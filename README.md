@@ -33,14 +33,14 @@ specs/greenhouse/
 └── extraction.xml   # Field mappings and derivation rules
 ```
 
-The Python engine in `agents/` is generic and reads any spec. **Adding a new company means editing one JSON file. Adding a new ATS means writing three small files.**
+The Python engine in `pipeline/` is generic and reads any spec. **Adding a new company means editing one JSON file. Adding a new ATS means writing three small files.**
 
 ```
 ┌─────────────────────────────────────────────────────┐
 │                   GitHub Actions (daily cron)        │
 └───────────────────────┬─────────────────────────────┘
                         │
-              agents/orchestrator.py
+              pipeline/orchestrator.py
               (runs all specs in parallel)
                         │
           ┌─────────────┼─────────────┐
@@ -80,14 +80,14 @@ All derivation logic lives in `extraction.xml` — no source-specific Python.
 | Validate | Pydantic v2 |
 | Storage | PostgreSQL via Supabase |
 | Pipeline | GitHub Actions (daily cron) |
-| Frontend | Next.js 14 + Tailwind + Recharts *(coming)* |
+| Frontend | Next.js 16 + Tailwind CSS |
 
 ---
 
 ## Project structure
 
 ```
-agents/
+pipeline/
   extractor.py      # Generic spec-driven fetch + extraction engine
   orchestrator.py   # Runs all specs in parallel, writes to DB
 
@@ -115,6 +115,11 @@ storage/
 scripts/
   migrate.sql             # Initial DB schema + indexes + RLS
 
+frontend/                 # Next.js 16 — job list with filters
+  app/                    # App Router pages
+  components/             # JobCard, JobFilters
+  lib/                    # Supabase client, shared types
+
 tests/
   fixtures/               # Recorded HTTP responses for offline testing
 ```
@@ -126,12 +131,13 @@ tests/
 | Component | Status |
 |---|---|
 | Greenhouse spec | ✅ Live — 4 QC companies |
-| Extractor engine | ✅ Live |
+| Extraction pipeline | ✅ Live |
 | Supabase storage | ✅ Live |
 | Daily cron (GitHub Actions) | ✅ Live |
 | Lever spec | ✅ Live — 3 QC companies |
 | Workable spec | ✅ Live — 2 QC companies |
-| Next.js frontend | 📋 Planned (week 2) |
+| Next.js frontend | ✅ Live — job list + filters |
+| Agentic layer | 📋 Planned |
 
 ---
 
@@ -145,10 +151,13 @@ pip install -e ".[dev]"
 cp .env.example .env   # add SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY
 
 # Run the full pipeline once
-python -m agents.orchestrator
+python -m pipeline.orchestrator
 
 # Or test a single source
-python -m agents.extractor greenhouse
+python -m pipeline.extractor greenhouse
+
+# Run the frontend
+cd frontend && npm install && npm run dev   # → http://localhost:3000
 ```
 
 ### Running the DB migration

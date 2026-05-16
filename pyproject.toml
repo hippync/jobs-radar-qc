@@ -30,7 +30,7 @@ dev = [
 ]
 
 [tool.setuptools]
-packages = ["agents", "core", "storage"]
+packages = ["pipeline", "core", "storage"]
 
 [tool.ruff]
 line-length = 100
