@@ -124,7 +124,7 @@ tests/
 | Supabase storage | ✅ Live |
 | Daily cron (GitHub Actions) | ✅ Live |
 | Lever spec | ✅ Live — 3 QC companies |
-| Workable spec | 📋 Planned |
+| Workable spec | ✅ Live — 2 QC companies |
 | Next.js frontend | 📋 Planned (week 2) |
 
 ---
