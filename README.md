@@ -8,17 +8,33 @@
 
 ---
 
+## Why this exists
+
+I'm an ÉTS software engineering student doing an internship at BNC. Every week I spent 20–30 minutes manually checking a dozen company career pages to track what the Quebec tech market was actually hiring for — not what LinkedIn says, but what's live on Greenhouse, Lever, and Workable right now. This project automates that completely, and adds a tech-stack radar so I can see which technologies are growing across the market without reading every job posting.
+
+---
+
 ## The problem
 
 Tech job hunting in Quebec means checking 50+ company career pages and job boards every day. There's no single place to see what's actively hiring in Python, Go, .NET, or any specific stack across Montreal startups and scale-ups — let alone track which technologies are growing over time.
 
 ## What this does
 
-Jobs Radar QC pulls open roles from major ATS platforms (Greenhouse, Lever, Workable, …), deduplicates them, normalizes the data into a unified schema, and surfaces:
+Jobs Radar QC pulls open roles from major ATS platforms (Greenhouse, Lever, Workable), deduplicates them, normalizes the data into a unified schema, and surfaces:
 
-- What's hiring in Montreal/Quebec right now, filterable by tech stack
-- Hiring trends over 30 days — which technologies are on the rise
+- What's hiring in Montreal/Quebec right now, filterable by tech stack, seniority, and remote
+- A [Tech Stack Radar](/trends) — which technologies appear most across active roles
 - When a job first appeared and how long it's been open
+
+---
+
+## Screenshots
+
+> **To add screenshots:** run `npm run dev` in `frontend/`, capture the following views, and drop them in `docs/screenshots/`.
+
+| Home — job list with filters | Tech Stack Radar |
+|---|---|
+| ![Job list](docs/screenshots/home.png) | ![Trends](docs/screenshots/trends.png) |
 
 ---
 
@@ -36,39 +52,47 @@ specs/greenhouse/
 The Python engine in `pipeline/` is generic and reads any spec. **Adding a new company means editing one JSON file. Adding a new ATS means writing three small files.**
 
 ```
-┌─────────────────────────────────────────────────────┐
-│                   GitHub Actions (daily cron)        │
-│                                                      │
-│   Step 1: pipeline/orchestrator.py ──────────────┐  │
-│   Step 2: agents/enricher.py (after pipeline)    │  │
-└───────────────────────────────────────────────────┘  │
-                        │  Step 1                      │
-              pipeline/orchestrator.py
-              (runs all specs in parallel)
-                        │
-          ┌─────────────┼─────────────┐
-          ▼             ▼             ▼
-   Greenhouse         Lever       Workable  …
-  (extractor)      (extractor)  (extractor)
-          │             │             │
-          └─────────────┴─────────────┘
-                        │
-              Canonical Job schema
-              (is_qc, is_remote,
-               seniority, tech_stack …)
-                        │
-                        ▼
-              Supabase / PostgreSQL
-              (upsert + mark_inactive)
-                        │
-                        │  Step 2 (enrichment pass)
-                        ▼
-              agents/enricher.py
-              WHERE enriched_prompt_hash != current
-                        │  Claude Haiku
-                        ▼
-              enriched_tech_stack[]
-              (LLM-extracted, versioned by prompt hash)
+┌──────────────────────────────────────────────────────────┐
+│                  GitHub Actions (crons)                   │
+│                                                           │
+│   daily_fetch.yml ─── pipeline/orchestrator.py           │
+│   weekly_enrich.yml ── agents/enricher.py (Sundays)      │
+└──────────────────────────────────────────────────────────┘
+              │  daily fetch
+   pipeline/orchestrator.py
+   (runs all specs in parallel)
+              │
+  ┌───────────┼───────────┐
+  ▼           ▼           ▼
+Greenhouse  Lever     Workable  …
+(extractor)(extractor)(extractor)
+  │           │           │
+  └───────────┴───────────┘
+              │
+    Canonical Job schema
+    (is_qc, is_remote,
+     seniority, tech_stack …)
+              │
+              ▼
+    Supabase / PostgreSQL
+    (upsert + mark_inactive)
+              │
+              │  weekly enrichment pass
+              ▼
+    agents/enricher.py
+    WHERE enriched_prompt_hash != current
+              │  Claude Haiku
+              ▼
+    enriched_tech_stack[]
+    (LLM-extracted, versioned by prompt hash)
+              │
+              ▼
+    active_qc_jobs view
+    (merges tech_stack || enriched_tech_stack)
+              │
+              ▼
+    Next.js frontend
+    (job list + filters + /trends radar)
 ```
 
 ### Extraction pipeline
@@ -83,6 +107,25 @@ All derivation logic lives in `extraction.xml` — no source-specific Python.
 
 ---
 
+## Key technical decisions
+
+**1. Spec-driven engine over per-company scrapers.**
+Three declarative files per ATS source; the engine is generic. Adding a new ATS takes an afternoon instead of a week, and the spec files are diffable — you can see exactly what changed when a company's API quirks shift. Tradeoff: the spec format has to be expressive enough to handle all sources, which took a few iterations.
+
+**2. Deterministic pipeline first, LLM second pass.**
+The pipeline always runs to completion and writes `tech_stack` from rule-based regex extraction. Claude Haiku runs afterwards in a separate weekly job. A billing outage or API failure on the enricher never affects the daily feed. Tradeoff: users see rule-based results until the weekly enrichment runs.
+
+**3. Separate `enriched_tech_stack` column — pipeline never touches it.**
+The daily upsert writes every column in the canonical schema. If `enriched_tech_stack` were the same column, every upsert would overwrite LLM results with empty rule-based output. The separate column means enrichment is preserved across daily refreshes. The Supabase view merges both arrays for the frontend. Tradeoff: two columns to keep in sync in the view definition.
+
+**4. Prompt hash versioning for automatic re-enrichment.**
+The rendered system prompt (template + canonical tech list injected) is SHA-256[:8] hashed and stored per job. Change the prompt or add a tech to the canonical list → every job's stored hash becomes stale → the enricher automatically re-processes them on the next run, with no manual bookkeeping. Tradeoff: can trigger an unexpectedly large batch if you change the canonical list carelessly.
+
+**5. CSS-only bar chart on `/trends` — no charting library.**
+Horizontal bars are a single `<div>` with `style={{ width: X% }}` via Tailwind. The page is a Next.js Server Component with 1-hour ISR. Zero JS bundle overhead, renders server-side, each bar is a link to a pre-filtered job list. Tradeoff: no animation, no tooltips, no interactivity — intentional for a radar view.
+
+---
+
 ## Stack
 
 | Layer | Technology |
@@ -91,7 +134,8 @@ All derivation logic lives in `extraction.xml` — no source-specific Python.
 | Parse | lxml, BeautifulSoup |
 | Validate | Pydantic v2 |
 | Storage | PostgreSQL via Supabase |
-| Pipeline | GitHub Actions (daily cron) |
+| Pipeline | GitHub Actions (daily + weekly crons) |
+| Enrichment | Claude Haiku (Anthropic API) |
 | Frontend | Next.js 16 + Tailwind CSS |
 
 ---
@@ -103,37 +147,50 @@ pipeline/
   extractor.py      # Generic spec-driven fetch + extraction engine
   orchestrator.py   # Runs all specs in parallel, writes to DB
 
+agents/
+  enricher.py       # LLM tech-stack enrichment (weekly run)
+  prompt_utils.py   # Render prompt, hash, parse response, strip HTML
+  prompts/
+    tech_extraction.md  # Versioned system prompt template
+
 core/
-  canonical_schema.json   # Unified Job model (JSON Schema draft-07)
+  canonical_schema.json     # Unified Job model (JSON Schema draft-07)
+  canonical_tech_stack.json # 73 canonical tech names by category
 
 specs/
-  greenhouse/             # Broadsign, AppDirect, AlayaCare, Valtech
-    source.md             # API docs, rate limits, known quirks
-    schema.json           # Endpoint config + company list
-    extraction.xml        # Field mappings + derivation rules
-  lever/                  # Plusgrade, Mirego, Osedea
+  greenhouse/               # Broadsign, AppDirect, AlayaCare, Valtech
+    source.md               # API docs, rate limits, known quirks
+    schema.json             # Endpoint config + company list
+    extraction.xml          # Field mappings + derivation rules
+  lever/                    # Plusgrade, Mirego, Osedea, Spiria, Behaviour Interactive, Wattpad
     source.md
     schema.json
     extraction.xml
-  workable/               # Tecsys, Nuvei
+  workable/                 # Tecsys, Nuvei
     source.md
     schema.json
     extraction.xml
 
 storage/
-  supabase_client.py      # Singleton client
-  jobs_repository.py      # upsert_jobs(), mark_inactive()
+  supabase_client.py        # Singleton client
+  jobs_repository.py        # upsert_jobs(), mark_inactive()
 
 scripts/
-  migrate.sql             # Initial DB schema + indexes + RLS
-
-frontend/                 # Next.js 16 — job list with filters
-  app/                    # App Router pages
-  components/             # JobCard, JobFilters
-  lib/                    # Supabase client, shared types
+  migrate.sql               # Initial DB schema + indexes + RLS
+  migrate_enrichment.sql    # Enrichment columns + active_qc_jobs view
+  test_enrichment.py        # Dry-run: compare rule-based vs LLM, no DB writes
 
 tests/
-  fixtures/               # Recorded HTTP responses for offline testing
+  fixtures/                 # Sample jobs + Claude responses for offline tests
+  test_enrichment_parsing.py
+  test_prompt_hash.py
+
+frontend/                   # Next.js 16 — App Router
+  app/
+    page.tsx                # Job list with filters + pagination
+    trends/page.tsx         # Tech Stack Radar (Server Component, 1h ISR)
+  components/               # JobCard, JobFilters
+  lib/                      # Supabase client, shared types
 ```
 
 ---
@@ -143,15 +200,14 @@ tests/
 | Component | Status |
 |---|---|
 | Greenhouse spec | ✅ Live — 4 QC companies |
+| Lever spec | ✅ Live — 6 QC companies |
+| Workable spec | ✅ Live — 2 QC companies |
 | Extraction pipeline | ✅ Live |
 | Supabase storage | ✅ Live |
 | Daily cron (GitHub Actions) | ✅ Live |
-| Lever spec | ✅ Live — 3 QC companies |
-| Workable spec | ✅ Live — 2 QC companies |
 | Next.js frontend | ✅ Live — job list + filters |
-| Enrichment agent — prompt + dry-run | ✅ Step 0 complete |
-| Enrichment agent — Greenhouse + Lever | 🔨 Step 1: in progress |
-| Enrichment agent — Workable (detail fetch) | 📋 Step 2: planned |
+| Tech Stack Radar (/trends) | ✅ Live |
+| Enrichment agent | ✅ Live — weekly Sundays 9 AM EDT |
 
 ---
 
@@ -186,13 +242,16 @@ python -m pipeline.orchestrator
 # Or test a single source
 python -m pipeline.extractor greenhouse
 
+# Dry-run the enrichment agent (no API calls, just counts)
+python -m agents.enricher --dry-run
+
 # Run the frontend
 cd frontend && npm install && npm run dev   # → http://localhost:3000
 ```
 
 ### Running the DB migration
 
-Paste `scripts/migrate.sql` into the Supabase SQL editor and run. Creates the `jobs` table, dedup constraint, GIN index on `tech_stack`, RLS policy (public read, service-role write), and a trigger that freezes `first_seen_at` after first insert.
+Paste `scripts/migrate.sql` then `scripts/migrate_enrichment.sql` into the Supabase SQL editor and run in order. The first script creates the `jobs` table, dedup constraint, GIN index on `tech_stack`, RLS policy (public read, service-role write), and a trigger that freezes `first_seen_at` after first insert. The second adds the enrichment columns and creates the `active_qc_jobs` view.
 
 ---
 
@@ -224,6 +283,18 @@ That's it — no Python changes needed.
 ## Adding a new ATS
 
 Copy `specs/_template/` to `specs/your-ats/`, then fill in the three files following the Greenhouse spec as a reference. The engine picks up new specs automatically on the next run.
+
+---
+
+## Future v2
+
+What's intentionally not in v1 — and why:
+
+- **Workday ATS** — no public job list API; requires scraping individual career pages. Technically feasible but the maintenance burden is high (login flows, anti-bot measures, company-specific URL patterns). Biggest gap in Quebec market coverage.
+- **30-day trend deltas on the radar** — the data is accumulating now; the `TODO` comment in `trends/page.tsx` marks exactly where to add `↑/↓` badges once we have 30+ days of history.
+- **Job matching agent** — given a resume or skill profile, rank jobs by fit. The canonical tech stack and seniority fields make this tractable; the missing piece is a user model.
+- **Email / Slack alerts** — "new job matching your stack posted today." Supabase has edge functions and pg_cron; this is a weekend project once a user model exists.
+- **More ATS coverage** — Ashby (growing in Canadian startups), BambooHR. Each is one afternoon of spec writing.
 
 ---
 
