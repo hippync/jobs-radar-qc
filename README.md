@@ -1,37 +1,133 @@
 # Jobs Radar QC
 
-> Public ATS jobs aggregator for Montreal/Quebec tech scene — built with spec-driven extraction and agentic workflows.
+> A public ATS aggregator for the Montreal/Quebec tech scene — spec-driven, open-source, no vendor lock-in.
+
+[![Daily fetch](https://github.com/hippync/jobs-radar-qc/actions/workflows/daily_fetch.yml/badge.svg)](https://github.com/hippync/jobs-radar-qc/actions/workflows/daily_fetch.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/)
+
+---
 
 ## The problem
 
-Tech job hunting in Quebec means manually checking 50+ company career pages and multiple job boards every day. There's no single, low-friction place to see what's hiring in Python, .NET, Next.js, or any specific stack across Montreal startups and scale-ups — let alone track trends over time.
+Tech job hunting in Quebec means checking 50+ company career pages and job boards every day. There's no single place to see what's actively hiring in Python, Go, .NET, or any specific stack across Montreal startups and scale-ups — let alone track which technologies are growing over time.
 
-## The solution
+## What this does
 
-This aggregator pulls jobs from 10+ public ATS APIs and career pages, deduplicates them, normalizes the data into a canonical schema, and surfaces:
+Jobs Radar QC pulls open roles from major ATS platforms (Greenhouse, Lever, Workable, …), deduplicates them, normalizes the data into a unified schema, and surfaces:
 
-- 📍 What's hiring in Montreal/Quebec by tech stack
-- 📈 Hiring trends over 30 days (which techs are growing)
-- 🔔 Filterable feed with email alerts (planned)
-- 🤖 Resume-to-job matching with Claude API (planned)
+- What's hiring in Montreal/Quebec right now, filterable by tech stack
+- Hiring trends over 30 days — which technologies are on the rise
+- When a job first appeared and how long it's been open
 
-## Why this is interesting technically
+---
 
-This isn't a hardcoded scraper. Each source (Greenhouse, Lever, Shopify Careers, etc.) is defined as a **declarative spec** — three files describing what to fetch, how to validate it, and how to extract fields. The agentic core reads these specs and executes them.
+## Architecture
 
-- `.md` — Human + LLM-readable source documentation
-- `.json` — Endpoint config, validation schemas, company lists
-- `.xml` — Extraction rules, field mappings, transformations
+The core insight is that ATS platforms are repetitive — they all expose a job list endpoint, return structured JSON, and use the same handful of field names. Instead of writing a custom scraper per company, each source is defined as **three declarative spec files**:
 
-Adding a new source means writing three small files, not modifying the engine.
+```
+specs/greenhouse/
+├── source.md        # API documentation, quirks, dedup strategy
+├── schema.json      # Endpoint config, company list, validation rules
+└── extraction.xml   # Field mappings and derivation rules
+```
+
+The Python engine in `agents/` is generic and reads any spec. **Adding a new company means editing one JSON file. Adding a new ATS means writing three small files.**
+
+```
+┌─────────────────────────────────────────────────────┐
+│                   GitHub Actions (daily cron)        │
+└───────────────────────┬─────────────────────────────┘
+                        │
+              agents/orchestrator.py
+              (runs all specs in parallel)
+                        │
+          ┌─────────────┼─────────────┐
+          ▼             ▼             ▼
+   Greenhouse         Lever       Workable  …
+  (extractor)      (extractor)  (extractor)
+          │             │             │
+          └─────────────┴─────────────┘
+                        │
+              Canonical Job schema
+              (is_qc, is_remote,
+               seniority, tech_stack …)
+                        │
+                        ▼
+              Supabase / PostgreSQL
+              (upsert + mark_inactive)
+```
+
+### Extraction pipeline
+
+For each source spec, the engine runs three passes:
+
+1. **Constants** — fixed values stamped on every record (`source = "greenhouse"`)
+2. **Field mappings** — dot-path resolution from the raw API response (`location.name → location`)
+3. **Derived fields** — regex rules and keyword matching to compute `is_qc`, `is_remote`, `seniority`, `employment_type`, and `tech_stack`
+
+All derivation logic lives in `extraction.xml` — no source-specific Python.
+
+---
 
 ## Stack
 
-- **Backend**: Python 3.12, httpx (async), BeautifulSoup, Pydantic v2
-- **Storage**: PostgreSQL via Supabase
-- **Pipeline**: GitHub Actions (daily cron)
-- **Frontend**: Next.js 14 + Tailwind + Recharts *(coming in week 2)*
-- **Deploy**: Vercel
+| Layer | Technology |
+|---|---|
+| Fetch | Python 3.12, httpx (async) |
+| Parse | lxml, BeautifulSoup |
+| Validate | Pydantic v2 |
+| Storage | PostgreSQL via Supabase |
+| Pipeline | GitHub Actions (daily cron) |
+| Frontend | Next.js 14 + Tailwind + Recharts *(coming)* |
+
+---
+
+## Project structure
+
+```
+agents/
+  extractor.py      # Generic spec-driven fetch + extraction engine
+  orchestrator.py   # Runs all specs in parallel, writes to DB
+
+core/
+  canonical_schema.json   # Unified Job model (JSON Schema draft-07)
+
+specs/
+  greenhouse/
+    source.md             # API docs, rate limits, known quirks
+    schema.json           # Endpoint config + company list
+    extraction.xml        # Field mappings + derivation rules
+  lever/                  # (coming)
+  workable/               # (coming)
+
+storage/
+  supabase_client.py      # Singleton client
+  jobs_repository.py      # upsert_jobs(), mark_inactive()
+
+scripts/
+  migrate.sql             # Initial DB schema + indexes + RLS
+
+tests/
+  fixtures/               # Recorded HTTP responses for offline testing
+```
+
+---
+
+## Status
+
+| Component | Status |
+|---|---|
+| Greenhouse spec | ✅ Live — 4 QC companies |
+| Extractor engine | ✅ Live |
+| Supabase storage | ✅ Live |
+| Daily cron (GitHub Actions) | ✅ Live |
+| Lever spec | 🔧 In progress |
+| Workable spec | 📋 Planned |
+| Next.js frontend | 📋 Planned (week 2) |
+
+---
 
 ## Quick start
 
@@ -40,22 +136,44 @@ git clone https://github.com/hippync/jobs-radar-qc.git
 cd jobs-radar-qc
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
-cp .env.example .env  # then fill in Supabase keys
+cp .env.example .env   # add SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY
+
+# Run the full pipeline once
 python -m agents.orchestrator
+
+# Or test a single source
+python -m agents.extractor greenhouse
 ```
 
-## Project structure
+### Running the DB migration
 
-- specs/         # One folder per source: source.md + schema.json + extraction.xml
-- agents/        # Generic engine: extractor, normalizer, validator, orchestrator
-- core/          # Canonical schema, shared Pydantic models
-- storage/       # Supabase client and queries
-- tests/         # Unit tests + recorded HTTP fixture
+Paste `scripts/migrate.sql` into the Supabase SQL editor and run. Creates the `jobs` table, dedup constraint, GIN index on `tech_stack`, RLS policy (public read, service-role write), and a trigger that freezes `first_seen_at` after first insert.
 
-## Status
+---
 
-🚧 Active development — sprint 1 in progress.
+## Adding a new company (Greenhouse)
+
+Open `specs/greenhouse/schema.json` and add an entry to the `companies` array:
+
+```json
+{ "name": "Your Company", "slug": "your-greenhouse-slug" }
+```
+
+Verify the slug first:
+```bash
+curl -s "https://boards-api.greenhouse.io/v1/boards/your-slug/jobs" | python3 -m json.tool | head -5
+```
+
+That's it — no Python changes needed.
+
+---
+
+## Adding a new ATS
+
+Copy `specs/_template/` to `specs/your-ats/`, then fill in the three files following the Greenhouse spec as a reference. The engine picks up new specs automatically on the next run.
+
+---
 
 ## License
 
-MIT
+MIT — see [LICENSE](LICENSE).
