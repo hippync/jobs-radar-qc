@@ -59,6 +59,11 @@ def _coerce(value: Any, field_type: str, *, empty_as_null: bool = False) -> Any:
             return datetime.fromisoformat(str(value)).astimezone(timezone.utc).isoformat()
         except (ValueError, TypeError):
             return None
+    if field_type == "unix_ms":
+        try:
+            return datetime.fromtimestamp(int(value) / 1000, tz=timezone.utc).isoformat()
+        except (ValueError, TypeError):
+            return None
     if field_type == "bool":
         if isinstance(value, bool):
             return value
@@ -151,7 +156,9 @@ class Extractor:
             log.error("fetch_failed", error=str(exc))
             return []
 
-        raw_jobs = response.json().get(endpoint.get("jobs_path", "jobs"), [])
+        jobs_path = endpoint.get("jobs_path")
+        data = response.json()
+        raw_jobs = data if jobs_path is None else data.get(jobs_path, [])
         required = self.schema.get("validation", {}).get("required_fields", [])
 
         results = []

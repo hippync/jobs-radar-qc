@@ -1,0 +1,27 @@
+{
+  "source": "lever",
+  "display_name": "Lever",
+  "endpoint": {
+    "url_template": "https://api.lever.co/v0/postings/{company_slug}",
+    "method": "GET",
+    "params": {
+      "mode": "json"
+    },
+    "response_format": "json",
+    "jobs_path": null,
+    "rate_limit": {
+      "requests_per_second": 5,
+      "delay_between_companies_ms": 200
+    }
+  },
+  "companies": [
+    { "name": "Plusgrade", "slug": "plusgrade" },
+    { "name": "Mirego",    "slug": "mirego"    },
+    { "name": "Osedea",    "slug": "osedea"    }
+  ],
+  "validation": {
+    "required_fields": ["id", "text", "hostedUrl"],
+    "min_jobs_per_company": 0,
+    "warn_if_empty": true
+  }
+}
