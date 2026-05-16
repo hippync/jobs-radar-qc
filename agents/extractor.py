@@ -1,0 +1,219 @@
+"""Generic spec-driven extraction engine."""
+from __future__ import annotations
+
+import asyncio
+import json
+import re
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
+
+import httpx
+import structlog
+from lxml import etree
+
+logger = structlog.get_logger()
+
+SPECS_DIR = Path(__file__).parent.parent / "specs"
+
+
+# ─── Spec loading ────────────────────────────────────────────────────────────
+
+
+def _load_spec(source: str) -> tuple[dict, etree._Element]:
+    spec_dir = SPECS_DIR / source
+    schema = json.loads((spec_dir / "schema.json").read_text())
+    root = etree.parse(str(spec_dir / "extraction.xml")).getroot()
+    return schema, root
+
+
+# ─── Value helpers ───────────────────────────────────────────────────────────
+
+
+def _resolve_path(obj: Any, path: str) -> Any:
+    """Dot-notation path into nested dict/list. Integer parts index lists."""
+    for part in path.split("."):
+        if obj is None:
+            return None
+        if isinstance(obj, list):
+            try:
+                obj = obj[int(part)]
+            except (ValueError, IndexError):
+                return None
+        elif isinstance(obj, dict):
+            obj = obj.get(part)
+        else:
+            return None
+    return obj
+
+
+def _coerce(value: Any, field_type: str, *, empty_as_null: bool = False) -> Any:
+    if empty_as_null and value == "":
+        return None
+    if value is None:
+        return None
+    if field_type == "string":
+        return str(value)
+    if field_type == "datetime":
+        try:
+            return datetime.fromisoformat(str(value)).astimezone(timezone.utc).isoformat()
+        except (ValueError, TypeError):
+            return None
+    if field_type == "bool":
+        if isinstance(value, bool):
+            return value
+        return str(value).lower() in ("true", "1", "yes")
+    return value
+
+
+def _parse_literal(s: str, field_type: str) -> Any:
+    """Parse a string literal from an XML attribute into a typed Python value."""
+    if s == "null":
+        return None
+    if field_type == "bool":
+        return s == "true"
+    if field_type.startswith("list"):
+        return []
+    return s
+
+
+# ─── Derived field helpers ───────────────────────────────────────────────────
+
+
+def _apply_match_rules(
+    rules: list[etree._Element],
+    job_data: dict,
+    default: Any,
+    field_type: str,
+) -> Any:
+    """First-match: return value for the first rule whose pattern matches."""
+    for rule in rules:
+        field_value = job_data.get(rule.get("source"))
+        if field_value is None:
+            continue
+        if re.search(rule.get("pattern", ""), str(field_value)):
+            return _parse_literal(rule.get("value", "null"), field_type)
+    return default
+
+
+def _collect_keywords(kw_element: etree._Element | None, job_data: dict) -> list[str]:
+    """Collect all keyword matches from the specified source fields."""
+    if kw_element is None:
+        return []
+    sources = [s.strip() for s in kw_element.get("sources", "").split(",")]
+    flags = re.IGNORECASE if kw_element.get("case_insensitive") == "true" else 0
+    text = " ".join(str(job_data.get(s) or "") for s in sources)
+    return [
+        kw.get("canonical") or kw.text.strip()
+        for kw in kw_element.findall("kw")
+        if re.search(kw.text.strip(), text, flags)
+    ]
+
+
+# ─── Extractor ───────────────────────────────────────────────────────────────
+
+
+class Extractor:
+    def __init__(self, source: str) -> None:
+        self.source = source
+        self.schema, self.extraction = _load_spec(source)
+
+    async def run(self) -> list[dict]:
+        """Fetch and extract all jobs for all companies defined in the spec."""
+        companies = self.schema["companies"]
+        delay_s = self.schema["endpoint"]["rate_limit"].get("delay_between_companies_ms", 200) / 1000
+
+        async with httpx.AsyncClient(
+            headers={"User-Agent": "jobs-radar-qc/0.1"},
+            follow_redirects=True,
+        ) as client:
+            all_jobs: list[dict] = []
+            for i, company in enumerate(companies):
+                if i > 0:
+                    await asyncio.sleep(delay_s)
+                all_jobs.extend(await self._fetch_company(client, company))
+
+        logger.info("extraction_complete", source=self.source, total=len(all_jobs))
+        return all_jobs
+
+    async def _fetch_company(self, client: httpx.AsyncClient, company: dict) -> list[dict]:
+        endpoint = self.schema["endpoint"]
+        url = endpoint["url_template"].format(company_slug=company["slug"])
+        log = logger.bind(source=self.source, company=company["name"])
+
+        try:
+            response = await client.get(url, params=endpoint.get("params", {}), timeout=30.0)
+            response.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            log.warning("fetch_http_error", status=exc.response.status_code)
+            return []
+        except httpx.HTTPError as exc:
+            log.error("fetch_failed", error=str(exc))
+            return []
+
+        raw_jobs = response.json().get(endpoint.get("jobs_path", "jobs"), [])
+        required = self.schema.get("validation", {}).get("required_fields", [])
+
+        results = []
+        for raw_job in raw_jobs:
+            if not all(raw_job.get(f) for f in required):
+                log.debug("job_skipped_missing_fields", job_id=raw_job.get("id"))
+                continue
+            results.append(self._apply_extraction(raw_job, company))
+
+        log.info("fetched", count=len(results))
+        return results
+
+    def _apply_extraction(self, raw_job: dict, company: dict) -> dict:
+        result: dict[str, Any] = {
+            "company": company["name"],
+            "company_slug": company["slug"],
+            "fetched_at": datetime.now(timezone.utc).isoformat(),
+        }
+
+        # 1. Constants — fixed values stamped on every record
+        for const in self.extraction.findall("constants/constant"):
+            result[const.get("name")] = _parse_literal(
+                const.get("value"), const.get("type", "string")
+            )
+
+        # 2. Direct field mappings from the raw API response
+        for field in self.extraction.findall("fields/field"):
+            result[field.get("name")] = _coerce(
+                _resolve_path(raw_job, field.get("from")),
+                field.get("type", "string"),
+                empty_as_null=field.get("empty_as_null") == "true",
+            )
+
+        # 3. Derived fields — computed from already-mapped values in result
+        for field in self.extraction.findall("derived/field"):
+            name = field.get("name")
+            field_type = field.get("type", "string")
+            default = _parse_literal(field.get("default", "null"), field_type)
+
+            if field.get("strategy") == "collect-all":
+                result[name] = _collect_keywords(field.find("keywords"), result)
+            else:
+                result[name] = _apply_match_rules(
+                    field.findall("match"), result, default, field_type
+                )
+
+        return result
+
+
+# ─── Smoke test ──────────────────────────────────────────────────────────────
+
+if __name__ == "__main__":
+    import pprint
+    import sys
+
+    async def _smoke_test() -> None:
+        source = sys.argv[1] if len(sys.argv) > 1 else "greenhouse"
+        extractor = Extractor(source)
+        jobs = await extractor.run()
+        print(f"\nExtracted {len(jobs)} jobs from '{source}'")
+        if jobs:
+            print("\nFirst job:")
+            pprint.pprint(jobs[0])
+
+    asyncio.run(_smoke_test())
