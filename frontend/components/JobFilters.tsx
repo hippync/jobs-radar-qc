@@ -1,0 +1,101 @@
+"use client";
+
+import { useRouter, useSearchParams } from "next/navigation";
+import { useTransition } from "react";
+
+interface Props {
+  techOptions: string[];
+  sourceOptions: string[];
+}
+
+export default function JobFilters({ techOptions, sourceOptions }: Props) {
+  const router = useRouter();
+  const params = useSearchParams();
+  const [isPending, startTransition] = useTransition();
+
+  function update(key: string, value: string) {
+    const next = new URLSearchParams(params.toString());
+    if (value) {
+      next.set(key, value);
+    } else {
+      next.delete(key);
+    }
+    next.delete("page");
+    startTransition(() => router.replace(`?${next.toString()}`));
+  }
+
+  const tech = params.get("tech") ?? "";
+  const source = params.get("source") ?? "";
+  const remote = params.get("remote") ?? "";
+  const seniority = params.get("seniority") ?? "";
+
+  return (
+    <div
+      className={`flex flex-wrap gap-3 ${isPending ? "opacity-60 pointer-events-none" : ""}`}
+    >
+      <select
+        value={tech}
+        onChange={(e) => update("tech", e.target.value)}
+        className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 shadow-sm focus:border-indigo-500 focus:outline-none"
+      >
+        <option value="">All technologies</option>
+        {techOptions.map((t) => (
+          <option key={t} value={t}>
+            {t}
+          </option>
+        ))}
+      </select>
+
+      <select
+        value={source}
+        onChange={(e) => update("source", e.target.value)}
+        className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 shadow-sm focus:border-indigo-500 focus:outline-none"
+      >
+        <option value="">All sources</option>
+        {sourceOptions.map((s) => (
+          <option key={s} value={s}>
+            {s.charAt(0).toUpperCase() + s.slice(1)}
+          </option>
+        ))}
+      </select>
+
+      <select
+        value={remote}
+        onChange={(e) => update("remote", e.target.value)}
+        className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 shadow-sm focus:border-indigo-500 focus:outline-none"
+      >
+        <option value="">Any workplace</option>
+        <option value="true">Remote</option>
+        <option value="false">On-site</option>
+        <option value="null">Hybrid</option>
+      </select>
+
+      <select
+        value={seniority}
+        onChange={(e) => update("seniority", e.target.value)}
+        className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 shadow-sm focus:border-indigo-500 focus:outline-none"
+      >
+        <option value="">All levels</option>
+        <option value="internship">Internship</option>
+        <option value="junior">Junior</option>
+        <option value="senior">Senior</option>
+        <option value="lead">Lead</option>
+        <option value="staff">Staff</option>
+        <option value="principal">Principal</option>
+        <option value="manager">Manager</option>
+        <option value="director">Director</option>
+      </select>
+
+      {(tech || source || remote || seniority) && (
+        <button
+          onClick={() =>
+            startTransition(() => router.replace("/"))
+          }
+          className="rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-500 hover:bg-gray-50"
+        >
+          Clear filters
+        </button>
+      )}
+    </div>
+  );
+}
