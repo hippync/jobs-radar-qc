@@ -95,12 +95,18 @@ core/
   canonical_schema.json   # Unified Job model (JSON Schema draft-07)
 
 specs/
-  greenhouse/
+  greenhouse/             # Broadsign, AppDirect, AlayaCare, Valtech
     source.md             # API docs, rate limits, known quirks
     schema.json           # Endpoint config + company list
     extraction.xml        # Field mappings + derivation rules
-  lever/                  # (coming)
-  workable/               # (coming)
+  lever/                  # Plusgrade, Mirego, Osedea
+    source.md
+    schema.json
+    extraction.xml
+  workable/               # Tecsys, Nuvei
+    source.md
+    schema.json
+    extraction.xml
 
 storage/
   supabase_client.py      # Singleton client
@@ -151,17 +157,25 @@ Paste `scripts/migrate.sql` into the Supabase SQL editor and run. Creates the `j
 
 ---
 
-## Adding a new company (Greenhouse)
+## Adding a new company
 
-Open `specs/greenhouse/schema.json` and add an entry to the `companies` array:
+Open the relevant `specs/{ats}/schema.json` and add an entry to the `companies` array:
 
 ```json
-{ "name": "Your Company", "slug": "your-greenhouse-slug" }
+{ "name": "Your Company", "slug": "your-ats-slug" }
 ```
 
-Verify the slug first:
+Verify the slug before adding (examples per ATS):
+
 ```bash
-curl -s "https://boards-api.greenhouse.io/v1/boards/your-slug/jobs" | python3 -m json.tool | head -5
+# Greenhouse
+curl -s "https://boards-api.greenhouse.io/v1/boards/your-slug/jobs" | python3 -c "import sys,json; print(len(json.load(sys.stdin)['jobs']), 'jobs')"
+
+# Lever
+curl -s "https://api.lever.co/v0/postings/your-slug?mode=json" | python3 -c "import sys,json; print(len(json.load(sys.stdin)), 'jobs')"
+
+# Workable
+curl -s "https://apply.workable.com/your-slug/llms.txt" | grep "current opening"
 ```
 
 That's it — no Python changes needed.
