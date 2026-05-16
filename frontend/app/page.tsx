@@ -100,6 +100,12 @@ export default async function Page({
                 filtered
               </span>
             )}
+            <a
+              href="/trends"
+              className="inline-flex items-center gap-1 rounded-full bg-violet-600/40 px-3 py-1 text-xs font-medium text-violet-200 ring-1 ring-violet-400/30 transition hover:bg-violet-600/60 hover:text-white"
+            >
+              Tech Radar →
+            </a>
           </div>
         </div>
       </header>
