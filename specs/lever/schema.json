@@ -15,9 +15,12 @@
     }
   },
   "companies": [
-    { "name": "Plusgrade", "slug": "plusgrade" },
-    { "name": "Mirego",    "slug": "mirego"    },
-    { "name": "Osedea",    "slug": "osedea"    }
+    { "name": "Plusgrade",              "slug": "plusgrade" },
+    { "name": "Mirego",                 "slug": "mirego"    },
+    { "name": "Osedea",                 "slug": "osedea"    },
+    { "name": "Spiria",                 "slug": "spiria"    },
+    { "name": "Behaviour Interactive",  "slug": "bhvr"      },
+    { "name": "Wattpad",                "slug": "wattpad"   }
   ],
   "validation": {
     "required_fields": ["id", "text", "hostedUrl"],
