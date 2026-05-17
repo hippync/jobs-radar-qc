@@ -1,0 +1,61 @@
+# Architecture
+
+## System diagram
+
+```mermaid
+flowchart TD
+    GH["Greenhouse API"]
+    LV["Lever API"]
+    WK["Workable API"]
+
+    GH --> EXT
+    LV --> EXT
+    WK --> EXT
+
+    EXT["Spec-driven Python pipeline\npipeline/extractor.py + orchestrator.py"]
+
+    EXT --> SCHEMA["Canonical job schema\nis_qc · is_remote · seniority · tech_stack"]
+
+    SCHEMA --> DB[("Supabase / PostgreSQL\njobs table")]
+
+    DB --> ENRICH["Weekly LLM enrichment\nagents/enricher.py\nClaude Haiku — Sundays"]
+
+    ENRICH --> DB
+
+    DB --> VIEW["active_qc_jobs view\nmerges tech_stack + enriched_tech_stack"]
+
+    VIEW --> FE["Next.js frontend\nJob list + filters"]
+    VIEW --> TRENDS["Tech Stack Radar\n/trends — Server Component, 1h ISR"]
+```
+
+## Why deterministic-first
+
+The pipeline is split into two independent layers:
+
+**Layer 1 — Daily, deterministic (pipeline/)**
+- Fetches all specs in parallel via GitHub Actions cron
+- Runs three passes per record: constants → field mappings → derived fields
+- Applies a non-tech title filter before upsert
+- Writes `tech_stack` from rule-based regex extraction
+- Never calls an LLM; never fails because of a third-party AI service
+
+**Layer 2 — Weekly, probabilistic (agents/)**
+- Runs after Layer 1, on a separate cron (Sundays)
+- Calls Claude Haiku on jobs whose `enriched_prompt_hash` doesn't match the current prompt
+- Writes to `enriched_tech_stack` — a separate column the daily pipeline never touches
+- A billing outage or API error affects only this layer; the daily feed is unaffected
+
+The `active_qc_jobs` Supabase view merges both columns (`tech_stack || enriched_tech_stack`) so the frontend always gets the best available data regardless of which layer ran most recently.
+
+## Key files
+
+| File | Role |
+|---|---|
+| `pipeline/extractor.py` | Generic spec-driven fetch and extraction engine |
+| `pipeline/orchestrator.py` | Runs all specs in parallel, writes to DB |
+| `specs/{ats}/extraction.xml` | Declarative field mappings and derivation rules |
+| `core/canonical_tech_stack.json` | 73 canonical tech names used by both layers |
+| `agents/enricher.py` | LLM enrichment pass |
+| `agents/prompts/tech_extraction.md` | Versioned system prompt — editable without code changes |
+| `storage/jobs_repository.py` | `upsert_jobs()`, `mark_inactive()` |
+| `scripts/migrate_enrichment.sql` | `active_qc_jobs` view definition |

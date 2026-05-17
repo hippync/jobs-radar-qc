@@ -8,6 +8,31 @@
 
 ---
 
+Jobs Radar QC is an open-source, spec-driven job market radar that tracks Quebec tech roles directly from ATS platforms, extracts the technologies companies are hiring for, and visualizes stack demand over time.
+
+---
+
+## Live demo
+
+| | |
+|---|---|
+| App | TODO — add production URL |
+| Tech Stack Radar | TODO — add `/trends` URL |
+| GitHub | [github.com/hippync/jobs-radar-qc](https://github.com/hippync/jobs-radar-qc) |
+
+---
+
+## Current coverage
+
+- 3 ATS platforms: Greenhouse, Lever, Workable
+- 12 Quebec tech companies tracked
+- Daily automated fetch via GitHub Actions
+- Weekly LLM enrichment (Claude Haiku, Sundays)
+- 73 canonical technologies tracked
+- Active job trends at `/trends`
+
+---
+
 ## Why this exists
 
 I'm a software engineering student doing an internship in Quebec. Every week I spent 20–30 minutes manually checking a dozen company career pages to track what the Quebec tech market was actually hiring for — not what LinkedIn says, but what's live on Greenhouse, Lever, and Workable right now. This project automates that completely, and adds a tech-stack radar so I can see which technologies are growing across the market without reading every job posting.
@@ -26,11 +51,15 @@ Jobs Radar QC pulls open roles from major ATS platforms (Greenhouse, Lever, Work
 - A [Tech Stack Radar](/trends) — which technologies appear most across active roles
 - When a job first appeared and how long it's been open
 
+## Why not just use LinkedIn?
+
+LinkedIn is useful but noisy: sponsored posts, stale listings, and aggregated data you can't verify. This project reads from company ATS pages directly — Greenhouse, Lever, and Workable are the sources companies actually manage. If a job is on their ATS, it's real and it's open. That's the source of truth.
+
 ---
 
 ## Screenshots
 
-> **To add screenshots:** run `npm run dev` in `frontend/`, capture the following views, and drop them in `docs/screenshots/`.
+> **To add screenshots:** run `npm run dev` in `frontend/`, capture the following views, and drop them in `docs/screenshots/`. See [`docs/screenshots/README.md`](docs/screenshots/README.md) for guidance.
 
 | Home — job list with filters | Tech Stack Radar |
 |---|---|
@@ -105,6 +134,41 @@ For each source spec, the engine runs three passes then applies a title filter:
 4. **Non-tech filter** — jobs whose title matches a non-tech pattern (paralegal, sales, HR, legal, finance, and French equivalents) are dropped before upsert. They never reach the DB, and `mark_inactive()` deactivates any previously stored ones automatically.
 
 All derivation logic lives in `extraction.xml` — no source-specific Python.
+
+---
+
+## Data quality safeguards
+
+| Safeguard | What it prevents |
+|---|---|
+| HTML stripping before keyword matching | `data-path-to-node` attributes firing on tech names inside HTML |
+| `word_boundary="true"` (`\b` anchors) | `Rust` in `trust`, `Vue` in `Entrevue`, `Java` in `JavaScript` |
+| Lever `description` + `lists[]` concatenation | Technologies in requirements sections being silently dropped |
+| Non-tech title filter at upsert time | Paralegal/sales/HR jobs reaching the DB or consuming LLM tokens |
+| Regression tests from real-world bugs | Extraction fixes not regressing on the inputs that originally caused them |
+| `scripts/debug_extraction.py` | Per-job evidence audit before trusting extraction output |
+
+---
+
+## Debugging extraction
+
+`scripts/debug_extraction.py` fetches a single job URL and prints per-technology evidence — useful for verifying or debugging what the extractor found and why.
+
+```bash
+python scripts/debug_extraction.py https://jobs.lever.co/company/job-id
+```
+
+Example output:
+
+```json
+{
+  "technology": "C++",
+  "source_field": "description_html",
+  "evidence": "Strong C++ expertise and low-level programming skills",
+  "method": "regex",
+  "rule": "C\\+\\+"
+}
+```
 
 ---
 
@@ -236,7 +300,7 @@ The enrichment agent closes that gap with a second pass:
 
 4. **Versioned prompts.** The prompt lives in [`agents/prompts/tech_extraction.md`](agents/prompts/tech_extraction.md) — editable, diffable, no code changes required. Each enriched job stores a hash of the rendered prompt so re-enrichment is triggered automatically when the prompt changes.
 
-4. **Validate before spending.** [`scripts/test_enrichment.py`](scripts/test_enrichment.py) runs the prompt against real or fixture jobs and prints a side-by-side diff of rule-based vs LLM results, with no DB writes, before any production run.
+5. **Validate before spending.** [`scripts/test_enrichment.py`](scripts/test_enrichment.py) runs the prompt against real or fixture jobs and prints a side-by-side diff of rule-based vs LLM results, with no DB writes, before any production run.
 
 ---
 
@@ -247,19 +311,25 @@ git clone https://github.com/hippync/jobs-radar-qc.git
 cd jobs-radar-qc
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
-cp .env.example .env   # add SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY
+cp .env.example .env   # fill in SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, ANTHROPIC_API_KEY
 
 # Run the full pipeline once
 python -m pipeline.orchestrator
 
-# Or test a single source
+# Test a single ATS source
 python -m pipeline.extractor greenhouse
 
-# Dry-run the enrichment agent (no API calls, just counts)
+# Dry-run the enrichment agent (no DB writes, no API calls)
 python -m agents.enricher --dry-run
 
-# Debug extraction for a single job URL (shows snippet, source field, regex used)
+# Validate enrichment prompt against real jobs (no DB writes)
+python scripts/test_enrichment.py
+
+# Debug extraction for a single job URL
 python scripts/debug_extraction.py https://jobs.lever.co/company/job-id
+
+# Run all tests
+pytest
 
 # Run the frontend
 cd frontend && npm install && npm run dev   # → http://localhost:3000
@@ -279,7 +349,7 @@ Open the relevant `specs/{ats}/schema.json` and add an entry to the `companies` 
 { "name": "Your Company", "slug": "your-ats-slug" }
 ```
 
-Verify the slug before adding (examples per ATS):
+Verify the slug before adding:
 
 ```bash
 # Greenhouse
@@ -302,15 +372,29 @@ Copy `specs/_template/` to `specs/your-ats/`, then fill in the three files follo
 
 ---
 
-## Future v2
+## Roadmap
 
-What's intentionally not in v1 — and why:
+**v1 — Market visibility** _(live)_
+- ATS aggregation (Greenhouse, Lever, Workable)
+- Tech stack filters and seniority detection
+- Tech Stack Radar (`/trends`)
+- Weekly LLM enrichment with prompt hash versioning
 
-- **Workday ATS** — no public job list API; requires scraping individual career pages. Technically feasible but the maintenance burden is high (login flows, anti-bot measures, company-specific URL patterns). Biggest gap in Quebec market coverage.
-- **30-day trend deltas on the radar** — the data is accumulating now; the `TODO` comment in `trends/page.tsx` marks exactly where to add `↑/↓` badges once we have 30+ days of history.
-- **Job matching agent** — given a resume or skill profile, rank jobs by fit. The canonical tech stack and seniority fields make this tractable; the missing piece is a user model.
-- **Email / Slack alerts** — "new job matching your stack posted today." Supabase has edge functions and pg_cron; this is a weekend project once a user model exists.
-- **More ATS coverage** — Ashby (growing in Canadian startups), BambooHR. Each is one afternoon of spec writing.
+**v2 — Personal matching** _(planned)_
+- Resume/profile upload and job fit scoring
+- Email/Slack alerts for new matching roles
+- 30-day trend deltas on the radar
+- More ATS coverage: Ashby, BambooHR, Workday
+
+---
+
+## What I learned
+
+- Designing a **spec-driven extraction engine** instead of one-off scrapers — the engine is generic, specs are declarative, and adding a new ATS is three files instead of a week of glue code.
+- **Separating deterministic pipelines from LLM enrichment** — the daily feed always completes; the LLM is an independent second pass that can fail without affecting core data.
+- Using **prompt hash versioning** to make AI outputs reproducible and re-runnable — changing the prompt or canonical tech list automatically invalidates stored results without manual bookkeeping.
+- Debugging **extraction false positives caused by raw HTML attributes** — a single `data-path-to-node` attribute fires on every job from a company using an AI content tool, and the fix is stripping HTML before matching, not patching the regex.
+- Building a **low-JS data product** with Next.js Server Components and ISR — the `/trends` page renders server-side with a 1-hour cache, zero client JS, and each bar links to a pre-filtered job list.
 
 ---
 
