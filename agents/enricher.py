@@ -126,19 +126,21 @@ async def _call_with_retry(
     model: str,
     system_prompt: str,
     user_message: str,
-) -> tuple[list[str], list[str]]:
+) -> tuple[tuple[list[str], list[str]], anthropic.types.Usage]:
     for attempt in range(_MAX_RETRIES):
         try:
             response = await client.messages.create(
                 model=model,
                 max_tokens=512,
-                system=system_prompt,
+                system=[
+                    {"type": "text", "text": system_prompt, "cache_control": {"type": "ephemeral"}}
+                ],
                 messages=[{"role": "user", "content": user_message}],
             )
             block = response.content[0]
             if not isinstance(block, anthropic.types.TextBlock):
                 raise ValueError(f"unexpected content block type: {type(block)}")
-            return parse_llm_response(block.text)
+            return parse_llm_response(block.text), response.usage
         except (anthropic.RateLimitError, anthropic.InternalServerError) as exc:
             if attempt < _MAX_RETRIES - 1:
                 wait = 2 ** (attempt + 1)
@@ -190,6 +192,8 @@ async def main() -> None:
 
     results: list[dict] = []
     errors = 0
+    total_cache_read = 0
+    total_cache_write = 0
 
     async with httpx.AsyncClient(headers={"User-Agent": "jobs-radar-qc/0.1"}) as http:
         for i, job in enumerate(jobs):
@@ -211,11 +215,15 @@ async def main() -> None:
                     raw_desc = strip_html(raw) if raw else ""
 
                 user_message = _build_user_message(job["title"], raw_desc)
-                known, unknown = await _call_with_retry(
+                (known, unknown), usage = await _call_with_retry(
                     ai_client, model, system_prompt, user_message
                 )
+                cache_read = getattr(usage, "cache_read_input_tokens", 0) or 0
+                cache_write = getattr(usage, "cache_creation_input_tokens", 0) or 0
+                total_cache_read += cache_read
+                total_cache_write += cache_write
                 results.append({"id": job["id"], "known": known, "prompt_hash": prompt_hash})
-                log.info("enriched", known=len(known), unknown=len(unknown))
+                log.info("enriched", known=len(known), unknown=len(unknown), cache_read=cache_read)
 
             except Exception as exc:
                 errors += 1
@@ -230,7 +238,12 @@ async def main() -> None:
         len(set(r["known"]) - set(jobs[i].get("tech_stack") or [])) for i, r in enumerate(results)
     )
     logger.info(
-        "enricher_done", enriched=len(results) - errors, errors=errors, new_signals=new_signals
+        "enricher_done",
+        enriched=len(results) - errors,
+        errors=errors,
+        new_signals=new_signals,
+        cache_read_tokens=total_cache_read,
+        cache_write_tokens=total_cache_write,
     )
 
 
