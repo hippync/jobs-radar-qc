@@ -1,4 +1,5 @@
 """Orchestrator — discovers all specs, runs extractors in parallel, writes to DB."""
+
 from __future__ import annotations
 
 import asyncio
@@ -21,9 +22,7 @@ async def _run_source(source: str) -> list[dict]:
 
 async def main() -> None:
     sources = [
-        d.name
-        for d in sorted(SPECS_DIR.iterdir())
-        if d.is_dir() and (d / "schema.json").exists()
+        d.name for d in sorted(SPECS_DIR.iterdir()) if d.is_dir() and (d / "schema.json").exists()
     ]
 
     if not sources:
@@ -61,5 +60,6 @@ async def main() -> None:
 
 if __name__ == "__main__":
     from dotenv import load_dotenv
+
     load_dotenv()
     asyncio.run(main())

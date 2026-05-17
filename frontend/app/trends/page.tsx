@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 
 export const metadata: Metadata = {
@@ -48,9 +49,9 @@ export default async function TrendsPage() {
       <header className="bg-gradient-to-br from-violet-700 to-violet-900">
         <div className="mx-auto max-w-5xl px-4 py-10">
           <nav className="mb-4 text-sm">
-            <a href="/" className="text-violet-300 hover:text-white transition">
+            <Link href="/" className="text-violet-300 hover:text-white transition">
               ← Back to jobs
-            </a>
+            </Link>
           </nav>
           <h1 className="text-3xl font-bold tracking-tight text-white">
             Tech Stack Radar

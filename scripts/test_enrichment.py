@@ -14,19 +14,26 @@ Usage:
   # Write results to DB (Step 1+)
   python -m scripts.test_enrichment --sample 20 --write --confirm
 """
+
 from __future__ import annotations
 
 import argparse
 import json
 import os
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import structlog
 from dotenv import load_dotenv
 
-from agents.prompt_utils import compute_prompt_hash, parse_llm_response, render_system_prompt, strip_html
+from agents.prompt_utils import (
+    compute_prompt_hash,
+    is_non_tech_title,
+    parse_llm_response,
+    render_system_prompt,
+    strip_html,
+)
 
 load_dotenv()
 logger = structlog.get_logger()
@@ -92,7 +99,7 @@ def _write_to_db(results: list[dict], prompt_hash: str) -> None:
     from storage.supabase_client import get_client
 
     client = get_client()
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(UTC).isoformat()
     for r in results:
         client.table("jobs").update(
             {
@@ -106,16 +113,25 @@ def _write_to_db(results: list[dict], prompt_hash: str) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Dry-run tech stack enrichment")
-    parser.add_argument("--sample", type=int, default=10, metavar="N",
-                        help="Number of jobs to process (default: 10)")
-    parser.add_argument("--source", choices=["greenhouse", "lever", "workable"],
-                        help="Filter by ATS source")
-    parser.add_argument("--fixture", metavar="PATH",
-                        help="Load jobs from a local JSON fixture instead of Supabase")
-    parser.add_argument("--write", action="store_true",
-                        help="Write LLM results to DB (requires --confirm)")
-    parser.add_argument("--confirm", action="store_true",
-                        help="Required with --write to confirm production writes")
+    parser.add_argument(
+        "--sample",
+        type=int,
+        default=10,
+        metavar="N",
+        help="Number of jobs to process (default: 10)",
+    )
+    parser.add_argument(
+        "--source", choices=["greenhouse", "lever", "workable"], help="Filter by ATS source"
+    )
+    parser.add_argument(
+        "--fixture", metavar="PATH", help="Load jobs from a local JSON fixture instead of Supabase"
+    )
+    parser.add_argument(
+        "--write", action="store_true", help="Write LLM results to DB (requires --confirm)"
+    )
+    parser.add_argument(
+        "--confirm", action="store_true", help="Required with --write to confirm production writes"
+    )
     args = parser.parse_args()
 
     if args.write and not args.confirm:
@@ -141,14 +157,14 @@ def main() -> None:
     system_prompt = render_system_prompt()
     prompt_hash = compute_prompt_hash()
 
-    print(f"\nEnrichment dry-run")
+    print("\nEnrichment dry-run")
     print(f"  Model       : {model}")
     print(f"  Prompt hash : {prompt_hash}")
     print(f"  Jobs        : {len(jobs)}")
     if args.fixture:
         print(f"  Source      : fixture ({args.fixture})")
     else:
-        print(f"  Source      : Supabase" + (f" (filter: {args.source})" if args.source else ""))
+        print("  Source      : Supabase" + (f" (filter: {args.source})" if args.source else ""))
     print(f"  Mode        : {'WRITE' if args.write else 'dry-run (read-only)'}")
     print()
 
@@ -156,7 +172,8 @@ def main() -> None:
         # ~$0.00025 per job for Haiku (system + ~500 token description)
         estimated_cost = len(jobs) * 0.00025
         answer = input(
-            f"  About to enrich {len(jobs)} jobs. Est. cost: ~${estimated_cost:.2f}. Continue? [y/N] "
+            f"  About to enrich {len(jobs)} jobs."
+            f" Est. cost: ~${estimated_cost:.2f}. Continue? [y/N] "
         )
         if answer.strip().lower() != "y":
             print("Aborted.")
@@ -164,6 +181,7 @@ def main() -> None:
         print()
 
     import anthropic
+
     client = anthropic.Anthropic(api_key=api_key)
 
     results: list[dict] = []
@@ -173,6 +191,13 @@ def main() -> None:
         title = job.get("title", "Unknown")
         company = job.get("company", "Unknown")
         rule_based = job.get("tech_stack") or []
+
+        if is_non_tech_title(title):
+            print(f"[{company}] {title}")
+            print("  skipped    : non-tech title (gate)")
+            print()
+            results.append({"job": job, "known": [], "unknown": []})
+            continue
 
         try:
             known, unknown = _call_claude(client, model, system_prompt, job)
@@ -195,10 +220,7 @@ def main() -> None:
             print(f"  ERROR: {exc}")
             print()
 
-    total_new = sum(
-        len(set(r["known"]) - set(r["job"].get("tech_stack") or []))
-        for r in results
-    )
+    total_new = sum(len(set(r["known"]) - set(r["job"].get("tech_stack") or [])) for r in results)
     print(f"Summary: {len(results)} enriched, {errors} errors, {total_new} new tech signals found.")
 
     if args.write and args.confirm and results:

@@ -8,6 +8,8 @@ Return ONLY technologies from this list:
 
 ## Rules
 
+0. First, determine whether this is a technical role. If the job title clearly belongs to a non-technical function — legal (paralegal, counsel, notary, lawyer, avocat, parajuriste), sales, human resources, recruitment, marketing, finance, accounting, administration — return `{"technologies": []}` immediately without reading the description further.
+
 1. Use the exact canonical name from the list above. Never return aliases:
    - wrong: "ReactJS", "React.js" → correct: "React"
    - wrong: "Golang" → correct: "Go"

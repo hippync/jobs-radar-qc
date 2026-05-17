@@ -2,12 +2,44 @@
 
 Used by scripts/test_enrichment.py (Step 0) and agents/enricher.py (Step 1).
 """
+
 from __future__ import annotations
 
 import hashlib
 import json
 import re
 from pathlib import Path
+
+# Titles that belong to non-technical functions — enrichment is skipped entirely.
+# Covers common English and French patterns seen in Quebec postings.
+_NON_TECH_TITLE_RE = re.compile(
+    r"\b("
+    r"paralegal|parajuriste"
+    r"|legal\s+counsel|conseill(?:er|ère)\s+juridique|avocat(?:e)?"
+    r"|notary|notaire"
+    r"|recruiter|recruteur(?:euse)?|talent\s+acquisition"
+    r"|human\s+resources|ressources?\s+humaines|hr\s+(?:manager|generalist|coordinator|business\s+partner)"
+    r"|marketing\s+(?:coordinator|manager|specialist|analyst|director)"
+    r"|coordonnateur(?:trice)?\s+marketing"
+    r"|sales\s+(?:representative|rep|executive|manager|director|coordinator)"
+    r"|account\s+executive|account\s+manager|représentant(?:e)?\s+(?:des\s+ventes|commercial(?:e)?)"
+    r"|finance\s+(?:manager|analyst|director|coordinator)"
+    r"|accountant|comptable|controller|bookkeeper"
+    r"|administrative\s+(?:assistant|coordinator)|assistant(?:e)?\s+administratif(?:ve)?"
+    r"|receptionist|réceptionniste"
+    r")\b",
+    re.IGNORECASE,
+)
+
+
+def is_non_tech_title(title: str) -> bool:
+    """Return True if the job title clearly belongs to a non-technical function.
+
+    Used as a pre-filter gate before the LLM call to avoid false positives and
+    save API cost on roles like paralegal, sales, HR, marketing, etc.
+    """
+    return bool(_NON_TECH_TITLE_RE.search(title))
+
 
 _PROMPT_PATH = Path(__file__).parent / "prompts" / "tech_extraction.md"
 _CANONICAL_PATH = Path(__file__).parent.parent / "core" / "canonical_tech_stack.json"
