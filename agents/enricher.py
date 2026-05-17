@@ -132,7 +132,9 @@ async def _call_with_retry(
             response = await client.messages.create(
                 model=model,
                 max_tokens=512,
-                system=[{"type": "text", "text": system_prompt, "cache_control": {"type": "ephemeral"}}],
+                system=[
+                    {"type": "text", "text": system_prompt, "cache_control": {"type": "ephemeral"}}
+                ],
                 messages=[{"role": "user", "content": user_message}],
             )
             block = response.content[0]
