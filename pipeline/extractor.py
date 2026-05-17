@@ -182,7 +182,11 @@ class Extractor:
             if not all(raw_job.get(f) for f in required):
                 log.debug("job_skipped_missing_fields", job_id=raw_job.get("id"))
                 continue
-            results.append(self._apply_extraction(raw_job, company))
+            extracted = self._apply_extraction(raw_job, company)
+            if is_non_tech_title(extracted.get("title", "")):
+                log.debug("job_skipped_non_tech_title", title=extracted.get("title"))
+                continue
+            results.append(extracted)
 
         log.info("fetched", count=len(results))
         return results
