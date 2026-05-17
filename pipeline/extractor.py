@@ -13,6 +13,8 @@ import httpx
 import structlog
 from lxml import etree
 
+from agents.prompt_utils import is_non_tech_title
+
 logger = structlog.get_logger()
 
 SPECS_DIR = Path(__file__).parent.parent / "specs"
@@ -254,6 +256,12 @@ class Extractor:
                 result[name] = _apply_match_rules(
                     field.findall("match"), result, default, field_type
                 )
+
+        # Non-tech roles (paralegal, sales, HR…) must never carry tech_stack tags.
+        # Mirrors the same gate in agents/enricher.py to prevent daily fetch from
+        # re-polluting tech_stack after the enricher has cleared enriched_tech_stack.
+        if is_non_tech_title(result.get("title", "")):
+            result["tech_stack"] = []
 
         return result
 
