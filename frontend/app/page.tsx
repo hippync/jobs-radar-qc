@@ -99,8 +99,7 @@ export default async function Page({
             The Quebec tech job market, indexed daily.
           </h1>
           <p className="mt-1.5 max-w-xl text-sm text-zinc-500">
-            Track what Quebec tech companies are hiring for — directly from Greenhouse, Lever,
-            and Workable ATS pages. No aggregators, no sponsored posts.
+            Pulled directly from Greenhouse, Lever, and Workable. Real postings, no aggregators.
           </p>
 
           {/* Stats row */}

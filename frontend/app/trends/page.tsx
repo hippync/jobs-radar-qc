@@ -4,7 +4,7 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 
 export const metadata: Metadata = {
-  title: "Tech Stack Radar — Jobs Radar QC",
+  title: "Tech Stack Radar | Jobs Radar QC",
   description: "Most in-demand technologies across active Québec tech jobs.",
 };
 
@@ -136,8 +136,7 @@ export default async function TrendsPage() {
             {/* Footer note */}
             <div className="border-t border-zinc-100 bg-zinc-50 px-5 py-3">
               <p className="text-xs text-zinc-400">
-                Includes rule-based and LLM-enriched tech stacks. Counts reflect active
-                jobs only — closed postings are excluded.
+                Includes rule-based and LLM-enriched tech stacks. Closed postings are not counted.
               </p>
             </div>
           </div>

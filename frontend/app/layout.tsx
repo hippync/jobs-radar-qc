@@ -14,9 +14,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Jobs Radar QC — The Quebec tech job market, indexed daily.",
+  title: "Jobs Radar QC | The Quebec tech job market, indexed daily.",
   description:
-    "Active tech job postings from Montreal and Quebec companies, tracked directly from Greenhouse, Lever, and Workable. Updated daily.",
+    "Active tech job postings from Montreal and Quebec companies, pulled directly from Greenhouse, Lever, and Workable. Updated daily.",
 };
 
 export default function RootLayout({

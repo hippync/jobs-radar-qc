@@ -1,6 +1,6 @@
 # Jobs Radar QC
 
-> A public ATS aggregator for the Montreal/Quebec tech scene — spec-driven, open-source, no vendor lock-in.
+> A spec-driven, open-source ATS aggregator for the Montreal/Quebec tech scene. No vendor lock-in.
 
 [![Daily fetch](https://github.com/hippync/jobs-radar-qc/actions/workflows/daily_fetch.yml/badge.svg)](https://github.com/hippync/jobs-radar-qc/actions/workflows/daily_fetch.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
@@ -35,13 +35,13 @@ Jobs Radar QC is an open-source, spec-driven job market radar that tracks Quebec
 
 ## Why this exists
 
-I'm a software engineering student doing an internship in Quebec. Every week I spent 20–30 minutes manually checking a dozen company career pages to track what the Quebec tech market was actually hiring for — not what LinkedIn says, but what's live on Greenhouse, Lever, and Workable right now. This project automates that completely, and adds a tech-stack radar so I can see which technologies are growing across the market without reading every job posting.
+I'm a software engineering student doing an internship in Quebec. Every week I spent 20–30 minutes manually checking a dozen company career pages to track what the Quebec tech market was actually hiring for. Not what LinkedIn says — what's live on Greenhouse, Lever, and Workable right now. This project automates that, and adds a tech-stack radar so I can see which technologies are growing without reading every posting.
 
 ---
 
 ## The problem
 
-Tech job hunting in Quebec means checking 50+ company career pages and job boards every day. There's no single place to see what's actively hiring in Python, Go, .NET, or any specific stack across Montreal startups and scale-ups — let alone track which technologies are growing over time.
+Tech job hunting in Quebec means checking 50+ company career pages and job boards every day. There's no single place to see what's actively hiring in Python, Go, .NET, or any specific stack across Montreal startups and scale-ups, let alone track which technologies are growing over time.
 
 ## What this does
 
@@ -53,7 +53,7 @@ Jobs Radar QC pulls open roles from major ATS platforms (Greenhouse, Lever, Work
 
 ## Why not just use LinkedIn?
 
-LinkedIn is useful but noisy: sponsored posts, stale listings, and aggregated data you can't verify. This project reads from company ATS pages directly — Greenhouse, Lever, and Workable are the sources companies actually manage. If a job is on their ATS, it's real and it's open. That's the source of truth.
+LinkedIn is useful but noisy: sponsored posts, stale listings, aggregated data you can't verify. This project reads from company ATS pages directly. Greenhouse, Lever, and Workable are the sources companies actually manage. If a job is on their ATS, it's real and it's open.
 
 ---
 
@@ -390,14 +390,14 @@ Copy `specs/_template/` to `specs/your-ats/`, then fill in the three files follo
 
 ## What I learned
 
-- Designing a **spec-driven extraction engine** instead of one-off scrapers — the engine is generic, specs are declarative, and adding a new ATS is three files instead of a week of glue code.
-- **Separating deterministic pipelines from LLM enrichment** — the daily feed always completes; the LLM is an independent second pass that can fail without affecting core data.
-- Using **prompt hash versioning** to make AI outputs reproducible and re-runnable — changing the prompt or canonical tech list automatically invalidates stored results without manual bookkeeping.
-- Debugging **extraction false positives caused by raw HTML attributes** — a single `data-path-to-node` attribute fires on every job from a company using an AI content tool, and the fix is stripping HTML before matching, not patching the regex.
-- Building a **low-JS data product** with Next.js Server Components and ISR — the `/trends` page renders server-side with a 1-hour cache, zero client JS, and each bar links to a pre-filtered job list.
+- How to design a **spec-driven extraction engine** instead of one-off scrapers. The engine is generic, specs are declarative, and adding a new ATS takes three files instead of a week of glue code.
+- Why **deterministic pipelines and LLM enrichment** should be separate layers. The daily feed always completes; the LLM is an independent pass that can fail without touching core data.
+- How **prompt hash versioning** makes AI outputs reproducible. Changing the prompt or canonical tech list automatically invalidates stored results with no manual bookkeeping.
+- How to debug **extraction false positives from raw HTML attributes**. A single `data-path-to-node` attribute was firing on every job from one company; the fix was stripping HTML before matching, not patching the regex.
+- How to build a **low-JS data product** with Next.js Server Components and ISR. The `/trends` page renders server-side on a 1-hour cache with zero client JS.
 
 ---
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE).
