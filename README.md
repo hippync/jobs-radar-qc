@@ -97,11 +97,12 @@ The Python engine in `pipeline/` is generic and reads any spec. **Adding a new c
 
 ### Extraction pipeline
 
-For each source spec, the engine runs three passes:
+For each source spec, the engine runs three passes then applies a title filter:
 
 1. **Constants** — fixed values stamped on every record (`source = "greenhouse"`)
 2. **Field mappings** — dot-path resolution from the raw API response (`location.name → location`)
 3. **Derived fields** — regex rules and keyword matching to compute `is_qc`, `is_remote`, `seniority`, `employment_type`, and `tech_stack`
+4. **Non-tech filter** — jobs whose title matches a non-tech pattern (paralegal, sales, HR, legal, finance, and French equivalents) are dropped before upsert. They never reach the DB, and `mark_inactive()` deactivates any previously stored ones automatically.
 
 All derivation logic lives in `extraction.xml` — no source-specific Python.
 
@@ -121,7 +122,10 @@ The daily upsert writes every column in the canonical schema. If `enriched_tech_
 **4. Prompt hash versioning for automatic re-enrichment.**
 The rendered system prompt (template + canonical tech list injected) is SHA-256[:8] hashed and stored per job. Change the prompt or add a tech to the canonical list → every job's stored hash becomes stale → the enricher automatically re-processes them on the next run, with no manual bookkeeping. Tradeoff: can trigger an unexpectedly large batch if you change the canonical list carelessly.
 
-**5. CSS-only bar chart on `/trends` — no charting library.**
+**5. Non-tech title filtering at the source, not at the view.**
+Paralegal, sales, HR, legal, finance, and equivalent French-language titles are skipped in `_fetch_company()` before upsert — they are never stored. The alternative (filtering in the `active_qc_jobs` view) would keep noisy data in the DB and duplicate the title logic in SQL. Filtering at source means `mark_inactive()` handles previously stored non-tech jobs automatically on the next daily run, with no manual cleanup. The enricher applies the same check as a secondary guard. Tradeoff: if a title is wrongly classified as non-tech, the job won't appear until the regex is corrected and the next fetch runs.
+
+**6. CSS-only bar chart on `/trends` — no charting library.**
 Horizontal bars are a single `<div>` with `style={{ width: X% }}` via Tailwind. The page is a Next.js Server Component with 1-hour ISR. Zero JS bundle overhead, renders server-side, each bar is a link to a pre-filtered job list. Tradeoff: no animation, no tooltips, no interactivity — intentional for a radar view.
 
 ---
@@ -221,7 +225,9 @@ The enrichment agent closes that gap with a second pass:
 
 2. **LLM where regex can't reach.** Claude Haiku reads the full job description and returns technologies from a [canonical list](core/canonical_tech_stack.json). Technologies outside the list are flagged with `?` for review rather than silently dropped.
 
-3. **Versioned prompts.** The prompt lives in [`agents/prompts/tech_extraction.md`](agents/prompts/tech_extraction.md) — editable, diffable, no code changes required. Each enriched job stores a hash of the rendered prompt so re-enrichment is triggered automatically when the prompt changes.
+3. **Non-tech roles skipped before the LLM call.** The enricher checks `is_non_tech_title()` before calling Claude — the primary gate is in the extractor (jobs never reach the DB), but this secondary check prevents any edge cases from burning API tokens and polluting `enriched_tech_stack`.
+
+4. **Versioned prompts.** The prompt lives in [`agents/prompts/tech_extraction.md`](agents/prompts/tech_extraction.md) — editable, diffable, no code changes required. Each enriched job stores a hash of the rendered prompt so re-enrichment is triggered automatically when the prompt changes.
 
 4. **Validate before spending.** [`scripts/test_enrichment.py`](scripts/test_enrichment.py) runs the prompt against real or fixture jobs and prints a side-by-side diff of rule-based vs LLM results, with no DB writes, before any production run.
 
