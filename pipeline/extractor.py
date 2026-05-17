@@ -1,10 +1,11 @@
 """Generic spec-driven extraction engine."""
+
 from __future__ import annotations
 
 import asyncio
 import json
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -56,17 +57,17 @@ def _coerce(value: Any, field_type: str, *, empty_as_null: bool = False) -> Any:
         return str(value)
     if field_type == "datetime":
         try:
-            return datetime.fromisoformat(str(value)).astimezone(timezone.utc).isoformat()
+            return datetime.fromisoformat(str(value)).astimezone(UTC).isoformat()
         except (ValueError, TypeError):
             return None
     if field_type == "unix_ms":
         try:
-            return datetime.fromtimestamp(int(value) / 1000, tz=timezone.utc).isoformat()
+            return datetime.fromtimestamp(int(value) / 1000, tz=UTC).isoformat()
         except (ValueError, TypeError):
             return None
     if field_type == "date":
         try:
-            return datetime.strptime(str(value).strip(), "%Y-%m-%d").replace(tzinfo=timezone.utc).isoformat()
+            return datetime.strptime(str(value).strip(), "%Y-%m-%d").replace(tzinfo=UTC).isoformat()
         except (ValueError, TypeError):
             return None
     if field_type == "bool":
@@ -131,7 +132,9 @@ class Extractor:
     async def run(self) -> list[dict]:
         """Fetch and extract all jobs for all companies defined in the spec."""
         companies = self.schema["companies"]
-        delay_s = self.schema["endpoint"]["rate_limit"].get("delay_between_companies_ms", 200) / 1000
+        delay_s = (
+            self.schema["endpoint"]["rate_limit"].get("delay_between_companies_ms", 200) / 1000
+        )
 
         async with httpx.AsyncClient(
             headers={"User-Agent": "jobs-radar-qc/0.1"},
@@ -162,9 +165,7 @@ class Extractor:
             return []
 
         if endpoint.get("response_format") == "markdown_table":
-            raw_jobs = self._parse_markdown_table(
-                response.text, endpoint.get("columns", [])
-            )
+            raw_jobs = self._parse_markdown_table(response.text, endpoint.get("columns", []))
         else:
             jobs_path = endpoint.get("jobs_path")
             data = response.json()
@@ -204,7 +205,7 @@ class Extractor:
                 continue
 
             row: dict[str, Any] = {}
-            for col, cell in zip(columns, cells):
+            for col, cell in zip(columns, cells, strict=False):
                 link = re.fullmatch(r"\[([^\]]+)\]\(([^)]+)\)", cell)
                 row[col] = link.group(2) if link else (None if cell == "—" else cell)
 
@@ -213,9 +214,7 @@ class Extractor:
             m = re.search(r"/view/([A-F0-9]+)\.md$", detail_url, re.IGNORECASE)
             if m:
                 row["external_id"] = m.group(1)
-                row["source_url"] = re.sub(
-                    r"/jobs/view/([A-F0-9]+)\.md$", r"/j/\1", detail_url
-                )
+                row["source_url"] = re.sub(r"/jobs/view/([A-F0-9]+)\.md$", r"/j/\1", detail_url)
 
             rows.append(row)
         return rows
@@ -224,7 +223,7 @@ class Extractor:
         result: dict[str, Any] = {
             "company": company["name"],
             "company_slug": company["slug"],
-            "fetched_at": datetime.now(timezone.utc).isoformat(),
+            "fetched_at": datetime.now(UTC).isoformat(),
         }
 
         # 1. Constants — fixed values stamped on every record

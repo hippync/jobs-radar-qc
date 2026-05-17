@@ -1,9 +1,7 @@
 """Tests for agents.prompt_utils.compute_prompt_hash and render_system_prompt."""
-import json
-import shutil
-from pathlib import Path
 
-import pytest
+import json
+from pathlib import Path
 
 from agents.prompt_utils import compute_prompt_hash, render_system_prompt
 
@@ -28,6 +26,7 @@ class TestComputePromptHash:
         tmp_prompt.write_text(modified_prompt)
 
         import agents.prompt_utils as pu
+
         monkeypatch.setattr(pu, "_PROMPT_PATH", tmp_prompt)
 
         assert original != pu.compute_prompt_hash()
@@ -41,6 +40,7 @@ class TestComputePromptHash:
         tmp_canonical.write_text(json.dumps(canonical))
 
         import agents.prompt_utils as pu
+
         monkeypatch.setattr(pu, "_CANONICAL_PATH", tmp_canonical)
 
         assert original != pu.compute_prompt_hash()

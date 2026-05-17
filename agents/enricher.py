@@ -14,20 +14,27 @@ Usage:
   python -m agents.enricher --dry-run    # print counts, no API calls
   python -m agents.enricher --limit 200  # cap at N jobs per run
 """
+
 from __future__ import annotations
 
 import argparse
 import asyncio
 import os
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import anthropic
 import httpx
 import structlog
 from dotenv import load_dotenv
 
-from agents.prompt_utils import compute_prompt_hash, parse_llm_response, render_system_prompt, strip_html
+from agents.prompt_utils import (
+    compute_prompt_hash,
+    is_non_tech_title,
+    parse_llm_response,
+    render_system_prompt,
+    strip_html,
+)
 from storage.supabase_client import get_client
 
 logger = structlog.get_logger()
@@ -59,7 +66,7 @@ def _load_pending(prompt_hash: str, limit: int) -> list[dict]:
 
 def _write_results(results: list[dict]) -> None:
     client = get_client()
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(UTC).isoformat()
     for r in results:
         client.table("jobs").update(
             {
@@ -142,10 +149,12 @@ async def _call_with_retry(
 
 async def main() -> None:
     parser = argparse.ArgumentParser(description="Enrich tech_stack with Claude")
-    parser.add_argument("--dry-run", action="store_true",
-                        help="Print pending count only, no API calls")
-    parser.add_argument("--limit", type=int, default=200, metavar="N",
-                        help="Max jobs per run (default: 200)")
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Print pending count only, no API calls"
+    )
+    parser.add_argument(
+        "--limit", type=int, default=200, metavar="N", help="Max jobs per run (default: 200)"
+    )
     args = parser.parse_args()
 
     api_key = os.getenv("ANTHROPIC_API_KEY")
@@ -156,9 +165,13 @@ async def main() -> None:
     prompt_hash = compute_prompt_hash()
     jobs = _load_pending(prompt_hash, args.limit)
 
-    logger.info("enricher_start",
-                pending=len(jobs), prompt_hash=prompt_hash, model=model,
-                dry_run=args.dry_run)
+    logger.info(
+        "enricher_start",
+        pending=len(jobs),
+        prompt_hash=prompt_hash,
+        model=model,
+        dry_run=args.dry_run,
+    )
 
     if not jobs:
         logger.info("enricher_done", enriched=0, errors=0, new_signals=0)
@@ -179,6 +192,11 @@ async def main() -> None:
                 await asyncio.sleep(_REQUEST_DELAY_S)
 
             log = logger.bind(source=job["source"], company=job["company"], title=job["title"])
+
+            if is_non_tech_title(job["title"]):
+                results.append({"id": job["id"], "known": [], "prompt_hash": prompt_hash})
+                log.info("skipped_non_tech_title")
+                continue
 
             try:
                 if job["source"] == "workable":
@@ -204,11 +222,11 @@ async def main() -> None:
         _write_results(results)
 
     new_signals = sum(
-        len(set(r["known"]) - set(jobs[i].get("tech_stack") or []))
-        for i, r in enumerate(results)
+        len(set(r["known"]) - set(jobs[i].get("tech_stack") or [])) for i, r in enumerate(results)
     )
-    logger.info("enricher_done",
-                enriched=len(results) - errors, errors=errors, new_signals=new_signals)
+    logger.info(
+        "enricher_done", enriched=len(results) - errors, errors=errors, new_signals=new_signals
+    )
 
 
 if __name__ == "__main__":

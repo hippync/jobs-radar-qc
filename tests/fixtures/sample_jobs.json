@@ -154,5 +154,41 @@
     "tech_stack": ["Go", "Kubernetes", "AWS"],
     "source_url": "https://boards.greenhouse.io/appdirect/jobs/1013",
     "description_html": "<p>AppDirect's platform engineering team is looking for an engineer to own core infrastructure.</p><ul><li>Build internal developer platform tooling in Go</li><li>Operate multi-region Kubernetes clusters on AWS EKS</li><li>Implement async workflows with Temporal and RabbitMQ for event-driven architecture</li><li>Maintain PostgreSQL and DynamoDB data stores</li><li>Own our Terraform modules and GitOps pipeline</li></ul>"
+  },
+  {
+    "id": "aaaaaaaa-0014-0014-0014-000000000014",
+    "source": "greenhouse",
+    "company": "Lavery",
+    "company_slug": "lavery",
+    "title": "Paralegal",
+    "location": "Montréal, QC",
+    "is_qc": true,
+    "tech_stack": [],
+    "source_url": "https://boards.greenhouse.io/lavery/jobs/1014",
+    "description_html": "<p>Lavery is seeking a Paralegal to support our corporate and commercial law practice.</p><ul><li>Draft and review corporate documents, REST atements, and regulatory filings</li><li>Maintain the RAG istraire (corporate registry) and ensure compliance with provincial regulations</li><li>Coordinate with clients and REST of the legal team on file management</li><li>Conduct legal research using CanLII and Westlaw databases</li><li>Manage deadlines and REST rictions under the Quebec Civil Code</li></ul><p>Strong written French and English required. Experience with corporate secretarial work is an asset.</p>"
+  },
+  {
+    "id": "aaaaaaaa-0015-0015-0015-000000000015",
+    "source": "lever",
+    "company": "Lightspeed",
+    "company_slug": "lightspeed",
+    "title": "Marketing Coordinator",
+    "location": "Montréal, QC (Hybrid)",
+    "is_qc": true,
+    "tech_stack": [],
+    "source_url": "https://jobs.lever.co/lightspeed/15001",
+    "description_html": "<p>Lightspeed is looking for a Marketing Coordinator to support campaign execution across North America.</p><ul><li>Coordinate email marketing campaigns and manage the editorial calendar</li><li>Track campaign performance using HubSpot and Google Analytics</li><li>Support event logistics for tradeshows and webinars</li><li>Write copy for social media, newsletters, and landing pages</li><li>Collaborate with the creative team on asset production</li></ul><p>2+ years of B2B marketing experience preferred. Excellent written communication skills in English and French.</p>"
+  },
+  {
+    "id": "aaaaaaaa-0016-0016-0016-000000000016",
+    "source": "lever",
+    "company": "Nuvei",
+    "company_slug": "nuvei",
+    "title": "Sales Account Executive",
+    "location": "Montréal, QC",
+    "is_qc": true,
+    "tech_stack": [],
+    "source_url": "https://jobs.lever.co/nuvei/16001",
+    "description_html": "<p>Nuvei is growing its sales team and looking for an Account Executive to drive new business in the fintech space.</p><ul><li>Own the full sales cycle from prospecting to close</li><li>Build relationships with C-suite decision makers at mid-market merchants</li><li>Articulate Nuvei's REST ful payment API value proposition to non-technical buyers</li><li>Forecast pipeline accurately using Salesforce CRM</li><li>Collaborate with solutions engineers during technical discovery calls</li></ul><p>Experience selling payment or SaaS solutions is strongly preferred. OTE $180K–$220K.</p>"
   }
 ]
