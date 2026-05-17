@@ -7,11 +7,14 @@
   - createdAt is Unix milliseconds → use type="unix_ms"
   - workplaceType provides a structured is_remote signal
   - categories.commitment provides employment_type directly
+  - description is the main body; lists[] holds requirement/responsibility sections
+    → concat_array="lists" appends all list content to description_html so that
+      deterministic keyword matching AND LLM enrichment both see the full posting.
 
   _workplace_type and _commitment are intermediate fields — they are
   used by derived rules but ignored by the storage layer.
 -->
-<extraction source="lever" version="1">
+<extraction source="lever" version="2">
 
   <constants>
     <constant name="source"    value="lever" />
@@ -24,8 +27,14 @@
     <field name="source_url"       from="hostedUrl"             type="string"   />
     <field name="location"         from="categories.location"   type="string"   nullable="true" />
     <field name="department"       from="categories.department" type="string"   nullable="true" />
+    <!--
+      concat_array="lists" array_field="content": appends the HTML content of every
+      list section (e.g. "What we're looking for") to the main description body.
+      Without this, technologies mentioned only in requirements lists are missed.
+    -->
     <field name="description_html" from="description"           type="string"   nullable="true"
-           empty_as_null="true" />
+           empty_as_null="true"
+           concat_array="lists" array_field="content" />
     <field name="posted_at"        from="createdAt"             type="unix_ms"  nullable="true" />
 
     <!-- Intermediate fields for derivation — not written to DB -->
@@ -68,13 +77,31 @@
       <match source="title" pattern="(?i)\b(manager|gestionnaire)\b"                       value="manager"    />
     </field>
 
+    <!--
+      tech_stack: collect ALL keyword matches across title and description_html.
+
+      word_boundary="true" is implemented by the extractor: adds \b at word-char
+      positions of each pattern, preventing substring false positives:
+        - Java  → \bJava\b  (no match inside "JavaScript")
+        - Rust  → \bRust\b  (no match inside "trust", "frustrating")
+        - Vue   → \bVue\b   (no match inside "Entrevue" — French for interview)
+        - Scala → \bScala\b (no match inside "scalability")
+
+      HTML is stripped from source fields before matching to prevent false positives
+      from tech names appearing in HTML attributes (e.g. data-path-to-node → Node.js).
+
+      case_sensitive="true" on individual <kw> overrides the element-wide flag for
+      ambiguous short tokens (Go, REST, LLM, RAG, R) to prevent case-folded matches.
+    -->
     <field name="tech_stack" type="list[string]" default="[]" strategy="collect-all">
       <keywords sources="title,description_html" word_boundary="true" case_insensitive="true">
 
+        <!-- Languages -->
         <kw canonical="Python">Python</kw>
         <kw canonical="JavaScript">JavaScript</kw>
         <kw canonical="TypeScript">TypeScript</kw>
-        <kw canonical="Go">Golang</kw>
+        <!-- Go: case_sensitive prevents matching "google", "agora", etc. -->
+        <kw canonical="Go" case_sensitive="true">\b(?:Go|Golang)\b</kw>
         <kw canonical="Rust">Rust</kw>
         <kw canonical="Java">Java</kw>
         <kw canonical="Kotlin">Kotlin</kw>
@@ -86,16 +113,23 @@
         <kw canonical="Swift">Swift</kw>
         <kw canonical="Elixir">Elixir</kw>
         <kw canonical="Erlang">Erlang</kw>
+        <!-- R: explicit \b guards since it is a single letter; case_sensitive avoids
+             matching the letter r in French/English words. -->
+        <kw canonical="R" case_sensitive="true">\bR\b</kw>
 
+        <!-- Frontend / Web -->
         <kw canonical="React">React</kw>
         <kw canonical="Next.js">Next\.js</kw>
         <kw canonical="Vue">Vue(?:\.js)?</kw>
         <kw canonical="Angular">Angular</kw>
         <kw canonical="Svelte">Svelte</kw>
         <kw canonical="Node.js">Node(?:\.js)?</kw>
+        <kw canonical="Express">Express</kw>
         <kw canonical="GraphQL">GraphQL</kw>
-        <kw canonical="REST">REST(?:ful)?</kw>
+        <!-- REST: case_sensitive prevents "rest period", "at rest", etc. -->
+        <kw canonical="REST" case_sensitive="true">REST(?:ful)?</kw>
 
+        <!-- Backend frameworks -->
         <kw canonical="Django">Django</kw>
         <kw canonical="FastAPI">FastAPI</kw>
         <kw canonical="Flask">Flask</kw>
@@ -104,24 +138,38 @@
         <kw canonical="Laravel">Laravel</kw>
         <kw canonical="ASP.NET">ASP\.NET</kw>
         <kw canonical=".NET">\.NET</kw>
+        <kw canonical="gRPC">gRPC</kw>
+        <kw canonical="Celery">Celery</kw>
 
+        <!-- Data / ML / AI -->
         <kw canonical="Spark">(?:Apache )?Spark</kw>
         <kw canonical="Kafka">(?:Apache )?Kafka</kw>
         <kw canonical="Airflow">(?:Apache )?Airflow</kw>
+        <kw canonical="Flink">(?:Apache )?Flink</kw>
         <kw canonical="dbt">dbt</kw>
+        <kw canonical="Pandas">Pandas</kw>
+        <kw canonical="NumPy">NumPy</kw>
         <kw canonical="PyTorch">PyTorch</kw>
         <kw canonical="TensorFlow">TensorFlow</kw>
         <kw canonical="scikit-learn">scikit-learn</kw>
-        <kw canonical="LLM">LLM</kw>
+        <kw canonical="Databricks">Databricks</kw>
+        <kw canonical="RabbitMQ">RabbitMQ</kw>
+        <!-- LLM/RAG: case_sensitive avoids "llm" as a lowercase abbreviation match -->
+        <kw canonical="LLM" case_sensitive="true">LLM</kw>
+        <kw canonical="RAG" case_sensitive="true">RAG</kw>
 
+        <!-- Infrastructure / Cloud -->
         <kw canonical="AWS">AWS</kw>
         <kw canonical="GCP">GCP</kw>
         <kw canonical="Azure">Azure</kw>
         <kw canonical="Kubernetes">Kubernetes</kw>
         <kw canonical="Docker">Docker</kw>
         <kw canonical="Terraform">Terraform</kw>
+        <kw canonical="Ansible">Ansible</kw>
+        <kw canonical="CI/CD">CI/CD</kw>
         <kw canonical="GitHub Actions">GitHub Actions</kw>
 
+        <!-- Databases -->
         <kw canonical="PostgreSQL">Postgres(?:QL)?</kw>
         <kw canonical="MySQL">MySQL</kw>
         <kw canonical="MongoDB">MongoDB</kw>
@@ -129,9 +177,15 @@
         <kw canonical="Elasticsearch">Elasticsearch</kw>
         <kw canonical="Snowflake">Snowflake</kw>
         <kw canonical="BigQuery">BigQuery</kw>
+        <kw canonical="DynamoDB">DynamoDB</kw>
+        <kw canonical="Cassandra">Cassandra</kw>
+        <kw canonical="ClickHouse">ClickHouse</kw>
 
+        <!-- Mobile -->
         <kw canonical="React Native">React Native</kw>
         <kw canonical="Flutter">Flutter</kw>
+        <kw canonical="Android">Android</kw>
+        <kw canonical="iOS">iOS</kw>
 
       </keywords>
     </field>
