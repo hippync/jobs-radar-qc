@@ -24,7 +24,15 @@ Return ONLY technologies from this list:
    - Soft skills or methodologies
    - Company or product names that are not technologies
 
-4. If the description provides no technical signal (or is empty), return {"technologies": []}.
+4. Some terms have non-technical meanings. Only include them when they are clearly used as a technology:
+   - **Go** → only the programming language. Not: "go-to solution", "let's go", "go ahead"
+   - **Python** → only the programming language. Not: "python snake", "Monty Python"
+   - **Java** → only the programming language. Not: "java coffee", "Java island"
+   - **REST** → only the REST architectural style (REST API, RESTful). Not: "rest period", "rest of the time", "take a rest"
+   - **RAG** → only Retrieval-Augmented Generation. Not: "rags", "rag content"
+   - **SAP** → only the ERP software. Not: "life sap", "maple sap"
+
+5. If the description provides no technical signal (or is empty), return {"technologies": []}.
 
 ## Output format
 

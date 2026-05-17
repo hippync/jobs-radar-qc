@@ -112,13 +112,15 @@ def _collect_keywords(kw_element: etree._Element | None, job_data: dict) -> list
     if kw_element is None:
         return []
     sources = [s.strip() for s in kw_element.get("sources", "").split(",")]
-    flags = re.IGNORECASE if kw_element.get("case_insensitive") == "true" else 0
+    global_flags = re.IGNORECASE if kw_element.get("case_insensitive") == "true" else 0
     text = " ".join(str(job_data.get(s) or "") for s in sources)
-    return [
-        kw.get("canonical") or kw.text.strip()
-        for kw in kw_element.findall("kw")
-        if re.search(kw.text.strip(), text, flags)
-    ]
+    results = []
+    for kw in kw_element.findall("kw"):
+        # case_sensitive="true" on a <kw> overrides the element-level case_insensitive flag.
+        flags = 0 if kw.get("case_sensitive") == "true" else global_flags
+        if re.search(kw.text.strip(), text, flags):
+            results.append(kw.get("canonical") or kw.text.strip())
+    return results
 
 
 # ─── Extractor ───────────────────────────────────────────────────────────────
