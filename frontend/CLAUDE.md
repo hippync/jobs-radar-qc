@@ -1,1 +1,1 @@
-@AGENTS.md
+@frontend-ux-next16-agent.md
