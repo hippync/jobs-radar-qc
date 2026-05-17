@@ -92,7 +92,7 @@
         <kw canonical="Python">Python</kw>
         <kw canonical="JavaScript">JavaScript</kw>
         <kw canonical="TypeScript">TypeScript</kw>
-        <kw canonical="Go">(?:Go|Golang)</kw>
+        <kw canonical="Go" case_sensitive="true">(?:Go|Golang)</kw>
         <kw canonical="Rust">Rust</kw>
         <kw canonical="Java">Java</kw>
         <kw canonical="Kotlin">Kotlin</kw>
@@ -104,7 +104,7 @@
         <kw canonical="Swift">Swift</kw>
         <kw canonical="Elixir">Elixir</kw>
         <kw canonical="Erlang">Erlang</kw>
-        <kw canonical="R">\bR\b</kw>
+        <kw canonical="R" case_sensitive="true">\bR\b</kw>
 
         <!-- Frontend / Web -->
         <kw canonical="React">React</kw>
@@ -115,7 +115,7 @@
         <kw canonical="Node.js">Node(?:\.js)?</kw>
         <kw canonical="Express">Express</kw>
         <kw canonical="GraphQL">GraphQL</kw>
-        <kw canonical="REST">REST(?:ful)?</kw>
+        <kw canonical="REST" case_sensitive="true">REST(?:ful)?</kw>
 
         <!-- Backend frameworks -->
         <kw canonical="Django">Django</kw>
@@ -137,8 +137,8 @@
         <kw canonical="PyTorch">PyTorch</kw>
         <kw canonical="TensorFlow">TensorFlow</kw>
         <kw canonical="scikit-learn">scikit-learn</kw>
-        <kw canonical="LLM">LLM</kw>
-        <kw canonical="RAG">RAG</kw>
+        <kw canonical="LLM" case_sensitive="true">LLM</kw>
+        <kw canonical="RAG" case_sensitive="true">RAG</kw>
         <kw canonical="Flink">(?:Apache )?Flink</kw>
 
         <!-- Infrastructure / Cloud -->
