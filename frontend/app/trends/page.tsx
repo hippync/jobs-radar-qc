@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import React from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 
@@ -46,76 +47,95 @@ export default async function TrendsPage() {
 
   return (
     <>
-      <header className="bg-gradient-to-br from-violet-700 to-violet-900">
-        <div className="mx-auto max-w-5xl px-4 py-10">
-          <nav className="mb-4 text-sm">
-            <Link href="/" className="text-violet-300 hover:text-white transition">
-              ← Back to jobs
+      <header className="border-b border-zinc-200 bg-white">
+        <div className="mx-auto max-w-2xl px-4 py-8">
+          <nav className="mb-3">
+            <Link
+              href="/"
+              className="text-sm text-zinc-400 transition-colors hover:text-zinc-950"
+            >
+              ← Jobs
             </Link>
           </nav>
-          <h1 className="text-3xl font-bold tracking-tight text-white">
+          <h1 className="text-2xl font-semibold tracking-tight text-zinc-950">
             Tech Stack Radar
           </h1>
-          <p className="mt-1 text-sm text-violet-200">
-            Most in-demand technologies across {jobCount} active QC tech jobs.
+          <p className="mt-1.5 text-sm text-zinc-500">
+            How many active QC tech roles list each technology. Click a row to filter jobs.
+            Updated daily.
+          </p>
+          <p className="mt-3 text-sm text-zinc-400">
+            <span className="font-medium text-zinc-700">{jobCount}</span> active roles indexed
           </p>
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-2xl px-4 py-10">
+      <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-8">
         {techs.length === 0 ? (
-          <div className="rounded-xl border border-slate-200 bg-white p-12 text-center shadow-sm">
-            <p className="text-slate-500 font-medium">Data accumulating</p>
-            <p className="mt-1 text-sm text-slate-400">
+          <div className="rounded-lg border border-zinc-200 bg-white p-12 text-center">
+            <p className="text-sm font-medium text-zinc-950">Data accumulating</p>
+            <p className="mt-1 text-sm text-zinc-400">
               Check back once the daily pipeline has run a few times.
             </p>
           </div>
         ) : (
-          <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-slate-700">
+          <div className="overflow-hidden rounded-lg border border-zinc-200 bg-white">
+            {/* Table header */}
+            <div className="flex items-center justify-between border-b border-zinc-100 px-5 py-3.5">
+              <h2 className="text-xs font-semibold uppercase tracking-wide text-zinc-400">
                 Top {techs.length} technologies
               </h2>
-              <span className="text-xs text-slate-400">
-                {jobCount} active roles · click to filter
-              </span>
+              <span className="text-xs text-zinc-400">roles · click to filter</span>
             </div>
 
-            <div className="px-6 py-5 space-y-3.5">
+            {/* Rows */}
+            <div className="divide-y divide-zinc-50">
               {techs.map(({ tech, count }, i) => (
-                <a
-                  key={tech}
-                  href={`/?tech=${encodeURIComponent(tech)}`}
-                  className="flex items-center gap-3 group"
-                >
-                  {/* Rank */}
-                  <span className="w-5 shrink-0 text-right text-xs text-slate-300">
-                    {i + 1}
-                  </span>
+                <React.Fragment key={tech}>
+                  {/* Tier break after top 5 */}
+                  {i === 5 && (
+                    <div className="border-t border-zinc-200 bg-zinc-50 px-5 py-1.5">
+                      <span className="text-xs font-medium text-zinc-400">Emerging</span>
+                    </div>
+                  )}
+                  <a
+                    href={`/?tech=${encodeURIComponent(tech)}`}
+                    className="group flex items-center gap-4 px-5 py-3 transition-colors hover:bg-zinc-50"
+                  >
+                    {/* Rank */}
+                    <span className="w-5 shrink-0 text-right text-xs tabular-nums text-zinc-300">
+                      {i + 1}
+                    </span>
 
-                  {/* Tech name */}
-                  <span className="w-28 shrink-0 truncate text-sm font-medium text-slate-700 group-hover:text-violet-600 transition">
-                    {tech}
-                  </span>
+                    {/* Tech name */}
+                    <span className="w-28 shrink-0 truncate text-sm font-medium text-zinc-800 transition-colors group-hover:text-blue-600">
+                      {tech}
+                    </span>
 
-                  {/* Bar */}
-                  <div className="flex-1 overflow-hidden rounded-full bg-slate-100 h-2">
-                    <div
-                      className="h-2 rounded-full bg-violet-400 group-hover:bg-violet-500 transition-colors"
-                      style={{ width: `${(count / maxCount) * 100}%` }}
-                    />
-                  </div>
+                    {/* Bar */}
+                    <div className="flex-1 overflow-hidden rounded-full bg-zinc-100 h-1.5">
+                      <div
+                        className={`h-1.5 rounded-full transition-colors ${
+                          i < 5
+                            ? "bg-blue-500 group-hover:bg-blue-600"
+                            : "bg-blue-300 group-hover:bg-blue-400"
+                        }`}
+                        style={{ width: `${(count / maxCount) * 100}%` }}
+                      />
+                    </div>
 
-                  {/* Count */}
-                  <span className="w-8 shrink-0 text-right text-sm font-semibold text-slate-600">
-                    {count}
-                  </span>
-                </a>
+                    {/* Count */}
+                    <span className="w-8 shrink-0 text-right text-sm tabular-nums text-zinc-500">
+                      {count}
+                    </span>
+                  </a>
+                </React.Fragment>
               ))}
             </div>
 
-            <div className="px-6 py-3 border-t border-slate-100 bg-slate-50">
-              <p className="text-xs text-slate-400">
+            {/* Footer note */}
+            <div className="border-t border-zinc-100 bg-zinc-50 px-5 py-3">
+              <p className="text-xs text-zinc-400">
                 Includes rule-based and LLM-enriched tech stacks. Counts reflect active
                 jobs only — closed postings are excluded.
               </p>
@@ -123,6 +143,20 @@ export default async function TrendsPage() {
           </div>
         )}
       </main>
+
+      <footer className="border-t border-zinc-100 py-6">
+        <p className="text-center text-xs text-zinc-400">
+          Open source ·{" "}
+          <a
+            href="https://github.com/hippync/jobs-radar-qc"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="transition-colors hover:text-blue-500"
+          >
+            github.com/hippync/jobs-radar-qc
+          </a>
+        </p>
+      </footer>
     </>
   );
 }

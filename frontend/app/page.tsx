@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { Job } from "@/lib/types";
 import JobCard from "@/components/JobCard";
@@ -17,7 +18,7 @@ interface SearchParams {
 async function fetchJobs(filters: SearchParams): Promise<{ jobs: Job[]; total: number }> {
   const page = Math.max(1, parseInt(filters.page ?? "1", 10));
   const from = (page - 1) * PAGE_SIZE;
-  const to = from + PAGE_SIZE - 1;
+  const to   = from + PAGE_SIZE - 1;
 
   let query = supabase
     .from("active_qc_jobs")
@@ -38,17 +39,30 @@ async function fetchJobs(filters: SearchParams): Promise<{ jobs: Job[]; total: n
   return { jobs: (data ?? []) as Job[], total: count ?? 0 };
 }
 
-async function fetchFilterOptions(): Promise<{ techOptions: string[]; sourceOptions: string[] }> {
-  const { data } = await supabase.from("active_qc_jobs").select("tech_stack, source");
+async function fetchStats(): Promise<{
+  techOptions: string[];
+  sourceOptions: string[];
+  companyCount: number;
+}> {
+  const { data } = await supabase
+    .from("active_qc_jobs")
+    .select("tech_stack, source, company");
 
-  const techSet = new Set<string>();
-  const sourceSet = new Set<string>();
+  const techSet    = new Set<string>();
+  const sourceSet  = new Set<string>();
+  const companySet = new Set<string>();
+
   for (const row of data ?? []) {
     for (const t of row.tech_stack ?? []) techSet.add(t);
-    if (row.source) sourceSet.add(row.source);
+    if (row.source)  sourceSet.add(row.source);
+    if (row.company) companySet.add(row.company);
   }
 
-  return { techOptions: [...techSet].sort(), sourceOptions: [...sourceSet].sort() };
+  return {
+    techOptions:  [...techSet].sort(),
+    sourceOptions: [...sourceSet].sort(),
+    companyCount: companySet.size,
+  };
 }
 
 export default async function Page({
@@ -57,14 +71,13 @@ export default async function Page({
   searchParams: Promise<SearchParams>;
 }) {
   const filters = await searchParams;
-  const page = Math.max(1, parseInt(filters.page ?? "1", 10));
+  const page    = Math.max(1, parseInt(filters.page ?? "1", 10));
 
-  const [{ jobs, total }, { techOptions, sourceOptions }] = await Promise.all([
-    fetchJobs(filters),
-    fetchFilterOptions(),
-  ]);
+  const [{ jobs, total }, { techOptions, sourceOptions, companyCount }] =
+    await Promise.all([fetchJobs(filters), fetchStats()]);
 
   const totalPages = Math.ceil(total / PAGE_SIZE);
+  const hasFilters = !!(filters.tech || filters.source || filters.remote || filters.seniority);
 
   function pageUrl(p: number) {
     const q = new URLSearchParams();
@@ -77,42 +90,40 @@ export default async function Page({
     return qs ? `?${qs}` : "/";
   }
 
-  const hasFilters = !!(filters.tech || filters.source || filters.remote || filters.seniority);
-
   return (
     <>
-      {/* Hero header */}
-      <header className="bg-gradient-to-br from-violet-700 to-violet-900">
-        <div className="mx-auto max-w-5xl px-4 py-10">
-          <h1 className="text-3xl font-bold tracking-tight text-white">
-            Jobs Radar QC
+      {/* Page header */}
+      <header className="border-b border-zinc-200 bg-white">
+        <div className="mx-auto max-w-5xl px-4 py-8">
+          <h1 className="text-2xl font-semibold tracking-tight text-zinc-950">
+            The Quebec tech job market, indexed daily.
           </h1>
-          <p className="mt-1 text-sm text-violet-200">
-            Active tech jobs in Québec — updated daily from Greenhouse, Lever &amp; Workable.
+          <p className="mt-1.5 max-w-xl text-sm text-zinc-500">
+            Track what Quebec tech companies are hiring for — directly from Greenhouse, Lever,
+            and Workable ATS pages. No aggregators, no sponsored posts.
           </p>
-          <div className="mt-4 flex items-center gap-3">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-400/20 px-3 py-1 text-xs font-semibold text-amber-200 ring-1 ring-amber-300/30">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-              {total} active job{total !== 1 ? "s" : ""}
+
+          {/* Stats row */}
+          <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-zinc-100 pt-4 text-sm text-zinc-500">
+            <span>
+              <span className="font-semibold text-zinc-950">{total}</span>{" "}
+              {hasFilters ? "matching" : "active"} role{total !== 1 ? "s" : ""}
             </span>
-            {hasFilters && (
-              <span className="text-xs text-violet-300">
-                filtered
-              </span>
-            )}
-            <a
-              href="/trends"
-              className="inline-flex items-center gap-1 rounded-full bg-violet-600/40 px-3 py-1 text-xs font-medium text-violet-200 ring-1 ring-violet-400/30 transition hover:bg-violet-600/60 hover:text-white"
-            >
-              Tech Radar →
-            </a>
+            <span>
+              <span className="font-semibold text-zinc-950">{companyCount}</span>{" "}
+              companies tracked
+            </span>
+            <span>
+              <span className="font-semibold text-zinc-950">3</span>{" "}
+              ATS platforms
+            </span>
           </div>
         </div>
       </header>
 
       {/* Sticky filter bar */}
-      <div className="sticky top-0 z-10 border-b border-slate-200 bg-white shadow-sm">
-        <div className="mx-auto max-w-5xl px-4 py-3">
+      <div className="sticky top-0 z-10 border-b border-zinc-200 bg-white/95 backdrop-blur-sm">
+        <div className="mx-auto max-w-5xl px-4 py-2.5">
           <Suspense>
             <JobFilters techOptions={techOptions} sourceOptions={sourceOptions} />
           </Suspense>
@@ -120,20 +131,24 @@ export default async function Page({
       </div>
 
       {/* Main content */}
-      <main className="mx-auto w-full max-w-5xl px-4 py-6">
-        <p className="mb-4 text-sm text-slate-500">
-          <span className="font-semibold text-violet-700">{total}</span>{" "}
-          job{total !== 1 ? "s" : ""}
-          {filters.tech && (
-            <> with <span className="font-medium text-slate-700">{filters.tech}</span></>
-          )}
-          {filters.seniority && (
-            <> · <span className="font-medium text-slate-700">{filters.seniority}</span></>
-          )}
-        </p>
-
+      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6">
         {jobs.length === 0 ? (
-          <p className="py-20 text-center text-slate-400">No jobs match your filters.</p>
+          <div className="flex flex-col items-center py-24 text-center">
+            <p className="text-sm font-medium text-zinc-950">
+              No jobs match these filters.
+            </p>
+            <p className="mt-1 text-sm text-zinc-400">
+              Try clearing filters or check back after the next daily fetch.
+            </p>
+            {hasFilters && (
+              <Link
+                href="/"
+                className="mt-4 rounded-md border border-zinc-200 px-4 py-2 text-sm text-zinc-600 transition-colors hover:border-blue-200 hover:text-blue-600"
+              >
+                Clear filters
+              </Link>
+            )}
+          </div>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {jobs.map((job) => (
@@ -142,40 +157,45 @@ export default async function Page({
           </div>
         )}
 
+        {/* Pagination */}
         {totalPages > 1 && (
           <div className="mt-10 flex items-center justify-center gap-3">
             {page > 1 && (
               <a
                 href={pageUrl(page - 1)}
-                className="rounded-lg border border-slate-200 px-4 py-2 text-sm text-slate-600 transition hover:border-violet-300 hover:text-violet-700"
+                className="rounded-md border border-zinc-200 px-4 py-2 text-sm text-zinc-600 transition-colors hover:border-blue-200 hover:text-blue-600"
               >
                 ← Prev
               </a>
             )}
-            <span className="text-sm text-slate-400">{page} / {totalPages}</span>
+            <span className="text-sm tabular-nums text-zinc-400">
+              {page} / {totalPages}
+            </span>
             {page < totalPages && (
               <a
                 href={pageUrl(page + 1)}
-                className="rounded-lg border border-slate-200 px-4 py-2 text-sm text-slate-600 transition hover:border-violet-300 hover:text-violet-700"
+                className="rounded-md border border-zinc-200 px-4 py-2 text-sm text-zinc-600 transition-colors hover:border-blue-200 hover:text-blue-600"
               >
                 Next →
               </a>
             )}
           </div>
         )}
+      </main>
 
-        <p className="mt-12 text-center text-xs text-slate-300">
+      <footer className="border-t border-zinc-100 py-6">
+        <p className="text-center text-xs text-zinc-400">
           Open source ·{" "}
           <a
             href="https://github.com/hippync/jobs-radar-qc"
             target="_blank"
             rel="noopener noreferrer"
-            className="hover:text-violet-400"
+            className="transition-colors hover:text-blue-500"
           >
             github.com/hippync/jobs-radar-qc
           </a>
         </p>
-      </main>
+      </footer>
     </>
   );
 }
