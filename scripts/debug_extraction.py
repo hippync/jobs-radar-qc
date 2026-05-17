@@ -28,7 +28,12 @@ from lxml import etree
 # Allow running from repo root without installing the package.
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from pipeline.extractor import _resolve_path, _coerce, _strip_html_for_matching, _with_word_boundary
+from pipeline.extractor import (
+    _coerce,
+    _resolve_path,
+    _strip_html_for_matching,
+    _with_word_boundary,
+)
 
 SPECS_DIR = Path(__file__).parent.parent / "specs"
 

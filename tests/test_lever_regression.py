@@ -85,7 +85,7 @@ class TestPlusgradePaymentsEngineer:
     """Bugs 2 & 3: False positives from missing word-boundary and raw-HTML search."""
 
     def test_explicit_stack_present(self, lever: Extractor, plusgrade_raw: dict) -> None:
-        """The tech stack is explicitly listed: Java, Spring, TypeScript, React, AWS, Docker, REST."""
+        """The tech stack is explicitly listed: Java, Spring, TypeScript, React, AWS, Docker, REST."""  # noqa: E501
         result = lever._apply_extraction(plusgrade_raw, _COMPANY_PLUSGRADE)
         stack = set(result["tech_stack"])
         expected = {"Java", "Spring", "TypeScript", "React", "AWS", "Docker", "REST"}
@@ -244,7 +244,10 @@ class TestSpecialCharTechNames:
             "lists": [
                 {
                     "text": "What we're looking for",
-                    "content": "<ul><li>Strong Python expertise</li><li>Experience with PostgreSQL</li></ul>",
+                    "content": (
+                        "<ul><li>Strong Python expertise</li>"
+                        "<li>Experience with PostgreSQL</li></ul>"
+                    ),
                 }
             ],
             "categories": {"location": "Montreal, QC", "commitment": "Full-Time"},
