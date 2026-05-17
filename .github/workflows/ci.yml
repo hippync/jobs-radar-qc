@@ -3,8 +3,6 @@ name: CI
 on:
   pull_request:
     branches: [main]
-  push:
-    branches: [main]
 
 jobs:
   python:
@@ -60,7 +58,7 @@ jobs:
         run: npx tsc --noEmit
 
       - name: Lint (eslint)
-        run: npx next lint
+        run: npx eslint .
 
       - name: Dependency audit
         run: npm audit --audit-level=high
