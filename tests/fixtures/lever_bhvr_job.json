@@ -1,0 +1,35 @@
+{
+  "id": "b4582013-a93f-4b94-adef-1718407eaece",
+  "text": "Senior System Programmer - Unannounced IP | Programmeur·euse système Sénior·e  - Projet non annoncé",
+  "hostedUrl": "https://jobs.lever.co/bhvr/b4582013-a93f-4b94-adef-1718407eaece",
+  "description": "<div>Are you ready to dive into the world of cutting-edge video game development? Headquartered in Montreal, Behaviour Interactive is at the forefront of the gaming industry, crafting unforgettable experiences across PC, console, and mobile platforms. We’re a dynamic, independent studio of over 1200 passionate employees, with studios in Toronto (Behaviour Toronto), Rotterdam (Behaviour Rotterdam) and in the UK (Behaviour UK–North &amp; South). Our day to day revolves around two core business focuses: Services and Original Games. Our Services team collaborates with gaming and entertainment giants like Disney, Sony, Activision, and Nintendo, delivering exceptional work-for-hire development and pioneering immersive location-based entertainment (LBE). Meanwhile, our Original Games unit pushes our creative limits, with our signature IPs, including the iconic <i>Dead by Daylight</i>. Join us and be a part of the future of interactive entertainment!</div><div><br></div><div><i>At Behaviour Interactive, we believe in giving everyone a fair shot. We embrace a diverse and creative environment where everyone is celebrated. We value folks of all ages, sex, ethnicity, colour, ethnic or national origin, religion, sexual orientation, gender identity, civil status, disability, or any other protected characteristics as per applicable law. </i></div><div><br></div>\n<div>Our team is currently looking for an experienced System Programmer to design, implement and refine the game experience we provide to our console users.</div>\n<div>\n<div>As an integral part of the development team, you will be responsible for the implementation and maintenance of features, as well as their optimization and adaptation across platforms.\n<p>Notre équipe est actuellement à la recherche d’un·e Programmeur·euse système expérimenté·e pour concevoir, implémenter et améliorer l’expérience de jeu que nous offrons à nos joueur·euse·s sur consoles.</p>\n</div>\n</div>",
+  "lists": [
+    {
+      "text": "In this role you will: ",
+      "content": "\n<li>Support console development on Xbox and PS5 by owning platform-specific technical challenges, investigating platform bugs, and ensuring stable, consistent gameplay experiences across both platforms.</li>\n<li>Contribute to performance analysis workflows by participating in the performance capture and pipeline process.</li>\n<li>Help maintain multiplayer stability by keeping memory usage under control.</li>\n<li>Improve team efficiency by automating workflows such as version delivery, content checking, and game testing.</li>\n<li>Promote best practices for Unreal Engine internal structures, assisting the team in writing clean, maintainable, and efficient code.</li>\n"
+    },
+    {
+      "text": "What we’re looking for: ",
+      "content": "<div>\n\n<li>A minimum of 7 years of experience in programming in the video game industry.</li>\n<li>Strong C++ expertise and low-level programming skills.</li>\n<li>Familiarity with console development pipelines.</li>\n<li>Strong debugging and problem-solving skills in large-scale multiplayer environments.&nbsp;</li>\n<li>Proven experience with Unreal Engine 5 systems and architecture, tooling pipeline (UAT, BuildGraph).</li>\n<li>Proficiency in performance profiling tools and methodologies.&nbsp;</li>\n\n</div>"
+    },
+    {
+      "text": "Dans ce rôle, vous devrez :",
+      "content": "\n<li>Soutenir le développement console sur Xbox et PS5 en prenant en charge les enjeux techniques spécifiques aux plateformes, en investiguant les bogues et en assurant une expérience de jeu stable et cohérente sur l’ensemble des plateformes;</li>\n<li>Contribuer aux flux de travail d’analyse de performance en participant aux processus de capture des performances et aux pipelines associés;</li>\n<li>Aider à maintenir la stabilité du multijoueur en veillant à une gestion maîtrisée de l’utilisation de la mémoire;</li>\n<li>Améliorer l’efficacité de l’équipe en automatisant des flux de travail tels que la livraison des versions, la validation de contenu et les tests du jeu;</li>\n<li>Promouvoir les meilleures pratiques liées aux structures internes d’Unreal Engine, en accompagnant l’équipe dans l’écriture d’un code propre, maintenable et performant.</li>\n"
+    },
+    {
+      "text": "Ce que nous recherchons : ",
+      "content": "\n<li>Minimum de 7 ans d’expérience en programmation dans l’industrie du jeu vidéo;</li>\n<li>Excellente maîtrise du C++ et solides compétences en programmation bas niveau;</li>\n<li>Bonne connaissance des pipelines de développement console;</li>\n<li>Solides aptitudes en débogage et en résolution de problèmes dans des environnements multijoueur à grande échelle;</li>\n<li>Expérience confirmée avec les systèmes et l’architecture d’Unreal Engine 5, incluant les outils de pipeline (UAT, BuildGraph);</li>\n<li>Maîtrise des outils et méthodologies de profilage de performance.</li>\n"
+    }
+  ],
+  "categories": {
+    "commitment": "Permanent Full-Time | Permanent temps-plein",
+    "department": "Production | Production",
+    "location": "Montreal, QC",
+    "team": "Programming | Programmation",
+    "allLocations": [
+      "Montreal, QC"
+    ]
+  },
+  "workplaceType": "hybrid",
+  "createdAt": 1775742865517
+}

@@ -109,18 +109,58 @@ def _apply_match_rules(
     return default
 
 
+def _strip_html_for_matching(text: str) -> str:
+    """Strip HTML tags and collapse whitespace before keyword matching.
+
+    Prevents false positives from tech names appearing inside HTML attributes
+    (e.g. data-path-to-node triggering Node.js, class="java-btn" triggering Java).
+    """
+    text = re.sub(r"<[^>]+>", " ", text)
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def _with_word_boundary(pattern: str) -> str:
+    """Prepend/append \\b where the pattern starts/ends with a word character.
+
+    Skips positions already guarded by an explicit \\b in the pattern string.
+    Handles special-char tech names correctly:
+      - Java  → \\bJava\\b  (prevents matching inside "JavaScript")
+      - C\\+\\+ → \\bC\\+\\+  (suffix omitted: + is non-word, boundary there is implicit)
+      - \\.NET → \\.NET\\b  (prefix omitted: starts with \\, not a word char)
+      - \\bR\\b → unchanged  (already fully guarded)
+    """
+    if not pattern:
+        return pattern
+    prefix = (
+        r"\b"
+        if not pattern.startswith(r"\b") and re.match(r"[A-Za-z0-9_]", pattern[0])
+        else ""
+    )
+    suffix = (
+        r"\b"
+        if not pattern.endswith(r"\b") and re.match(r"[A-Za-z0-9_]", pattern[-1])
+        else ""
+    )
+    return f"{prefix}{pattern}{suffix}"
+
+
 def _collect_keywords(kw_element: etree._Element | None, job_data: dict) -> list[str]:
     """Collect all keyword matches from the specified source fields."""
     if kw_element is None:
         return []
     sources = [s.strip() for s in kw_element.get("sources", "").split(",")]
     global_flags = re.IGNORECASE if kw_element.get("case_insensitive") == "true" else 0
-    text = " ".join(str(job_data.get(s) or "") for s in sources)
+    word_boundary = kw_element.get("word_boundary") == "true"
+    # Strip HTML tags before searching to avoid false positives from attributes.
+    text = " ".join(_strip_html_for_matching(str(job_data.get(s) or "")) for s in sources)
     results = []
     for kw in kw_element.findall("kw"):
         # case_sensitive="true" on a <kw> overrides the element-level case_insensitive flag.
         flags = 0 if kw.get("case_sensitive") == "true" else global_flags
-        if re.search(kw.text.strip(), text, flags):
+        pattern = kw.text.strip()
+        if word_boundary:
+            pattern = _with_word_boundary(pattern)
+        if re.search(pattern, text, flags):
             results.append(kw.get("canonical") or kw.text.strip())
     return results
 
@@ -242,11 +282,30 @@ class Extractor:
 
         # 2. Direct field mappings from the raw API response
         for field in self.extraction.findall("fields/field"):
-            result[field.get("name")] = _coerce(
-                _resolve_path(raw_job, field.get("from")),
-                field.get("type", "string"),
-                empty_as_null=field.get("empty_as_null") == "true",
-            )
+            raw_value = _resolve_path(raw_job, field.get("from"))
+            field_type = field.get("type", "string")
+            empty_as_null = field.get("empty_as_null") == "true"
+
+            # Optional: concatenate sub-field from an array to the base value.
+            # Used by Lever to append list sections (requirements, responsibilities)
+            # to description_html so both deterministic extraction and LLM enrichment
+            # see the full posting text.
+            # XML: <field ... concat_array="lists" array_field="content" />
+            concat_array = field.get("concat_array")
+            if concat_array:
+                array_data = _resolve_path(raw_job, concat_array)
+                sub_key = field.get("array_field", "content")
+                if isinstance(array_data, list):
+                    extra = " ".join(
+                        item.get(sub_key, "")
+                        for item in array_data
+                        if isinstance(item, dict) and item.get(sub_key)
+                    )
+                    base = str(raw_value) if raw_value is not None else ""
+                    combined = f"{base} {extra}".strip()
+                    raw_value = combined or None
+
+            result[field.get("name")] = _coerce(raw_value, field_type, empty_as_null=empty_as_null)
 
         # 3. Derived fields — computed from already-mapped values in result
         for field in self.extraction.findall("derived/field"):
