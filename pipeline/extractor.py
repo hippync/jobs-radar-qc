@@ -13,6 +13,8 @@ import httpx
 import structlog
 from lxml import etree
 
+from agents.prompt_utils import is_non_tech_title
+
 logger = structlog.get_logger()
 
 SPECS_DIR = Path(__file__).parent.parent / "specs"
@@ -180,7 +182,11 @@ class Extractor:
             if not all(raw_job.get(f) for f in required):
                 log.debug("job_skipped_missing_fields", job_id=raw_job.get("id"))
                 continue
-            results.append(self._apply_extraction(raw_job, company))
+            extracted = self._apply_extraction(raw_job, company)
+            if is_non_tech_title(extracted.get("title", "")):
+                log.debug("job_skipped_non_tech_title", title=extracted.get("title"))
+                continue
+            results.append(extracted)
 
         log.info("fetched", count=len(results))
         return results
@@ -254,6 +260,12 @@ class Extractor:
                 result[name] = _apply_match_rules(
                     field.findall("match"), result, default, field_type
                 )
+
+        # Non-tech roles (paralegal, sales, HR…) must never carry tech_stack tags.
+        # Mirrors the same gate in agents/enricher.py to prevent daily fetch from
+        # re-polluting tech_stack after the enricher has cleared enriched_tech_stack.
+        if is_non_tech_title(result.get("title", "")):
+            result["tech_stack"] = []
 
         return result
 
