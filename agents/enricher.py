@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+from typing import cast
 import os
 import re
 from datetime import UTC, datetime
@@ -61,7 +62,7 @@ def _load_pending(prompt_hash: str, limit: int) -> list[dict]:
         .limit(limit)
         .execute()
     )
-    return list(response.data or [])
+    return cast(list[dict], response.data or [])
 
 
 def _write_results(results: list[dict]) -> None:
