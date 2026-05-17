@@ -61,7 +61,7 @@ def _load_pending(prompt_hash: str, limit: int) -> list[dict]:
         .limit(limit)
         .execute()
     )
-    return response.data or []
+    return list(response.data or [])
 
 
 def _write_results(results: list[dict]) -> None:
@@ -134,7 +134,10 @@ async def _call_with_retry(
                 system=system_prompt,
                 messages=[{"role": "user", "content": user_message}],
             )
-            return parse_llm_response(response.content[0].text)
+            block = response.content[0]
+            if not isinstance(block, anthropic.types.TextBlock):
+                raise ValueError(f"unexpected content block type: {type(block)}")
+            return parse_llm_response(block.text)
         except (anthropic.RateLimitError, anthropic.InternalServerError) as exc:
             if attempt < _MAX_RETRIES - 1:
                 wait = 2 ** (attempt + 1)
@@ -142,6 +145,7 @@ async def _call_with_retry(
                 await asyncio.sleep(wait)
             else:
                 raise
+    raise RuntimeError("unreachable")
 
 
 # ─── Main ────────────────────────────────────────────────────────────────────
