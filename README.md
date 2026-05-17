@@ -100,8 +100,8 @@ The Python engine in `pipeline/` is generic and reads any spec. **Adding a new c
 For each source spec, the engine runs three passes then applies a title filter:
 
 1. **Constants** — fixed values stamped on every record (`source = "greenhouse"`)
-2. **Field mappings** — dot-path resolution from the raw API response (`location.name → location`)
-3. **Derived fields** — regex rules and keyword matching to compute `is_qc`, `is_remote`, `seniority`, `employment_type`, and `tech_stack`
+2. **Field mappings** — dot-path resolution from the raw API response (`location.name → location`). Lever's `lists[]` field (requirement and responsibility sections) is concatenated into `description_html` via `concat_array="lists"` so that technologies mentioned only there are not silently dropped.
+3. **Derived fields** — regex rules and keyword matching to compute `is_qc`, `is_remote`, `seniority`, `employment_type`, and `tech_stack`. Before keyword matching, HTML tags are stripped to prevent tech names in attributes (e.g. `data-path-to-node`) from producing false positives. `word_boundary="true"` on `<keywords>` adds `\b` anchors at word-character positions of each pattern, preventing substring matches (`Rust` inside `trust`, `Vue` inside `Entrevue`, `Java` inside `JavaScript`).
 4. **Non-tech filter** — jobs whose title matches a non-tech pattern (paralegal, sales, HR, legal, finance, and French equivalents) are dropped before upsert. They never reach the DB, and `mark_inactive()` deactivates any previously stored ones automatically.
 
 All derivation logic lives in `extraction.xml` — no source-specific Python.
@@ -122,10 +122,13 @@ The daily upsert writes every column in the canonical schema. If `enriched_tech_
 **4. Prompt hash versioning for automatic re-enrichment.**
 The rendered system prompt (template + canonical tech list injected) is SHA-256[:8] hashed and stored per job. Change the prompt or add a tech to the canonical list → every job's stored hash becomes stale → the enricher automatically re-processes them on the next run, with no manual bookkeeping. Tradeoff: can trigger an unexpectedly large batch if you change the canonical list carelessly.
 
-**5. Non-tech title filtering at the source, not at the view.**
+**5. Deterministic extraction accuracy: HTML stripping, word boundaries, and full field coverage.**
+Keyword matching runs on plain text, not raw HTML — source descriptions can contain AI-generated attributes (e.g. Plusgrade's `data-path-to-node` on every paragraph) that would otherwise trigger false positives. `word_boundary="true"` in the spec is enforced in code with `\b` anchors at word-character positions, preventing short tokens from matching as substrings (`Rust` inside `trust`, `Vue` inside `Entrevue`, `Java` inside `JavaScript`). For Lever, the `description` body and `lists[]` array are both concatenated into `description_html` before storage and matching — technologies mentioned only in the requirements section are not silently dropped. All three mechanisms are spec-driven with no source-specific Python. Tradeoff: tests must use real API fixtures to catch API-structure changes that the spec doesn't handle.
+
+**6. Non-tech title filtering at the source, not at the view.**
 Paralegal, sales, HR, legal, finance, and equivalent French-language titles are skipped in `_fetch_company()` before upsert — they are never stored. The alternative (filtering in the `active_qc_jobs` view) would keep noisy data in the DB and duplicate the title logic in SQL. Filtering at source means `mark_inactive()` handles previously stored non-tech jobs automatically on the next daily run, with no manual cleanup. The enricher applies the same check as a secondary guard. Tradeoff: if a title is wrongly classified as non-tech, the job won't appear until the regex is corrected and the next fetch runs.
 
-**6. CSS-only bar chart on `/trends` — no charting library.**
+**7. CSS-only bar chart on `/trends` — no charting library.**
 Horizontal bars are a single `<div>` with `style={{ width: X% }}` via Tailwind. The page is a Next.js Server Component with 1-hour ISR. Zero JS bundle overhead, renders server-side, each bar is a link to a pre-filtered job list. Tradeoff: no animation, no tooltips, no interactivity — intentional for a radar view.
 
 ---
@@ -183,11 +186,15 @@ scripts/
   migrate.sql               # Initial DB schema + indexes + RLS
   migrate_enrichment.sql    # Enrichment columns + active_qc_jobs view
   test_enrichment.py        # Dry-run: compare rule-based vs LLM, no DB writes
+  debug_extraction.py       # Per-technology debug output for a single job URL
 
 tests/
-  fixtures/                 # Sample jobs + Claude responses for offline tests
+  fixtures/                 # Sample jobs + real Lever API responses for offline tests
   test_enrichment_parsing.py
+  test_extractor_tech_gate.py
+  test_lever_regression.py  # Regression tests for extraction accuracy (BHVR, Plusgrade)
   test_prompt_hash.py
+  test_tech_gate.py
 
 frontend/                   # Next.js 16 — App Router
   app/
@@ -250,6 +257,9 @@ python -m pipeline.extractor greenhouse
 
 # Dry-run the enrichment agent (no API calls, just counts)
 python -m agents.enricher --dry-run
+
+# Debug extraction for a single job URL (shows snippet, source field, regex used)
+python scripts/debug_extraction.py https://jobs.lever.co/company/job-id
 
 # Run the frontend
 cd frontend && npm install && npm run dev   # → http://localhost:3000
