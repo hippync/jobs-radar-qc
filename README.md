@@ -12,6 +12,10 @@
 
 Jobs Radar QC is an open-source, spec-driven job market radar that tracks Quebec tech roles directly from ATS platforms, extracts the technologies companies are hiring for, and visualizes stack demand over time.
 
+| 12 companies tracked | 73 canonical technologies | ~2M tokens/week | ~41% prompt cache hit rate |
+|---|---|---|---|
+| across 3 ATS platforms | in extraction stack | LLM enrichment volume | ~$2/week saved vs baseline |
+
 ---
 
 ## Live demo
@@ -32,6 +36,7 @@ Jobs Radar QC is an open-source, spec-driven job market radar that tracks Quebec
 - Weekly LLM enrichment (Claude Haiku, Sundays)
 - 73 canonical technologies tracked
 - Active job trends at `/trends`
+- ~41% prompt cache hit rate — ~$2/week saved vs uncached baseline (observed in production)
 
 ---
 
