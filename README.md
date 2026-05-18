@@ -65,6 +65,10 @@ LinkedIn is useful but noisy: sponsored posts, stale listings, aggregated data y
 |---|---|
 | ![Job list](docs/screenshots/home.png) | ![Trends](docs/screenshots/trends.png) |
 
+| Daily fetch (GitHub Actions) | Weekly enrichment (GitHub Actions) |
+|---|---|
+| ![daily_fetch](docs/screenshots/daily_fetch.png) | ![weekly_enrich](docs/screenshots/weekly_enrich.png) |
+
 ---
 
 ## Architecture
@@ -160,15 +164,7 @@ python scripts/debug_extraction.py https://jobs.lever.co/company/job-id
 
 Example output:
 
-```json
-{
-  "technology": "C++",
-  "source_field": "description_html",
-  "evidence": "Strong C++ expertise and low-level programming skills",
-  "method": "regex",
-  "rule": "C\\+\\+"
-}
-```
+![debug_extraction demo](docs/screenshots/debug_extraction.svg)
 
 ---
 
