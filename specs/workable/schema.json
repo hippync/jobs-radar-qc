@@ -16,8 +16,15 @@
     }
   },
   "companies": [
-    { "name": "Tecsys",  "slug": "tecsys"  },
-    { "name": "Nuvei",   "slug": "nuvei"   }
+    { "name": "Tecsys",                      "slug": "tecsys"       },
+    { "name": "Nuvei",                       "slug": "nuvei"        },
+    { "name": "VIA Science",                 "slug": "via-science"  },
+    { "name": "XTM International",           "slug": "xtm"          },
+    { "name": "GHGSat",                      "slug": "ghgsat"       },
+    { "name": "SOGECLAIR Digital Engineering","slug": "sogeclair"    },
+    { "name": "Mila",                        "slug": "mila"         },
+    { "name": "Genetec",                     "slug": "genetec"      },
+    { "name": "GlobalVision",                "slug": "globalvision" }
   ],
   "validation": {
     "required_fields": ["external_id", "title", "source_url"],
