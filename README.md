@@ -11,7 +11,7 @@
 
 Jobs Radar QC is an open-source, spec-driven job market radar that tracks Quebec tech roles directly from ATS platforms, extracts the technologies companies are hiring for, and visualizes stack demand over time.
 
-| 22 companies tracked | 73 canonical technologies | ~2M tokens/week | ~41% prompt cache hit rate |
+| 29 companies tracked | 73 canonical technologies | ~2M tokens/week | ~41% prompt cache hit rate |
 |---|---|---|---|
 | across 3 ATS platforms | in extraction stack | LLM enrichment volume | ~$2/week saved vs baseline |
 
@@ -30,7 +30,7 @@ Jobs Radar QC is an open-source, spec-driven job market radar that tracks Quebec
 ## Current coverage
 
 - 3 ATS platforms: Greenhouse, Lever, Workable
-- 22 Quebec tech companies tracked
+- 29 Quebec tech companies tracked
 - Daily automated fetch via GitHub Actions
 - Weekly LLM enrichment (Claude Haiku, Sundays)
 - 73 canonical technologies tracked
@@ -237,7 +237,7 @@ specs/
     source.md
     schema.json
     extraction.xml
-  workable/                 # Tecsys, Nuvei
+  workable/                 # 9 QC companies (Tecsys, Nuvei, VIA Science, XTM International, GHGSat, SOGECLAIR Digital Engineering, Mila, Genetec, GlobalVision)
     source.md
     schema.json
     extraction.xml
@@ -276,7 +276,7 @@ frontend/                   # Next.js 16 — App Router
 |---|---|
 | Greenhouse spec | ✅ Live — 14 QC companies |
 | Lever spec | ✅ Live — 6 QC companies |
-| Workable spec | ✅ Live — 2 QC companies |
+| Workable spec | ✅ Live — 9 QC companies |
 | Extraction pipeline | ✅ Live |
 | Supabase storage | ✅ Live |
 | Daily cron (GitHub Actions) | ✅ Live |
