@@ -66,8 +66,6 @@ LinkedIn is useful but noisy: sponsored posts, stale listings, aggregated data y
 
 ## Screenshots
 
-> **To add screenshots:** run `npm run dev` in `frontend/`, capture the following views, and drop them in `docs/screenshots/`. See [`docs/screenshots/README.md`](docs/screenshots/README.md) for guidance.
-
 | Home — job list with filters | Tech Stack Radar |
 |---|---|
 | ![Job list](docs/screenshots/home.png) | ![Trends](docs/screenshots/trends.png) |
@@ -92,47 +90,47 @@ specs/greenhouse/
 The Python engine in `pipeline/` is generic and reads any spec. **Adding a new company means editing one JSON file. Adding a new ATS means writing three small files.**
 
 ```
-┌──────────────────────────────────────────────────────────┐
-│                  GitHub Actions (crons)                  │
-│                                                          │
-│   daily_fetch.yml ─── pipeline/orchestrator.py           │
-│   weekly_enrich.yml ── agents/enricher.py (Sundays)      │
-└──────────────────────────────────────────────────────────┘
-                            │  daily fetch
-                pipeline/orchestrator.py
-                (runs all specs in parallel)
-                            │
-                ┌───────────┼───────────┐
-                ▼           ▼           ▼
-              Greenhouse  Lever     Workable  …
-              (extractor)(extractor)(extractor)
-                │           │           │
-                └───────────┴───────────┘
-                            │
-                  Canonical Job schema
-                  (is_qc, is_remote,
-                  seniority, tech_stack …)
-                            │
-                            ▼
-                  Supabase / PostgreSQL
-                  (upsert + mark_inactive)
-                            │
-                            │  weekly enrichment pass
-                            ▼
-                  agents/enricher.py
-                  WHERE enriched_prompt_hash != current
-                            │  Claude Haiku
-                            ▼
-                  enriched_tech_stack[]
-                  (LLM-extracted, versioned by prompt hash)
-                            │
-                            ▼
-                  active_qc_jobs view
-                  (merges tech_stack || enriched_tech_stack)
-                            │
-                            ▼
-                  Next.js frontend
-                  (job list + filters + /trends radar)
+                                        ┌──────────────────────────────────────────────────────────┐
+                                        │                  GitHub Actions (crons)                  │
+                                        │                                                          │
+                                        │   daily_fetch.yml ─── pipeline/orchestrator.py           │
+                                        │   weekly_enrich.yml ── agents/enricher.py (Sundays)      │
+                                        └──────────────────────────────────────────────────────────┘
+                                                                    │  daily fetch
+                                                        pipeline/orchestrator.py
+                                                        (runs all specs in parallel)
+                                                                    │
+                                                        ┌───────────┼───────────┐
+                                                        ▼           ▼           ▼
+                                                      Greenhouse  Lever     Workable  …
+                                                      (extractor)(extractor)(extractor)
+                                                        │           │           │
+                                                        └───────────┴───────────┘
+                                                                    │
+                                                          Canonical Job schema
+                                                          (is_qc, is_remote,
+                                                          seniority, tech_stack …)
+                                                                    │
+                                                                    ▼
+                                                          Supabase / PostgreSQL
+                                                          (upsert + mark_inactive)
+                                                                    │
+                                                                    │  weekly enrichment pass
+                                                                    ▼
+                                                          agents/enricher.py
+                                                          WHERE enriched_prompt_hash != current
+                                                                    │  Claude Haiku
+                                                                    ▼
+                                                          enriched_tech_stack[]
+                                                          (LLM-extracted, versioned by prompt hash)
+                                                                    │
+                                                                    ▼
+                                                          active_qc_jobs view
+                                                          (merges tech_stack || enriched_tech_stack)
+                                                                    │
+                                                                    ▼
+                                                          Next.js frontend
+                                                          (job list + filters + /trends radar)
 ```
 
 ### Extraction pipeline
