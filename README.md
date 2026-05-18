@@ -48,7 +48,7 @@ Tech job hunting in Quebec means checking 50+ company career pages and job board
 Jobs Radar QC pulls open roles from major ATS platforms (Greenhouse, Lever, Workable), deduplicates them, normalizes the data into a unified schema, and surfaces:
 
 - What's hiring in Montreal/Quebec right now, filterable by tech stack, seniority, and remote
-- A [Tech Stack Radar](/trends) — which technologies appear most across active roles
+- A [Tech Stack Radar](docs/tech-stack-radar.md) — which technologies appear most across active roles
 - When a job first appeared and how long it's been open
 
 ## Why not just use LinkedIn?
