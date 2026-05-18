@@ -16,8 +16,8 @@ Jobs Radar QC is an open-source, spec-driven job market radar that tracks Quebec
 
 | | |
 |---|---|
-| App | TODO — add production URL |
-| Tech Stack Radar | TODO — add `/trends` URL |
+| App | [Jobs Radar QC](https://jobs-radar-qc.vercel.app) |
+| Tech Stack Radar | [jobs-radar-qc/trends](https://jobs-radar-qc.vercel.app/trends) |
 | GitHub | [github.com/hippync/jobs-radar-qc](https://github.com/hippync/jobs-radar-qc) |
 
 ---
