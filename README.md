@@ -11,7 +11,7 @@
 
 Jobs Radar QC is an open-source, spec-driven job market radar that tracks Quebec tech roles directly from ATS platforms, extracts the technologies companies are hiring for, and visualizes stack demand over time.
 
-| 29 companies tracked | 73 canonical technologies | ~2M tokens/week | ~41% prompt cache hit rate |
+| 37 companies tracked | 73 canonical technologies | ~2M tokens/week | ~41% prompt cache hit rate |
 |---|---|---|---|
 | across 3 ATS platforms | in extraction stack | LLM enrichment volume | ~$2/week saved vs baseline |
 
@@ -30,7 +30,7 @@ Jobs Radar QC is an open-source, spec-driven job market radar that tracks Quebec
 ## Current coverage
 
 - 3 ATS platforms: Greenhouse, Lever, Workable
-- 29 Quebec tech companies tracked
+- 37 Quebec tech companies tracked
 - Daily automated fetch via GitHub Actions
 - Weekly LLM enrichment (Claude Haiku, Sundays)
 - 73 canonical technologies tracked
@@ -233,7 +233,7 @@ specs/
     source.md               # API docs, rate limits, known quirks
     schema.json             # Endpoint config + company list
     extraction.xml          # Field mappings + derivation rules
-  lever/                    # Plusgrade, Mirego, Osedea, Spiria, Behaviour Interactive, Wattpad
+  lever/                    # 14 QC companies (Plusgrade, Mirego, Osedea, Spiria, Behaviour Interactive, Wattpad, Kogniz, Xsolla, Mistral AI, Spreedly, Telesat, Swapcard, Kabam, TrackTik)
     source.md
     schema.json
     extraction.xml
@@ -275,7 +275,7 @@ frontend/                   # Next.js 16 — App Router
 | Component | Status |
 |---|---|
 | Greenhouse spec | ✅ Live — 14 QC companies |
-| Lever spec | ✅ Live — 6 QC companies |
+| Lever spec | ✅ Live — 14 QC companies |
 | Workable spec | ✅ Live — 9 QC companies |
 | Extraction pipeline | ✅ Live |
 | Supabase storage | ✅ Live |

@@ -46,7 +46,7 @@
 
     <field name="is_qc" type="bool" default="false">
       <match source="location"
-             pattern="(?i)(montr[eé]al|qu[eé]bec city|laval|longueuil|brossard|sherbrooke|gatineau|\bqc\b)"
+             pattern="(?i)(montr[eé]al|qu[eé]bec|laval|longueuil|brossard|sherbrooke|gatineau|\bqc\b)"
              value="true" />
     </field>
 

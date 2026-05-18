@@ -20,7 +20,15 @@
     { "name": "Osedea",                 "slug": "osedea"    },
     { "name": "Spiria",                 "slug": "spiria"    },
     { "name": "Behaviour Interactive",  "slug": "bhvr"      },
-    { "name": "Wattpad",                "slug": "wattpad"   }
+    { "name": "Wattpad",                "slug": "wattpad"   },
+    { "name": "Kogniz",                 "slug": "kogniz"    },
+    { "name": "Xsolla",                 "slug": "xsolla"    },
+    { "name": "Mistral AI",             "slug": "mistral"   },
+    { "name": "Spreedly",               "slug": "spreedly"  },
+    { "name": "Telesat",                "slug": "telesat"   },
+    { "name": "Swapcard",               "slug": "swapcard"  },
+    { "name": "Kabam",                  "slug": "kabam"     },
+    { "name": "TrackTik",               "slug": "tracktik"  }
   ],
   "validation": {
     "required_fields": ["id", "text", "hostedUrl"],
