@@ -4,7 +4,6 @@
 
 [![Daily fetch](https://github.com/hippync/jobs-radar-qc/actions/workflows/daily_fetch.yml/badge.svg)](https://github.com/hippync/jobs-radar-qc/actions/workflows/daily_fetch.yml)
 [![Weekly enrich](https://github.com/hippync/jobs-radar-qc/actions/workflows/weekly_enrich.yml/badge.svg)](https://github.com/hippync/jobs-radar-qc/actions/workflows/weekly_enrich.yml)
-[![CI](https://github.com/hippync/jobs-radar-qc/actions/workflows/ci.yml/badge.svg)](https://github.com/hippync/jobs-radar-qc/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/)
 
