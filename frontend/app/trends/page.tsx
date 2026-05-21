@@ -271,6 +271,7 @@ function RadarChart({
       {/* Bubbles */}
       {placed.map(({ tech, x, y, size, isTop5, labelSide }) => (
         <g key={tech.name}>
+          <title>{tech.name} — {tech.count} roles (rank #{tech.rank})</title>
           <a href={`/?tech=${encodeURIComponent(tech.name)}`}>
             <circle
               cx={x} cy={y} r={size}
@@ -278,9 +279,7 @@ function RadarChart({
               stroke="var(--rule)"
               strokeWidth="1"
               style={{ cursor: "pointer" }}
-            >
-              <title>{tech.name} — {tech.count} roles (rank #{tech.rank})</title>
-            </circle>
+            />
             {/* Inline labels for top-5 only; others use tooltip via <title> */}
             {isTop5 && (
               <>
