@@ -1,29 +1,34 @@
-const SOURCE_STYLE: Record<string, { label: string; cls: string }> = {
-  greenhouse: {
-    label: "Greenhouse",
-    cls: "bg-emerald-50 text-emerald-700 ring-emerald-200",
-  },
-  lever: {
-    label: "Lever",
-    cls: "bg-blue-50 text-blue-700 ring-blue-200",
-  },
-  workable: {
-    label: "Workable",
-    cls: "bg-orange-50 text-orange-700 ring-orange-200",
-  },
+const SOURCE: Record<string, { label: string; short: string }> = {
+  greenhouse: { label: "Greenhouse", short: "GH" },
+  lever:      { label: "Lever",      short: "LV" },
+  workable:   { label: "Workable",   short: "WK" },
 };
 
 export default function SourceBadge({ source }: { source: string }) {
-  const style = SOURCE_STYLE[source] ?? {
-    label: source,
-    cls: "bg-zinc-100 text-zinc-600 ring-zinc-200",
-  };
+  const s = SOURCE[source];
+  if (!s) {
+    return (
+      <span
+        className="inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium"
+        style={{ background: "var(--bg-2)", color: "var(--ink-soft)", border: "1px solid var(--rule-soft)", fontFamily: "var(--font-mono)" }}
+      >
+        {source}
+      </span>
+    );
+  }
+
+  const bg = `var(--${source.slice(0, 2)}-bg)`;
+  const fg = `var(--${source.slice(0, 2)}-fg)`;
 
   return (
     <span
-      className={`inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium ring-1 ${style.cls}`}
+      className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-semibold"
+      style={{ background: bg, color: fg, borderRadius: 3, fontFamily: "var(--font-mono)" }}
+      aria-label={s.label}
+      title={s.label}
     >
-      {style.label}
+      <span aria-hidden>{s.short}·</span>
+      {s.label}
     </span>
   );
 }

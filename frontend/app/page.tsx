@@ -3,7 +3,10 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { Job } from "@/lib/types";
 import JobCard from "@/components/JobCard";
-import JobFilters from "@/components/JobFilters";
+import KpiStrip from "@/components/KpiStrip";
+import FilterSidebar from "@/components/FilterSidebar";
+import ActiveFilterChips from "@/components/ActiveFilterChips";
+import MobileFilterDrawer from "@/components/MobileFilterDrawer";
 
 const PAGE_SIZE = 30;
 
@@ -13,6 +16,17 @@ interface SearchParams {
   remote?: string;
   seniority?: string;
   page?: string;
+}
+
+interface Stats {
+  techOptions: string[];
+  sourceOptions: string[];
+  companyCount: number;
+  newTodayCount: number;
+  remotePercent: number;
+  sourceCounts: Record<string, number>;
+  seniorityCounts: Record<string, number>;
+  workplaceCounts: Record<string, number>;
 }
 
 async function fetchJobs(filters: SearchParams): Promise<{ jobs: Job[]; total: number }> {
@@ -39,29 +53,52 @@ async function fetchJobs(filters: SearchParams): Promise<{ jobs: Job[]; total: n
   return { jobs: (data ?? []) as Job[], total: count ?? 0 };
 }
 
-async function fetchStats(): Promise<{
-  techOptions: string[];
-  sourceOptions: string[];
-  companyCount: number;
-}> {
+async function fetchStats(): Promise<Stats> {
   const { data } = await supabase
     .from("active_qc_jobs")
-    .select("tech_stack, source, company");
+    .select("tech_stack, source, company, is_remote, seniority, first_seen_at");
 
-  const techSet    = new Set<string>();
-  const sourceSet  = new Set<string>();
-  const companySet = new Set<string>();
+  const techSet       = new Set<string>();
+  const sourceSet     = new Set<string>();
+  const companySet    = new Set<string>();
+  const sourceCounts: Record<string, number>    = {};
+  const seniorityCounts: Record<string, number> = {};
+  const workplaceCounts: Record<string, number> = {};
+
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  let newTodayCount = 0;
+  let remoteOrHybrid = 0;
 
   for (const row of data ?? []) {
     for (const t of row.tech_stack ?? []) techSet.add(t);
     if (row.source)  sourceSet.add(row.source);
     if (row.company) companySet.add(row.company);
+
+    // Counts per filter value
+    if (row.source) sourceCounts[row.source] = (sourceCounts[row.source] ?? 0) + 1;
+    if (row.seniority) seniorityCounts[row.seniority] = (seniorityCounts[row.seniority] ?? 0) + 1;
+    const rk = row.is_remote === true ? "true" : row.is_remote === false ? "false" : "null";
+    workplaceCounts[rk] = (workplaceCounts[rk] ?? 0) + 1;
+
+    // New today
+    if (row.first_seen_at && new Date(row.first_seen_at) >= todayStart) newTodayCount++;
+
+    // Remote or hybrid (is_remote = true | null)
+    if (row.is_remote !== false) remoteOrHybrid++;
   }
 
+  const total = data?.length ?? 0;
+
   return {
-    techOptions:  [...techSet].sort(),
-    sourceOptions: [...sourceSet].sort(),
-    companyCount: companySet.size,
+    techOptions:    [...techSet].sort(),
+    sourceOptions:  [...sourceSet].sort(),
+    companyCount:   companySet.size,
+    newTodayCount,
+    remotePercent:  total > 0 ? Math.round((remoteOrHybrid / total) * 100) : 0,
+    sourceCounts,
+    seniorityCounts,
+    workplaceCounts,
   };
 }
 
@@ -73,17 +110,20 @@ export default async function Page({
   const filters = await searchParams;
   const page    = Math.max(1, parseInt(filters.page ?? "1", 10));
 
-  const [{ jobs, total }, { techOptions, sourceOptions, companyCount }] =
-    await Promise.all([fetchJobs(filters), fetchStats()]);
+  const [{ jobs, total }, stats] = await Promise.all([
+    fetchJobs(filters),
+    fetchStats(),
+  ]);
 
   const totalPages = Math.ceil(total / PAGE_SIZE);
   const hasFilters = !!(filters.tech || filters.source || filters.remote || filters.seniority);
+  const activeFilterCount = [filters.tech, filters.source, filters.remote, filters.seniority].filter(Boolean).length;
 
   function pageUrl(p: number) {
     const q = new URLSearchParams();
-    if (filters.tech)      q.set("tech", filters.tech);
-    if (filters.source)    q.set("source", filters.source);
-    if (filters.remote)    q.set("remote", filters.remote);
+    if (filters.tech)      q.set("tech",      filters.tech);
+    if (filters.source)    q.set("source",    filters.source);
+    if (filters.remote)    q.set("remote",    filters.remote);
     if (filters.seniority) q.set("seniority", filters.seniority);
     if (p > 1) q.set("page", String(p));
     const qs = q.toString();
@@ -91,65 +131,131 @@ export default async function Page({
   }
 
   return (
-    <>
-      {/* Page header */}
-      <header className="border-b border-zinc-200 bg-white">
-        <div className="mx-auto max-w-5xl px-4 py-8">
-          <h1 className="text-2xl font-semibold tracking-tight text-zinc-950">
-            The Quebec tech job market, indexed daily.
-          </h1>
-          <p className="mt-1.5 max-w-xl text-sm text-zinc-500">
-            Pulled directly from Greenhouse, Lever, and Workable. Real postings, no aggregators.
+    <div className="mx-auto flex w-full max-w-7xl flex-1 px-4 py-6">
+      {/* ── Desktop sidebar ───────────────────────────────────────────── */}
+      <aside
+        className="hidden w-56 shrink-0 pr-6 lg:block"
+        aria-label="Filter panel"
+      >
+        {/* Sidebar header */}
+        <div className="mb-4">
+          <p
+            className="text-xs font-semibold uppercase tracking-widest"
+            style={{ color: "var(--ink-mute)", fontFamily: "var(--font-mono)", fontSize: 10 }}
+          >
+            Filters
           </p>
-
-          {/* Stats row */}
-          <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-zinc-100 pt-4 text-sm text-zinc-500">
-            <span>
-              <span className="font-semibold text-zinc-950">{total}</span>{" "}
-              {hasFilters ? "matching" : "active"} role{total !== 1 ? "s" : ""}
-            </span>
-            <span>
-              <span className="font-semibold text-zinc-950">{companyCount}</span>{" "}
-              companies tracked
-            </span>
-            <span>
-              <span className="font-semibold text-zinc-950">3</span>{" "}
-              ATS platforms
-            </span>
-          </div>
         </div>
-      </header>
 
-      {/* Sticky filter bar */}
-      <div className="sticky top-0 z-10 border-b border-zinc-200 bg-white/95 backdrop-blur-sm">
-        <div className="mx-auto max-w-5xl px-4 py-2.5">
+        <Suspense>
+          <FilterSidebar
+            techOptions={stats.techOptions}
+            sourceOptions={stats.sourceOptions}
+            sourceCounts={stats.sourceCounts}
+            seniorityCounts={stats.seniorityCounts}
+            workplaceCounts={stats.workplaceCounts}
+          />
+        </Suspense>
+
+        {/* Save-as-alert CTA */}
+        <div
+          className="mt-6 rounded-md px-3 py-3 text-xs"
+          style={{
+            border: "1.5px dashed var(--accent)",
+            color: "var(--accent)",
+            background: "var(--accent-12)",
+          }}
+        >
+          <p className="font-semibold" style={{ fontSize: 11 }}>★ Save as alert</p>
+          <p className="mt-0.5" style={{ color: "var(--ink-soft)", fontSize: 10 }}>
+            Get email notifications when new roles match this search.
+          </p>
+        </div>
+      </aside>
+
+      {/* ── Main content ──────────────────────────────────────────────── */}
+      <div className="min-w-0 flex-1">
+        {/* KPI strip */}
+        <div className="mb-5">
+          <KpiStrip
+            activeRoles={stats.companyCount > 0 ? total : 0}
+            newToday={stats.newTodayCount}
+            companies={stats.companyCount}
+            remotePercent={stats.remotePercent}
+            hasFilters={hasFilters}
+          />
+        </div>
+
+        {/* Mobile: search row + filter drawer trigger */}
+        <div className="mb-3 flex items-center gap-2 lg:hidden">
           <Suspense>
-            <JobFilters techOptions={techOptions} sourceOptions={sourceOptions} />
+            <MobileFilterDrawer
+              techOptions={stats.techOptions}
+              sourceOptions={stats.sourceOptions}
+              sourceCounts={stats.sourceCounts}
+              seniorityCounts={stats.seniorityCounts}
+              workplaceCounts={stats.workplaceCounts}
+              activeFilterCount={activeFilterCount}
+            />
           </Suspense>
-        </div>
-      </div>
 
-      {/* Main content */}
-      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6">
+          <span
+            className="text-xs tabular"
+            style={{ color: "var(--ink-mute)", fontFamily: "var(--font-mono)", fontSize: 11 }}
+          >
+            {total} role{total !== 1 ? "s" : ""}
+          </span>
+        </div>
+
+        {/* Active filter chips */}
+        {hasFilters && (
+          <div className="mb-3">
+            <Suspense>
+              <ActiveFilterChips />
+            </Suspense>
+          </div>
+        )}
+
+        {/* Results header */}
+        <div className="mb-3 flex items-baseline gap-2">
+          <h1
+            className="text-sm font-semibold"
+            style={{ color: "var(--ink)", fontSize: 13 }}
+          >
+            {hasFilters ? `${total} matching role${total !== 1 ? "s" : ""}` : `${total} active role${total !== 1 ? "s" : ""}`}
+          </h1>
+          <span
+            className="text-xs"
+            style={{ color: "var(--ink-mute)", fontFamily: "var(--font-mono)", fontSize: 10 }}
+          >
+            · {stats.companyCount} companies · updated daily
+          </span>
+        </div>
+
+        {/* Jobs grid or empty state */}
         {jobs.length === 0 ? (
-          <div className="flex flex-col items-center py-24 text-center">
-            <p className="text-sm font-medium text-zinc-950">
+          <div className="flex flex-col items-center py-20 text-center">
+            <p className="text-sm font-medium" style={{ color: "var(--ink)" }}>
               No jobs match these filters.
             </p>
-            <p className="mt-1 text-sm text-zinc-400">
+            <p className="mt-1 text-sm" style={{ color: "var(--ink-mute)" }}>
               Try clearing filters or check back after the next daily fetch.
             </p>
             {hasFilters && (
               <Link
                 href="/"
-                className="mt-4 rounded-md border border-zinc-200 px-4 py-2 text-sm text-zinc-600 transition-colors hover:border-blue-200 hover:text-blue-600"
+                className="mt-4 rounded-md px-4 py-2 text-sm transition-colors"
+                style={{
+                  border: "1px solid var(--rule-soft)",
+                  color: "var(--ink-soft)",
+                }}
               >
                 Clear filters
               </Link>
             )}
           </div>
         ) : (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2">
             {jobs.map((job) => (
               <JobCard key={job.id} job={job} />
             ))}
@@ -159,42 +265,57 @@ export default async function Page({
         {/* Pagination */}
         {totalPages > 1 && (
           <div className="mt-10 flex items-center justify-center gap-3">
-            {page > 1 && (
+            {page > 1 ? (
               <a
                 href={pageUrl(page - 1)}
-                className="rounded-md border border-zinc-200 px-4 py-2 text-sm text-zinc-600 transition-colors hover:border-blue-200 hover:text-blue-600"
+                className="rounded-md px-4 py-2 text-sm transition-colors"
+                style={{
+                  border: "1px solid var(--rule-soft)",
+                  color: "var(--ink-soft)",
+                }}
               >
                 ← Prev
               </a>
+            ) : (
+              <span
+                className="rounded-md px-4 py-2 text-sm"
+                style={{ border: "1px solid transparent", color: "var(--ink-mute)" }}
+                aria-hidden
+              >
+                ← Prev
+              </span>
             )}
-            <span className="text-sm tabular-nums text-zinc-400">
+
+            <span
+              className="text-sm tabular"
+              style={{ color: "var(--ink-mute)", fontFamily: "var(--font-mono)", fontSize: 12 }}
+            >
               {page} / {totalPages}
             </span>
-            {page < totalPages && (
+
+            {page < totalPages ? (
               <a
                 href={pageUrl(page + 1)}
-                className="rounded-md border border-zinc-200 px-4 py-2 text-sm text-zinc-600 transition-colors hover:border-blue-200 hover:text-blue-600"
+                className="rounded-md px-4 py-2 text-sm transition-colors"
+                style={{
+                  border: "1px solid var(--rule-soft)",
+                  color: "var(--ink-soft)",
+                }}
               >
                 Next →
               </a>
+            ) : (
+              <span
+                className="rounded-md px-4 py-2 text-sm"
+                style={{ border: "1px solid transparent", color: "var(--ink-mute)" }}
+                aria-hidden
+              >
+                Next →
+              </span>
             )}
           </div>
         )}
-      </main>
-
-      <footer className="border-t border-zinc-100 py-6">
-        <p className="text-center text-xs text-zinc-400">
-          Open source ·{" "}
-          <a
-            href="https://github.com/hippync/jobs-radar-qc"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="transition-colors hover:text-blue-500"
-          >
-            github.com/hippync/jobs-radar-qc
-          </a>
-        </p>
-      </footer>
-    </>
+      </div>
+    </div>
   );
 }
