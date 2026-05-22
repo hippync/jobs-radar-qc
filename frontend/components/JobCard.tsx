@@ -1,4 +1,5 @@
 import { Job } from "@/lib/types";
+import SaveButton from "./SaveButton";
 import SourceBadge from "./SourceBadge";
 
 const SENIORITY_LABEL: Record<string, string> = {
@@ -112,6 +113,18 @@ export default function JobCard({ job }: { job: Job }) {
               {ageText}
             </div>
           )}
+
+          {/* ── Save to /saved (Watching column) ── */}
+          <SaveButton
+            id={job.id}
+            company={job.company}
+            title={job.title}
+            source={job.source}
+            source_url={job.source_url}
+            location={job.location}
+            first_seen_at={job.first_seen_at}
+            tech_stack={job.tech_stack}
+          />
         </div>
 
         {/* ── Title ── */}
