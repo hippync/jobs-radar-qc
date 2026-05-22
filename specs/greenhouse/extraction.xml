@@ -92,7 +92,7 @@
         <kw canonical="Python">Python</kw>
         <kw canonical="JavaScript">JavaScript</kw>
         <kw canonical="TypeScript">TypeScript</kw>
-        <kw canonical="Go" case_sensitive="true">(?:Go|Golang)</kw>
+        <kw canonical="Go" case_sensitive="true">\b(?:Go|Golang)\b</kw>
         <kw canonical="Rust">Rust</kw>
         <kw canonical="Java">Java</kw>
         <kw canonical="Kotlin">Kotlin</kw>

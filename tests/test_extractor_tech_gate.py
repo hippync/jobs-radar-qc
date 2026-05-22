@@ -91,3 +91,50 @@ class TestFetchCompanyNonTechSkip:
             if not is_non_tech_title(t)
         ]
         assert results == []
+
+
+# ─── Keyword boundary regressions (Greenhouse) ──────────────────────────────
+
+
+class TestKeywordBoundaryGreenhouse:
+    """Regression tests for word-boundary false positives in Greenhouse extraction.
+
+    Bug: (?:Go|Golang) lacked \b anchors, so the Go keyword matched the substring
+    "Go" inside "Google", "Golang" inside unrelated mentions, etc.
+    Root cause: _with_word_boundary inspected pattern[0] which is '(' for a
+    non-capturing group, so no \b was prepended or appended.
+    """
+
+    def test_go_not_matched_inside_google(self, extractor: Extractor) -> None:
+        """Go must not fire when only Google is mentioned (no actual Go usage)."""
+        raw = _raw_job(
+            "Gestionnaire des Médias de Performance",
+            "Plateformes telles que Google, Meta, Amazon, TikTok.",
+        )
+        result = extractor._apply_extraction(raw, _COMPANY)
+        assert "Go" not in result["tech_stack"], (
+            "Go is a false positive: it matched 'Go' inside 'Google'. "
+            "Word-boundary enforcement must prevent this."
+        )
+
+    def test_go_detected_when_explicitly_named(self, extractor: Extractor) -> None:
+        """Go must still be extracted when the posting genuinely uses Go."""
+        raw = _raw_job(
+            "Backend Developer",
+            "We build microservices in Go and deploy with Docker.",
+        )
+        result = extractor._apply_extraction(raw, _COMPANY)
+        assert "Go" in result["tech_stack"], (
+            "Go must be detected when it appears as a standalone word."
+        )
+
+    def test_golang_detected_as_go_canonical(self, extractor: Extractor) -> None:
+        """'Golang' in the description should map to the canonical 'Go' entry."""
+        raw = _raw_job(
+            "Backend Developer",
+            "Our stack is Golang and PostgreSQL.",
+        )
+        result = extractor._apply_extraction(raw, _COMPANY)
+        assert "Go" in result["tech_stack"], (
+            "Golang must map to canonical 'Go'."
+        )
