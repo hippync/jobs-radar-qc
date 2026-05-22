@@ -97,12 +97,16 @@ class TestFetchCompanyNonTechSkip:
 
 
 class TestKeywordBoundaryGreenhouse:
-    """Regression tests for word-boundary false positives in Greenhouse extraction.
+    """Regression tests for word-boundary and HTML-entity false positives.
 
-    Bug: (?:Go|Golang) lacked \b anchors, so the Go keyword matched the substring
-    "Go" inside "Google", "Golang" inside unrelated mentions, etc.
-    Root cause: _with_word_boundary inspected pattern[0] which is '(' for a
+    Bug A: (?:Go|Golang) lacked \b anchors — Go matched inside "Google".
+    Root cause: _with_word_boundary checked pattern[0] which is '(' for a
     non-capturing group, so no \b was prepended or appended.
+
+    Bug B: Greenhouse entity-encodes its HTML (&lt;span data-is-last-node&gt;).
+    _strip_html_for_matching only stripped real angle-bracket tags, so encoded
+    attributes survived into the search text. Combined with a missing suffix \\b
+    on Node(?:\\.js)?, the word "node" in data-is-last-node triggered Node.js.
     """
 
     def test_go_not_matched_inside_google(self, extractor: Extractor) -> None:
@@ -138,3 +142,33 @@ class TestKeywordBoundaryGreenhouse:
         assert "Go" in result["tech_stack"], (
             "Golang must map to canonical 'Go'."
         )
+
+    def test_nodejs_not_matched_in_entity_encoded_html_attribute(
+        self, extractor: Extractor
+    ) -> None:
+        """Bug B: entity-encoded Greenhouse HTML must not trigger Node.js via data-is-last-node.
+
+        The Greenhouse API returns markup like:
+            &lt;span data-is-last-node=""&gt;
+        _strip_html_for_matching must decode entities before stripping, otherwise
+        the attribute string survives and \\bNode(?:\\.js)? matches 'node' at the end
+        of 'data-is-last-node'.
+        """
+        raw = _raw_job(
+            "Gestionnaire des Médias de Performance",
+            "&lt;span data-is-last-node=&quot;&quot;&gt;Plateformes Google, Meta.&lt;/span&gt;",
+        )
+        result = extractor._apply_extraction(raw, _COMPANY)
+        assert "Node.js" not in result["tech_stack"], (
+            "Node.js is a false positive: 'node' in data-is-last-node inside "
+            "entity-encoded HTML must be stripped before matching."
+        )
+
+    def test_nodejs_detected_when_explicitly_named(self, extractor: Extractor) -> None:
+        """Node.js must still be extracted when genuinely present after entity decoding."""
+        raw = _raw_job(
+            "Backend Developer",
+            "Our services run on Node.js and are deployed with Docker.",
+        )
+        result = extractor._apply_extraction(raw, _COMPANY)
+        assert "Node.js" in result["tech_stack"]
