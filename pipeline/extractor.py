@@ -124,21 +124,31 @@ def _with_word_boundary(pattern: str) -> str:
 
     Skips positions already guarded by an explicit \\b in the pattern string.
     Handles special-char tech names correctly:
-      - Java  → \\bJava\\b  (prevents matching inside "JavaScript")
-      - C\\+\\+ → \\bC\\+\\+  (suffix omitted: + is non-word, boundary there is implicit)
-      - \\.NET → \\.NET\\b  (prefix omitted: starts with \\, not a word char)
-      - \\bR\\b → unchanged  (already fully guarded)
+      - Java          → \\bJava\\b        (prevents matching inside "JavaScript")
+      - C\\+\\+       → \\bC\\+\\+        (suffix omitted: + is non-word, boundary implicit)
+      - \\.NET        → \\.NET\\b         (prefix omitted: starts with \\, not a word char)
+      - \\bR\\b       → unchanged          (already fully guarded)
+      - (?:Go|Golang) → \\b(?:Go|Golang)\\b (peeks inside leading (?:, trailing ))
     """
     if not pattern:
         return pattern
+    # For patterns that start with a non-capturing group (?:...), peek at the
+    # first character inside the group rather than the literal '(' character.
+    effective_first = (
+        pattern[3] if pattern.startswith(r"(?:") and len(pattern) > 3 else pattern[0]
+    )
     prefix = (
         r"\b"
-        if not pattern.startswith(r"\b") and re.match(r"[A-Za-z0-9_]", pattern[0])
+        if not pattern.startswith(r"\b") and re.match(r"[A-Za-z0-9_]", effective_first)
         else ""
     )
+    # For patterns that end with a quantified closing paren — e.g. (?:ful)? or
+    # (?:\.js)? — find the last word character inside the group rather than ')'.
+    trailing = re.search(r"([A-Za-z0-9_])\)[?*+]?(?:\{[^}]*\})?$", pattern)
+    effective_last = trailing.group(1) if trailing else pattern[-1]
     suffix = (
         r"\b"
-        if not pattern.endswith(r"\b") and re.match(r"[A-Za-z0-9_]", pattern[-1])
+        if not pattern.endswith(r"\b") and re.match(r"[A-Za-z0-9_]", effective_last)
         else ""
     )
     return f"{prefix}{pattern}{suffix}"
