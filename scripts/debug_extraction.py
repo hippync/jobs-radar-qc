@@ -23,7 +23,6 @@ import json
 import re
 import sys
 from pathlib import Path
-from typing import Any
 
 import httpx
 from lxml import etree
@@ -49,7 +48,8 @@ def _detect_ats(url: str) -> tuple[str, str, str]:
     """Return (source, slug, job_id) inferred from the job URL."""
     patterns = [
         ("lever", r"(?:jobs\.lever\.co|api\.lever\.co/v0/postings)/([^/]+)/([^/?]+)"),
-        ("greenhouse", r"(?:job-boards(?:\.eu)?\.greenhouse\.io|boards-api\.greenhouse\.io/v1/boards)/([^/]+)/jobs/([^/?]+)"),
+        ("greenhouse", r"(?:job-boards(?:\.eu)?\.greenhouse\.io"
+                       r"|boards-api\.greenhouse\.io/v1/boards)/([^/]+)/jobs/([^/?]+)"),
         ("workable", r"apply\.workable\.com/([^/]+)/j/([^/?]+)"),
     ]
     for source, pat in patterns:
@@ -85,7 +85,9 @@ def _fetch_workable(slug: str, job_id: str) -> dict:
     schema = json.loads((SPECS_DIR / "workable" / "schema.json").read_text())
     endpoint = schema["endpoint"]
     url = endpoint["url_template"].format(company_slug=slug)
-    resp = httpx.get(url, headers=_HEADERS, params=endpoint.get("params", {}), follow_redirects=True)
+    resp = httpx.get(
+        url, headers=_HEADERS, params=endpoint.get("params", {}), follow_redirects=True
+    )
     resp.raise_for_status()
     rows = Extractor._parse_markdown_table(resp.text, endpoint["columns"])
     match = next(
