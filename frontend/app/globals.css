@@ -1,19 +1,62 @@
 @import "tailwindcss";
 
+/* ── Design tokens ────────────────────────────────────────────────────── */
 :root {
-  --background: #fafafa;
-  --foreground: #09090b;
+  /* Backgrounds */
+  --bg:         oklch(0.97 0.012 85);   /* #faf7f0 warm off-white */
+  --bg-2:       oklch(0.94 0.014 85);   /* #f3efe6 KPI cards, sidebar */
+  --surface:    #ffffff;
+
+  /* Text */
+  --ink:        oklch(0.22 0.005 85);   /* #1d1b18 */
+  --ink-soft:   oklch(0.42 0.008 85);   /* #4a463f */
+  --ink-mute:   oklch(0.62 0.01 85);    /* #8a8478 */
+
+  /* Borders */
+  --rule:       oklch(0.27 0.005 85);   /* #2a2724 hard */
+  --rule-soft:  oklch(0.81 0.012 85);   /* #c4bdaf soft */
+
+  /* Brand */
+  --accent:     oklch(0.55 0.18 252);   /* #2f6fe0 */
+  --accent-12:  color-mix(in oklab, var(--accent) 12%, var(--bg));
+  --hilite-new: oklch(0.92 0.13 95);    /* #ffe680 */
+
+  /* Source colors — trust signals, never change */
+  --gh-bg: #d6f0e0;  --gh-fg: #2f8f5a;   /* Greenhouse */
+  --lv-bg: #dfe9fb;  --lv-fg: #2f6fe0;   /* Lever */
+  --wk-bg: #fce4d3;  --wk-fg: #d96b3a;   /* Workable */
+
+  /* Fonts (set by Next.js) */
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-jetbrains-mono);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-jetbrains-mono);
+}
+
+/* ── Base ─────────────────────────────────────────────────────────────── */
+html {
+  height: 100%;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--bg);
+  color: var(--ink);
   font-family: var(--font-sans), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100%;
 }
+
+/* ── Reduced motion ───────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+/* ── Tabular numerals (KPI strip, pagination, badges) ────────────────── */
+.tabular { font-variant-numeric: tabular-nums; }

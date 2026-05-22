@@ -1,28 +1,77 @@
 import type { Metadata } from "next";
-import React from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 
 export const metadata: Metadata = {
-  title: "Tech Stack Radar | Jobs Radar QC",
-  description: "Most in-demand technologies across active Québec tech jobs.",
+  title: "Tech Stack Radar | Jobs Radar /qc",
+  description: "Most in-demand technologies across active Québec tech roles, visualized as a radial radar.",
 };
 
-// Revalidate once per hour — data changes only when the daily pipeline runs.
 export const revalidate = 3600;
 
-interface TechCount {
-  tech: string;
-  count: number;
+/* ── Tech category mapping ──────────────────────────────────────────── */
+type Category = "Languages" | "Frameworks" | "Cloud" | "Data" | "Tools";
+
+const TECH_CATEGORY: Record<string, Category> = {
+  // Languages
+  Python: "Languages", JavaScript: "Languages", TypeScript: "Languages",
+  Go: "Languages", Java: "Languages", Kotlin: "Languages", Rust: "Languages",
+  Scala: "Languages", "C#": "Languages", "C++": "Languages", Ruby: "Languages",
+  Swift: "Languages", PHP: "Languages", R: "Languages", Dart: "Languages",
+  Elixir: "Languages", Clojure: "Languages", "Objective-C": "Languages",
+  Haskell: "Languages", Erlang: "Languages",
+  // Frameworks
+  React: "Frameworks", Vue: "Frameworks", Angular: "Frameworks",
+  "Next.js": "Frameworks", "Node.js": "Frameworks", Django: "Frameworks",
+  Flask: "Frameworks", FastAPI: "Frameworks", Spring: "Frameworks",
+  Rails: "Frameworks", Express: "Frameworks", GraphQL: "Frameworks",
+  gRPC: "Frameworks", ".NET": "Frameworks", "ASP.NET": "Frameworks",
+  Laravel: "Frameworks", "Spring Boot": "Frameworks", NestJS: "Frameworks",
+  "Vue.js": "Frameworks", "React Native": "Frameworks", Flutter: "Frameworks",
+  Svelte: "Frameworks", Remix: "Frameworks",
+  // Cloud
+  AWS: "Cloud", GCP: "Cloud", Azure: "Cloud", Kubernetes: "Cloud",
+  Docker: "Cloud", Terraform: "Cloud", Helm: "Cloud",
+  "Cloud Run": "Cloud", EKS: "Cloud", "AWS Lambda": "Cloud",
+  "Google Cloud": "Cloud", CI: "Cloud", "GitHub Actions": "Cloud",
+  Jenkins: "Cloud", Ansible: "Cloud",
+  // Data
+  PostgreSQL: "Data", MySQL: "Data", MongoDB: "Data", Redis: "Data",
+  Kafka: "Data", Spark: "Data", Airflow: "Data", dbt: "Data",
+  Snowflake: "Data", Elasticsearch: "Data", BigQuery: "Data",
+  Databricks: "Data", Redshift: "Data", Postgres: "Data",
+  Elastic: "Data", Flink: "Data", "Apache Spark": "Data",
+  "Apache Kafka": "Data", Pinecone: "Data", Qdrant: "Data",
+};
+
+function getCategory(tech: string): Category {
+  return TECH_CATEGORY[tech] ?? "Tools";
 }
 
-async function fetchDistribution(): Promise<{ techs: TechCount[]; jobCount: number }> {
+/* ── Data types ─────────────────────────────────────────────────────── */
+interface TechRow {
+  name: string;
+  count: number;
+  rank: number;
+  category: Category;
+}
+
+type RadarSector = "Languages" | "Frameworks" | "Cloud" | "Data";
+const CATEGORIES: RadarSector[] = ["Languages", "Frameworks", "Cloud", "Data"];
+
+/* ── Fetch ──────────────────────────────────────────────────────────── */
+async function fetchRadarData(filterCategory?: string): Promise<{
+  techs: TechRow[];
+  jobCount: number;
+  coMentions: Record<string, Array<{ name: string; pct: number }>>;
+}> {
   const { data, error } = await supabase
     .from("active_qc_jobs")
     .select("tech_stack");
 
-  if (error || !data) return { techs: [], jobCount: 0 };
+  if (error || !data) return { techs: [], jobCount: 0, coMentions: {} };
 
+  // Count frequency per tech
   const counts: Record<string, number> = {};
   for (const row of data) {
     for (const tech of (row.tech_stack as string[]) ?? []) {
@@ -30,132 +79,498 @@ async function fetchDistribution(): Promise<{ techs: TechCount[]; jobCount: numb
     }
   }
 
-  // TODO: once first_seen_at history >= 30 days, add delta comparison:
-  // fetch jobs where first_seen_at >= now()-30d and now()-60d to now()-30d,
-  // compute delta per tech, show ↑/↓ badge sorted by delta as tiebreaker.
-  const techs = Object.entries(counts)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 15)
-    .map(([tech, count]) => ({ tech, count }));
+  // Compute co-occurrences
+  const coOccurrence: Record<string, Record<string, number>> = {};
+  for (const row of data) {
+    const stack = (row.tech_stack as string[]) ?? [];
+    for (let i = 0; i < stack.length; i++) {
+      for (let j = i + 1; j < stack.length; j++) {
+        const a = stack[i], b = stack[j];
+        if (!coOccurrence[a]) coOccurrence[a] = {};
+        if (!coOccurrence[b]) coOccurrence[b] = {};
+        coOccurrence[a][b] = (coOccurrence[a][b] ?? 0) + 1;
+        coOccurrence[b][a] = (coOccurrence[b][a] ?? 0) + 1;
+      }
+    }
+  }
 
-  return { techs, jobCount: data.length };
+  // Build ranked tech list
+  const all = Object.entries(counts)
+    .sort((a, b) => b[1] - a[1])
+    .map(([name, count], i) => ({
+      name,
+      count,
+      rank: i + 1,
+      category: getCategory(name),
+    }));
+
+  // Co-mentions as percentage of the tech's own count
+  const coMentions: Record<string, Array<{ name: string; pct: number }>> = {};
+  for (const [tech, mentions] of Object.entries(coOccurrence)) {
+    const base = counts[tech] ?? 1;
+    coMentions[tech] = Object.entries(mentions)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 8)
+      .map(([name, c]) => ({ name, pct: Math.round((c / base) * 100) }));
+  }
+
+  // Filter to selected category if provided
+  const filtered = filterCategory
+    ? all.filter((t) => t.category === filterCategory)
+    : all;
+
+  return { techs: filtered.slice(0, 30), jobCount: data.length, coMentions };
 }
 
-export default async function TrendsPage() {
-  const { techs, jobCount } = await fetchDistribution();
-  const maxCount = techs[0]?.count ?? 1;
+/* ── Radar SVG ──────────────────────────────────────────────────────── */
+function RadarChart({
+  techs,
+  allTechs,
+}: {
+  techs: TechRow[];
+  allTechs: TechRow[];
+}) {
+  const CX = 280, CY = 240, R = 200;
+  const RINGS = [0.95, 0.68, 0.42, 0.18];
+  const RING_LABELS = ["top 5", "top 10", "top 20", "long tail"];
+  const TOP5 = new Set(allTechs.slice(0, 5).map((t) => t.name));
+
+  // Group techs by category and position in their sector
+  const byCat: Record<RadarSector, TechRow[]> = {
+    Languages: [], Frameworks: [], Cloud: [], Data: [],
+  };
+  for (const t of techs) {
+    if (CATEGORIES.includes(t.category as RadarSector)) {
+      byCat[t.category as RadarSector].push(t);
+    }
+  }
+
+  const maxCount = allTechs[0]?.count ?? 1;
+
+  interface PlacedTech {
+    tech: TechRow;
+    x: number;
+    y: number;
+    size: number;
+    isTop5: boolean;
+    labelSide: "right" | "left";
+  }
+
+  const placed: PlacedTech[] = [];
+
+  CATEGORIES.forEach((cat, catIdx) => {
+    const arr = byCat[cat];
+    const sectorAngle = (Math.PI * 2) / CATEGORIES.length;
+    arr.forEach((tech, i) => {
+      const angle =
+        -Math.PI / 2 +
+        catIdx * sectorAngle +
+        (sectorAngle * (i + 1)) / (arr.length + 1);
+
+      // Rank drives radial position: top rank closer to center
+      const rankFrac = tech.rank / (maxCount === 1 ? 1 : allTechs.length);
+      const r = R * (0.16 + 0.76 * Math.min(1, rankFrac * 1.8));
+
+      const x = CX + Math.cos(angle) * r;
+      const y = CY + Math.sin(angle) * r;
+      const size = Math.max(6, Math.min(20, Math.sqrt(tech.count) * 1.3));
+      const isTop5 = TOP5.has(tech.name);
+      const labelSide = x > CX ? "right" : "left";
+
+      placed.push({ tech, x, y, size, isTop5, labelSide });
+    });
+  });
 
   return (
-    <>
-      <header className="border-b border-zinc-200 bg-white">
-        <div className="mx-auto max-w-2xl px-4 py-8">
-          <nav className="mb-3">
-            <Link
-              href="/"
-              className="text-sm text-zinc-400 transition-colors hover:text-zinc-950"
+    <svg
+      viewBox={`0 0 560 480`}
+      style={{ width: "100%", height: "100%", display: "block" }}
+      role="img"
+      aria-label="Tech stack radial radar showing technology distribution across Quebec tech jobs"
+    >
+      <title>Tech Stack Radar — Jobs Radar /qc</title>
+      <desc>
+        Radial chart showing {techs.length} technologies grouped by category. Bubble size
+        represents posting count; proximity to center represents overall rank.
+      </desc>
+
+      {/* Concentric rings */}
+      {RINGS.map((k, i) => (
+        <g key={i}>
+          <circle
+            cx={CX} cy={CY} r={R * k}
+            fill="none"
+            stroke="var(--rule-soft)"
+            strokeDasharray="3 5"
+            strokeWidth="1"
+          />
+          <text
+            x={CX + R * k + 5}
+            y={CY - 5}
+            fontFamily="var(--font-mono)"
+            fontSize="9"
+            fill="var(--ink-mute)"
+          >
+            {RING_LABELS[i]}
+          </text>
+        </g>
+      ))}
+
+      {/* Sector divider lines */}
+      {CATEGORIES.map((_, i) => {
+        const sector = (Math.PI * 2) / CATEGORIES.length;
+        const a0 = -Math.PI / 2 + i * sector;
+        return (
+          <line
+            key={i}
+            x1={CX} y1={CY}
+            x2={CX + Math.cos(a0) * R}
+            y2={CY + Math.sin(a0) * R}
+            stroke="var(--rule-soft)"
+            strokeWidth="1"
+          />
+        );
+      })}
+
+      {/* Sector labels */}
+      {CATEGORIES.map((cat, i) => {
+        const sector = (Math.PI * 2) / CATEGORIES.length;
+        const am = -Math.PI / 2 + i * sector + sector / 2;
+        const lx = CX + Math.cos(am) * (R + 26);
+        const ly = CY + Math.sin(am) * (R + 26);
+        return (
+          <text
+            key={cat}
+            x={lx} y={ly}
+            fontFamily="var(--font-sans)"
+            fontSize="11"
+            fontWeight="600"
+            textAnchor="middle"
+            fill="var(--ink)"
+          >
+            {cat}
+          </text>
+        );
+      })}
+
+      {/* Decorative sweep line at -32° */}
+      <line
+        x1={CX} y1={CY}
+        x2={CX + R} y2={CY}
+        stroke="var(--accent)"
+        strokeWidth="1.25"
+        strokeDasharray="2 5"
+        opacity="0.45"
+        transform={`rotate(-32 ${CX} ${CY})`}
+      />
+
+      {/* Center */}
+      <circle cx={CX} cy={CY} r={5} fill="var(--accent)" />
+      <circle cx={CX} cy={CY} r={13} fill="none" stroke="var(--accent)" strokeWidth="1" />
+
+      {/* Bubbles */}
+      {placed.map(({ tech, x, y, size, isTop5, labelSide }) => (
+        <g key={tech.name}>
+          <title>{tech.name} — {tech.count} roles (rank #{tech.rank})</title>
+          <a href={`/?tech=${encodeURIComponent(tech.name)}`}>
+            <circle
+              cx={x} cy={y} r={size}
+              fill={isTop5 ? "var(--accent)" : "color-mix(in oklab, var(--accent) 28%, var(--surface))"}
+              stroke="var(--rule)"
+              strokeWidth="1"
+              style={{ cursor: "pointer" }}
+            />
+            {/* Inline labels for top-5 only; others use tooltip via <title> */}
+            {isTop5 && (
+              <>
+                <text
+                  x={labelSide === "right" ? x + size + 4 : x - size - 4}
+                  y={y + 3}
+                  fontFamily="var(--font-sans)"
+                  fontSize="10.5"
+                  fontWeight="600"
+                  textAnchor={labelSide === "right" ? "start" : "end"}
+                  fill="var(--ink)"
+                >
+                  {tech.name}
+                </text>
+                <text
+                  x={labelSide === "right" ? x + size + 4 : x - size - 4}
+                  y={y + 14}
+                  fontFamily="var(--font-mono)"
+                  fontSize="8.5"
+                  textAnchor={labelSide === "right" ? "start" : "end"}
+                  fill="var(--ink-mute)"
+                >
+                  {tech.count}
+                </text>
+              </>
+            )}
+          </a>
+        </g>
+      ))}
+
+      {/* Legend */}
+      <text
+        x="16" y="470"
+        fontFamily="var(--font-mono)"
+        fontSize="9"
+        fill="var(--ink-mute)"
+      >
+        ◯ size = job count · proximity to center = rank · hover for name
+      </text>
+    </svg>
+  );
+}
+
+/* ── Page ───────────────────────────────────────────────────────────── */
+export default async function TrendsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ category?: string }>;
+}) {
+  const { category } = await searchParams;
+  const validCategory = CATEGORIES.includes(category as RadarSector)
+    ? (category as RadarSector)
+    : undefined;
+
+  const { techs, jobCount, coMentions } = await fetchRadarData(validCategory);
+
+  // For side rail: always show all tech for top movers list
+  const { techs: allTechs } = await fetchRadarData();
+  const top5 = allTechs.slice(0, 5);
+  const focusTech = top5[0];
+  const focusCoMentions = focusTech ? (coMentions[focusTech.name] ?? []) : [];
+
+  const categoryChips: Array<{ value: string | undefined; label: string }> = [
+    { value: undefined, label: "All" },
+    ...CATEGORIES.map((c) => ({ value: c, label: c })),
+    { value: "Tools", label: "Tools" },
+  ];
+
+  return (
+    <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col px-4 py-6 lg:flex-row lg:gap-0">
+      {/* ── Main radar area ─────────────────────────────────────────── */}
+      <div className="flex flex-1 flex-col">
+        {/* Page header */}
+        <div
+          className="mb-4 pb-4"
+          style={{ borderBottom: "1.5px solid var(--rule-soft)" }}
+        >
+          <div className="flex flex-wrap items-baseline gap-3">
+            <h1 className="text-xl font-semibold" style={{ color: "var(--ink)" }}>
+              Tech Stack Radar
+            </h1>
+            <span
+              className="text-xs"
+              style={{ color: "var(--ink-mute)", fontFamily: "var(--font-mono)" }}
             >
-              ← Jobs
-            </Link>
-          </nav>
-          <h1 className="text-2xl font-semibold tracking-tight text-zinc-950">
-            Tech Stack Radar
-          </h1>
-          <p className="mt-1.5 text-sm text-zinc-500">
-            How many active QC tech roles list each technology. Click a row to filter jobs.
-            Updated daily.
-          </p>
-          <p className="mt-3 text-sm text-zinc-400">
-            <span className="font-medium text-zinc-700">{jobCount}</span> active roles indexed
-          </p>
-        </div>
-      </header>
-
-      <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-8">
-        {techs.length === 0 ? (
-          <div className="rounded-lg border border-zinc-200 bg-white p-12 text-center">
-            <p className="text-sm font-medium text-zinc-950">Data accumulating</p>
-            <p className="mt-1 text-sm text-zinc-400">
-              Check back once the daily pipeline has run a few times.
-            </p>
-          </div>
-        ) : (
-          <div className="overflow-hidden rounded-lg border border-zinc-200 bg-white">
-            {/* Table header */}
-            <div className="flex items-center justify-between border-b border-zinc-100 px-5 py-3.5">
-              <h2 className="text-xs font-semibold uppercase tracking-wide text-zinc-400">
-                Top {techs.length} technologies
-              </h2>
-              <span className="text-xs text-zinc-400">roles · click to filter</span>
-            </div>
-
-            {/* Rows */}
-            <div className="divide-y divide-zinc-50">
-              {techs.map(({ tech, count }, i) => (
-                <React.Fragment key={tech}>
-                  {/* Tier break after top 5 */}
-                  {i === 5 && (
-                    <div className="border-t border-zinc-200 bg-zinc-50 px-5 py-1.5">
-                      <span className="text-xs font-medium text-zinc-400">Emerging</span>
-                    </div>
-                  )}
-                  <a
-                    href={`/?tech=${encodeURIComponent(tech)}`}
-                    className="group flex items-center gap-4 px-5 py-3 transition-colors hover:bg-zinc-50"
-                  >
-                    {/* Rank */}
-                    <span className="w-5 shrink-0 text-right text-xs tabular-nums text-zinc-300">
-                      {i + 1}
-                    </span>
-
-                    {/* Tech name */}
-                    <span className="w-28 shrink-0 truncate text-sm font-medium text-zinc-800 transition-colors group-hover:text-blue-600">
-                      {tech}
-                    </span>
-
-                    {/* Bar */}
-                    <div className="flex-1 overflow-hidden rounded-full bg-zinc-100 h-1.5">
-                      <div
-                        className={`h-1.5 rounded-full transition-colors ${
-                          i < 5
-                            ? "bg-blue-500 group-hover:bg-blue-600"
-                            : "bg-blue-300 group-hover:bg-blue-400"
-                        }`}
-                        style={{ width: `${(count / maxCount) * 100}%` }}
-                      />
-                    </div>
-
-                    {/* Count */}
-                    <span className="w-8 shrink-0 text-right text-sm tabular-nums text-zinc-500">
-                      {count}
-                    </span>
-                  </a>
-                </React.Fragment>
+              · {jobCount} active roles · enriched weekly
+            </span>
+            <div className="ml-auto flex items-center gap-1.5">
+              {(["7d", "30d", "90d", "all"] as const).map((w) => (
+                <span
+                  key={w}
+                  className="rounded-full px-2 py-0.5 text-xs"
+                  style={{
+                    border: "1px solid var(--rule-soft)",
+                    background: w === "30d" ? "var(--accent)" : "transparent",
+                    color: w === "30d" ? "white" : "var(--ink-mute)",
+                    fontFamily: "var(--font-mono)",
+                    fontSize: 10,
+                  }}
+                >
+                  {w}
+                </span>
               ))}
             </div>
+          </div>
+          <p className="mt-1 text-sm" style={{ color: "var(--ink-soft)" }}>
+            Technologies across active QC tech roles. Click a bubble to filter jobs.
+          </p>
+        </div>
 
-            {/* Footer note */}
-            <div className="border-t border-zinc-100 bg-zinc-50 px-5 py-3">
-              <p className="text-xs text-zinc-400">
-                Includes rule-based and LLM-enriched tech stacks. Closed postings are not counted.
-              </p>
+        {/* Radar SVG */}
+        <div
+          className="relative flex-1 rounded-md"
+          style={{
+            background: "var(--surface)",
+            border: "1px solid var(--rule-soft)",
+            minHeight: 340,
+          }}
+        >
+          {techs.length === 0 ? (
+            <div className="flex h-full items-center justify-center py-20 text-center">
+              <div>
+                <p className="text-sm font-medium" style={{ color: "var(--ink)" }}>
+                  Data accumulating
+                </p>
+                <p className="mt-1 text-sm" style={{ color: "var(--ink-mute)" }}>
+                  Check back once the daily pipeline has run.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <RadarChart techs={techs} allTechs={allTechs} />
+          )}
+        </div>
+      </div>
+
+      {/* ── Side rail ───────────────────────────────────────────────── */}
+      <div
+        className="mt-4 flex flex-col gap-4 lg:ml-5 lg:mt-0 lg:w-72"
+        style={{ flexShrink: 0 }}
+      >
+        {/* Category filter chips */}
+        <div className="flex flex-wrap gap-1.5">
+          {categoryChips.map(({ value, label }) => {
+            const isActive = value === validCategory;
+            const href = value
+              ? `?category=${encodeURIComponent(value)}`
+              : "/trends";
+            return (
+              <Link
+                key={label}
+                href={href}
+                className="rounded-full px-2.5 py-1 text-xs transition-colors"
+                style={{
+                  background: isActive ? "var(--accent)" : "var(--bg-2)",
+                  color: isActive ? "white" : "var(--ink-soft)",
+                  border: `1px solid ${isActive ? "var(--accent)" : "var(--rule-soft)"}`,
+                  fontWeight: isActive ? 600 : 400,
+                  fontSize: 11,
+                }}
+              >
+                {label}
+              </Link>
+            );
+          })}
+        </div>
+
+        {/* Top technologies */}
+        <div
+          className="rounded-md p-3"
+          style={{ background: "var(--bg-2)", border: "1px solid var(--rule-soft)" }}
+        >
+          <div className="mb-2 flex items-center gap-2">
+            <span
+              className="text-xs font-semibold uppercase tracking-widest"
+              style={{ color: "var(--ink-mute)", fontFamily: "var(--font-mono)", fontSize: 9 }}
+            >
+              Top technologies
+            </span>
+            <span
+              className="text-xs"
+              style={{ color: "var(--ink-mute)", fontFamily: "var(--font-mono)", fontSize: 9 }}
+            >
+              · current
+            </span>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            {allTechs.slice(0, 8).map((t, i) => (
+              <Link
+                key={t.name}
+                href={`/?tech=${encodeURIComponent(t.name)}`}
+                className="group flex items-center gap-2 rounded text-xs transition-colors"
+                style={{ padding: "2px 0" }}
+              >
+                <span
+                  className="tabular shrink-0"
+                  style={{
+                    width: 18,
+                    textAlign: "right",
+                    color: "var(--ink-mute)",
+                    fontFamily: "var(--font-mono)",
+                    fontSize: 9,
+                  }}
+                >
+                  {i + 1}
+                </span>
+                <span
+                  className="flex-1 font-medium"
+                  style={{ color: "var(--ink)", fontSize: 12 }}
+                >
+                  {t.name}
+                </span>
+                <span
+                  className="tabular shrink-0"
+                  style={{
+                    color: "var(--ink-mute)",
+                    fontFamily: "var(--font-mono)",
+                    fontSize: 10,
+                  }}
+                >
+                  {t.count}
+                </span>
+              </Link>
+            ))}
+          </div>
+        </div>
+
+        {/* Often paired with */}
+        {focusTech && focusCoMentions.length > 0 && (
+          <div
+            className="rounded-md p-3"
+            style={{ background: "var(--bg-2)", border: "1px solid var(--rule-soft)" }}
+          >
+            <div className="mb-2 flex items-center gap-1">
+              <span
+                className="text-xs font-semibold uppercase tracking-widest"
+                style={{ color: "var(--ink-mute)", fontFamily: "var(--font-mono)", fontSize: 9 }}
+              >
+                Often paired with{" "}
+              </span>
+              <span
+                className="rounded px-1 text-xs font-semibold"
+                style={{ background: "var(--accent-12)", color: "var(--accent)", fontSize: 9 }}
+              >
+                {focusTech.name}
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {focusCoMentions.map(({ name, pct }) => (
+                <Link
+                  key={name}
+                  href={`/?tech=${encodeURIComponent(name)}`}
+                  className="rounded-full px-2 py-0.5 text-xs transition-colors"
+                  style={{
+                    background: "var(--surface)",
+                    color: "var(--ink-soft)",
+                    border: "1px solid var(--rule-soft)",
+                    fontSize: 10,
+                  }}
+                >
+                  {name}{" "}
+                  <span style={{ color: "var(--ink-mute)", fontFamily: "var(--font-mono)" }}>
+                    {pct}%
+                  </span>
+                </Link>
+              ))}
             </div>
           </div>
         )}
-      </main>
 
-      <footer className="border-t border-zinc-100 py-6">
-        <p className="text-center text-xs text-zinc-400">
-          Open source ·{" "}
-          <a
-            href="https://github.com/hippync/jobs-radar-qc"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="transition-colors hover:text-blue-500"
+        {/* Embed / API card */}
+        <div
+          className="rounded-md p-3"
+          style={{ background: "var(--ink)", color: "var(--bg)" }}
+        >
+          <div
+            className="flex items-center gap-1.5 text-xs"
+            style={{ fontFamily: "var(--font-mono)", fontSize: 11 }}
           >
-            github.com/hippync/jobs-radar-qc
-          </a>
-        </p>
-      </footer>
-    </>
+            <span style={{ color: "var(--accent)" }}>$</span>
+            <span style={{ opacity: 0.85 }}>curl jobs-radar-qc.dev/api/radar.json</span>
+          </div>
+          <p
+            className="mt-1.5 text-xs"
+            style={{ color: "var(--ink-mute)", fontFamily: "var(--font-mono)", fontSize: 9 }}
+          >
+            MIT-licensed open data · embed the radar in your blog
+          </p>
+        </div>
+      </div>
+    </div>
   );
 }

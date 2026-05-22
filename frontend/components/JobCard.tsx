@@ -12,6 +12,12 @@ const SENIORITY_LABEL: Record<string, string> = {
   director:   "Director",
 };
 
+const SOURCE_LABEL: Record<string, string> = {
+  greenhouse: "Greenhouse",
+  lever: "Lever",
+  workable: "Workable",
+};
+
 function remoteLabel(is_remote: boolean | null): string {
   if (is_remote === true)  return "Remote";
   if (is_remote === false) return "On-site";
@@ -26,75 +32,174 @@ function age(iso: string | null): { text: string; fresh: boolean } {
   return               { text: `${diff}d`,   fresh: false };
 }
 
-export default function JobCard({ job }: { job: Job }) {
-  const { text: ageText, fresh } = age(job.first_seen_at);
+/* Company logo placeholder — first 2 initials in a fixed-size box */
+function LogoPlaceholder({ company }: { company: string }) {
+  const initials = company
+    .split(/[\s\-&]+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase() ?? "")
+    .join("");
 
   return (
-    <a
-      href={job.source_url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="group flex flex-col rounded-lg border border-zinc-200 border-l-2 border-l-zinc-200 bg-white p-4 transition-all hover:border-zinc-300 hover:border-l-blue-500 hover:shadow-sm"
+    <div
+      className="flex shrink-0 items-center justify-center rounded text-xs font-semibold"
+      style={{
+        width: 28, height: 28,
+        background: "var(--bg-2)",
+        border: "1px solid var(--rule-soft)",
+        color: "var(--ink-mute)",
+        fontFamily: "var(--font-mono)",
+        fontSize: 9,
+        letterSpacing: "0.04em",
+      }}
+      aria-hidden
     >
-      {/* Company + age */}
-      <div className="flex items-start justify-between gap-2">
-        <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">
-          {job.company}
-        </p>
-        {ageText && (
-          <span
-            className={`shrink-0 text-xs ${
-              fresh ? "font-medium text-blue-500" : "text-zinc-300"
-            }`}
-          >
-            {fresh && "● "}{ageText}
-          </span>
-        )}
-      </div>
+      {initials}
+    </div>
+  );
+}
 
-      {/* Title */}
-      <h2 className="mt-1 line-clamp-2 text-sm font-semibold text-zinc-900 transition-colors group-hover:text-blue-600">
-        {job.title}
-      </h2>
+export default function JobCard({ job }: { job: Job }) {
+  const { text: ageText, fresh } = age(job.first_seen_at);
+  const CHIP_MAX = 4;
 
-      {/* Location */}
-      {job.location && (
-        <p className="mt-0.5 truncate text-xs text-zinc-400">{job.location}</p>
-      )}
-
-      {/* Status badges */}
-      <div className="mt-3 flex flex-wrap items-center gap-1.5">
-        <span className="inline-flex items-center rounded px-1.5 py-0.5 text-xs text-zinc-500 ring-1 ring-zinc-200">
-          {remoteLabel(job.is_remote)}
-        </span>
-
-        {job.seniority && SENIORITY_LABEL[job.seniority] && (
-          <span className="inline-flex items-center rounded px-1.5 py-0.5 text-xs text-zinc-500 ring-1 ring-zinc-200">
-            {SENIORITY_LABEL[job.seniority]}
-          </span>
-        )}
-
-        <SourceBadge source={job.source} />
-      </div>
-
-      {/* Tech chips */}
-      {job.tech_stack.length > 0 && (
-        <div className="mt-2 flex flex-wrap gap-1">
-          {job.tech_stack.slice(0, 4).map((t) => (
-            <span
-              key={t}
-              className="inline-flex items-center rounded bg-zinc-50 px-1.5 py-0.5 text-xs font-medium text-zinc-600 ring-1 ring-zinc-200"
+  return (
+    <div
+      className="group flex flex-col rounded-md"
+      style={{
+        background: "var(--surface)",
+        border: "1px solid var(--rule-soft)",
+        /* Left accent stripe — 3 px, blue if fresh, muted otherwise */
+        borderLeft: `3px solid ${fresh ? "var(--accent)" : "var(--rule-soft)"}`,
+        transition: "border-color 120ms ease-out, box-shadow 120ms ease-out",
+      }}
+    >
+      <div className="flex flex-col gap-2 p-4 pb-3">
+        {/* ── Header: logo + company + location + age ── */}
+        <div className="flex items-start gap-2">
+          <LogoPlaceholder company={job.company} />
+          <div className="min-w-0 flex-1">
+            <p
+              className="truncate text-xs font-medium uppercase tracking-wide"
+              style={{ color: "var(--ink-mute)", fontFamily: "var(--font-mono)", fontSize: 10 }}
+              title={job.company}
             >
-              {t}
-            </span>
-          ))}
-          {job.tech_stack.length > 4 && (
-            <span className="self-center text-xs text-zinc-300">
-              +{job.tech_stack.length - 4}
-            </span>
+              {job.company}
+            </p>
+            {job.location && (
+              <p
+                className="truncate text-xs"
+                style={{ color: "var(--ink-mute)", fontSize: 11 }}
+                title={job.location}
+              >
+                {job.location}
+              </p>
+            )}
+          </div>
+          {ageText && (
+            <div
+              className="flex shrink-0 items-center gap-1 text-xs"
+              style={{ color: fresh ? "var(--accent)" : "var(--ink-mute)", fontFamily: "var(--font-mono)", fontSize: 10 }}
+            >
+              {fresh && (
+                <span
+                  className="inline-block rounded-full"
+                  style={{ width: 5, height: 5, background: "var(--accent)", flexShrink: 0 }}
+                  aria-hidden
+                />
+              )}
+              {ageText}
+            </div>
           )}
         </div>
-      )}
-    </a>
+
+        {/* ── Title ── */}
+        <h2
+          className="line-clamp-2 text-sm font-semibold leading-snug transition-colors"
+          style={{ color: "var(--ink)", fontSize: 13.5 }}
+          title={job.title}
+        >
+          {job.title}
+        </h2>
+
+        {/* ── Level / workplace / source chips ── */}
+        <div className="flex flex-wrap items-center gap-1">
+          {job.seniority && SENIORITY_LABEL[job.seniority] && (
+            <span
+              className="inline-flex items-center rounded-full px-2 py-0.5 text-xs"
+              style={{
+                background: "var(--bg-2)",
+                color: "var(--ink-soft)",
+                border: "1px solid var(--rule-soft)",
+                fontSize: 11,
+              }}
+            >
+              {SENIORITY_LABEL[job.seniority]}
+            </span>
+          )}
+          <span
+            className="inline-flex items-center rounded-full px-2 py-0.5 text-xs"
+            style={{
+              background: "var(--bg-2)",
+              color: "var(--ink-soft)",
+              border: "1px solid var(--rule-soft)",
+              fontSize: 11,
+            }}
+          >
+            {remoteLabel(job.is_remote)}
+          </span>
+          <SourceBadge source={job.source} />
+        </div>
+
+        {/* ── Tech chips ── */}
+        {job.tech_stack.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {job.tech_stack.slice(0, CHIP_MAX).map((t) => (
+              <span
+                key={t}
+                className="inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium"
+                style={{
+                  background: "var(--bg-2)",
+                  color: "var(--ink-soft)",
+                  border: "1px solid var(--rule-soft)",
+                  fontSize: 11,
+                }}
+              >
+                {t}
+              </span>
+            ))}
+            {job.tech_stack.length > CHIP_MAX && (
+              <span
+                className="self-center text-xs"
+                style={{ color: "var(--ink-mute)", fontFamily: "var(--font-mono)", fontSize: 10 }}
+              >
+                +{job.tech_stack.length - CHIP_MAX}
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* ── Footer: view link ── */}
+      <div
+        className="mt-auto flex items-center px-4 py-2.5"
+        style={{ borderTop: "1px solid var(--rule-soft)" }}
+      >
+        <a
+          href={job.source_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1 text-xs transition-colors"
+          style={{ color: "var(--ink-mute)", fontFamily: "var(--font-mono)", fontSize: 11 }}
+          aria-label={`View ${job.title} at ${job.company} on ${SOURCE_LABEL[job.source] ?? job.source}`}
+        >
+          view on {SOURCE_LABEL[job.source] ?? job.source}
+          <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden>
+            <path d="M2 8L8 2M4 2h4v4" />
+          </svg>
+        </a>
+      </div>
+    </div>
   );
 }
