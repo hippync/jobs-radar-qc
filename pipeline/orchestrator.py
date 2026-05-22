@@ -38,12 +38,17 @@ async def main() -> None:
         logger.warning("no_jobs_fetched")
         return
 
-    upsert_result = upsert_jobs(all_jobs)
+    # Only persist QC-located jobs — non-QC jobs are fetched for is_active bookkeeping
+    # but must never pollute the DB or cause oversized upserts.
+    qc_jobs = [job for job in all_jobs if job.get("is_qc")]
+    logger.info("qc_filter", total_fetched=len(all_jobs), qc_count=len(qc_jobs))
+
+    upsert_result = upsert_jobs(qc_jobs)
 
     # mark_inactive only for companies that returned ≥1 job — if a fetch failed
     # entirely we skip it rather than risk falsely deactivating all their jobs.
     seen: dict[tuple[str, str], list[str]] = {}
-    for job in all_jobs:
+    for job in qc_jobs:
         seen.setdefault((job["source"], job["company_slug"]), []).append(job["external_id"])
 
     total_deactivated = sum(

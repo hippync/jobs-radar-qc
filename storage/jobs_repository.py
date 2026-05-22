@@ -10,6 +10,8 @@ from storage.supabase_client import get_client
 
 logger = structlog.get_logger()
 
+_UPSERT_BATCH_SIZE = 100
+
 
 def upsert_jobs(jobs: list[dict]) -> dict[str, int]:
     """
@@ -19,6 +21,7 @@ def upsert_jobs(jobs: list[dict]) -> dict[str, int]:
       - Updates all fields except first_seen_at (set once on insert).
       - Sets last_seen_at and fetched_at to the current run's timestamp.
 
+    Sends rows in batches of _UPSERT_BATCH_SIZE to avoid statement timeouts.
     Returns a summary dict with inserted/updated counts from Supabase metadata.
     """
     if not jobs:
@@ -28,20 +31,22 @@ def upsert_jobs(jobs: list[dict]) -> dict[str, int]:
     rows = [_to_row(job, now) for job in jobs]
 
     client = get_client()
-    response = (
-        client.table("jobs")
-        .upsert(
-            rows,
-            on_conflict="source,external_id,company_slug",
-            # first_seen_at is set on insert; ignore it on update
-            ignore_duplicates=False,
+    total = 0
+    for i in range(0, len(rows), _UPSERT_BATCH_SIZE):
+        batch = rows[i : i + _UPSERT_BATCH_SIZE]
+        response = (
+            client.table("jobs")
+            .upsert(
+                batch,
+                on_conflict="source,external_id,company_slug",
+                ignore_duplicates=False,
+            )
+            .execute()
         )
-        .execute()
-    )
+        total += len(response.data) if response.data else 0
 
-    count = len(response.data) if response.data else 0
-    logger.info("upsert_complete", count=count)
-    return {"upserted": count}
+    logger.info("upsert_complete", count=total)
+    return {"upserted": total}
 
 
 def mark_inactive(source: str, company_slug: str, seen_external_ids: list[str]) -> int:
