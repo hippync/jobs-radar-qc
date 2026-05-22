@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import html
 import json
 import re
 from datetime import UTC, datetime
@@ -114,7 +115,10 @@ def _strip_html_for_matching(text: str) -> str:
 
     Prevents false positives from tech names appearing inside HTML attributes
     (e.g. data-path-to-node triggering Node.js, class="java-btn" triggering Java).
+    Decodes HTML entities first so that entity-encoded markup from Greenhouse
+    (&lt;span data-is-last-node=...&gt;) is converted to real tags before stripping.
     """
+    text = html.unescape(text)
     text = re.sub(r"<[^>]+>", " ", text)
     return re.sub(r"\s+", " ", text).strip()
 
