@@ -17,13 +17,48 @@ const VIEW_KEY    = "jobs-radar-qc:tracker-view";
 const SAVED_CHANGE = "jobs-radar-qc:saved-change";
 const VIEW_CHANGE  = "jobs-radar-qc:view-change";
 
+/* ── Snapshot cache for useSyncExternalStore ──────────────────────────────
+ *
+ * useSyncExternalStore requires BOTH getSnapshot (client) AND
+ * getServerSnapshot (SSR) to return a *stable reference* when the data
+ * hasn't changed. React compares successive return values with Object.is;
+ * two [] literals are never the same reference, so an inline arrow that
+ * returns [] on every call causes the "getSnapshot/getServerSnapshot should
+ * be cached" warning and an infinite re-render loop.
+ *
+ * Client (getSnapshot / loadSaved):
+ *   Store the last raw JSON string (_savedRaw) and the last parsed array
+ *   (_savedCache). If the raw string is identical, return the cached
+ *   reference — React sees no change and skips the re-render.
+ *
+ * Server (getServerSnapshot):
+ *   localStorage / sessionStorage don't exist on the server. We return
+ *   pre-allocated module-level constants so every SSR call returns the
+ *   exact same reference. React sees Object.is(ref, ref) === true and
+ *   does not loop.
+ *
+ * loadView returns a primitive string — React compares primitives by value,
+ * so no reference caching is needed there.
+ */
+
+/** Stable empty array returned by getServerSnapshot for the saved list. */
+const SERVER_SAVED: SavedJob[] = [];
+
+let _savedRaw   : string | null = null;
+let _savedCache : SavedJob[]    = [];
+
 /* ── localStorage helpers ─────────────────────────────────────────────── */
 function loadSaved(): SavedJob[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
+    if (raw === _savedRaw) return _savedCache;   // stable ref — no re-render
+    _savedRaw   = raw;
+    _savedCache = raw ? (JSON.parse(raw) as SavedJob[]) : [];
+    return _savedCache;
   } catch {
-    return [];
+    _savedRaw   = null;
+    _savedCache = [];
+    return _savedCache;
   }
 }
 
@@ -38,6 +73,8 @@ function persistSaved(jobs: SavedJob[]) {
  *
  * View state (board | list) is stored in sessionStorage so it survives
  * a page refresh but resets when the browser tab is closed — per spec.
+ *
+ * Returns a primitive string — no reference caching needed.
  */
 function loadView(): "board" | "list" {
   try {
@@ -301,18 +338,21 @@ export default function SavedPageClient() {
    */
   const saved = useSyncExternalStore(
     subscribeSaved,
-    loadSaved,          /* client snapshot  */
-    (): SavedJob[] => [], /* server snapshot */
+    loadSaved,    /* client snapshot — cached by raw string, see _savedRaw */
+    () => SERVER_SAVED, /* server snapshot — stable module-level constant  */
   );
 
   /*
    * View toggle state: "board" (4-column Kanban) or "list" (vertical list).
    * Persisted in sessionStorage — survives refresh, resets on tab close.
+   *
+   * Both client and server snapshots return primitive strings; Object.is
+   * compares primitives by value so no reference caching is needed.
    */
   const view = useSyncExternalStore(
     subscribeView,
-    loadView,                            /* client snapshot */
-    (): "board" | "list" => "board",     /* server snapshot */
+    loadView,       /* client snapshot  */
+    () => "board",  /* server snapshot — primitive, stable by value */
   );
 
   /*
