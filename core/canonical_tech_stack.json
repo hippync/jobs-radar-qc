@@ -1,36 +1,41 @@
 {
-  "version": "1",
+  "version": "2",
   "categories": {
     "languages": [
-      "Python", "JavaScript", "TypeScript", "Go", "Rust",
-      "Java", "Kotlin", "Scala", "C#", "C++",
-      "Ruby", "PHP", "Swift", "Elixir", "Erlang", "R"
+      "Python", "Java", "TypeScript", "JavaScript", "C#", "Go",
+      "SQL", "Kotlin", "Swift", "Rust"
     ],
     "frontend": [
-      "React", "Next.js", "Vue", "Angular", "Svelte",
-      "Node.js", "Express", "GraphQL", "REST"
+      "React", "Next.js", "Angular", "Vue", "Tailwind", "Redux", "Svelte"
     ],
     "backend": [
-      "Django", "FastAPI", "Flask", "Rails", "Spring",
-      "Laravel", "ASP.NET", ".NET", "gRPC", "Celery"
+      "Spring Boot", "Node.js", "Express", "NestJS", ".NET",
+      "Django", "FastAPI", "GraphQL", "REST", "gRPC"
     ],
     "databases": [
-      "PostgreSQL", "MySQL", "MongoDB", "Redis", "Elasticsearch",
-      "Snowflake", "BigQuery", "DynamoDB", "Cassandra", "ClickHouse"
+      "PostgreSQL", "MySQL", "MongoDB", "Redis",
+      "DynamoDB", "Snowflake", "Elasticsearch", "ClickHouse"
     ],
-    "infrastructure": [
-      "AWS", "GCP", "Azure", "Kubernetes", "Docker",
-      "Terraform", "Ansible", "CI/CD", "GitHub Actions"
+    "cloud": [
+      "AWS", "Azure", "GCP", "Linux", "Nginx", "Cloudflare"
     ],
-    "data": [
-      "Spark", "Kafka", "Airflow", "dbt", "Flink",
-      "Temporal", "Databricks", "RabbitMQ",
-      "Pandas", "NumPy", "PyTorch", "TensorFlow", "scikit-learn"
+    "devops": [
+      "Docker", "Kubernetes", "Terraform", "Helm",
+      "GitHub Actions", "Jenkins", "ArgoCD",
+      "Prometheus", "Grafana", "Ansible"
+    ],
+    "data_ai": [
+      "Pandas", "Spark", "Databricks", "Airflow",
+      "TensorFlow", "PyTorch", "LangChain", "OpenAI",
+      "Vector DB", "dbt", "Kafka", "MLflow"
     ],
     "mobile": [
-      "React Native", "Flutter", "Android", "iOS"
+      "React Native", "Flutter", "SwiftUI", "Android", "iOS"
     ],
-    "other": [
+    "testing": [
+      "Jest", "Cypress", "Playwright", "Selenium", "JUnit", "Postman"
+    ],
+    "ai_concepts": [
       "LLM", "RAG"
     ]
   }
