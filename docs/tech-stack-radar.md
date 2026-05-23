@@ -28,18 +28,20 @@ The Supabase `active_qc_jobs` view merges both columns (`tech_stack || enriched_
 
 ## Canonical technology list
 
-73 technologies tracked across 8 categories. Adding a technology to this list invalidates all stored prompt hashes and triggers a full re-enrichment on the next Sunday run.
+76 technologies tracked across 10 categories (v2). Adding a technology to this list invalidates all stored prompt hashes and triggers a full re-enrichment on the next Sunday run.
 
 | Category | Technologies |
 |---|---|
-| Languages | Python, JavaScript, TypeScript, Go, Rust, Java, Kotlin, Scala, C#, C++, Ruby, PHP, Swift, Elixir, Erlang, R |
-| Frontend | React, Next.js, Vue, Angular, Svelte, Node.js, Express, GraphQL, REST |
-| Backend | Django, FastAPI, Flask, Rails, Spring, Laravel, ASP.NET, .NET, gRPC, Celery |
-| Databases | PostgreSQL, MySQL, MongoDB, Redis, Elasticsearch, Snowflake, BigQuery, DynamoDB, Cassandra, ClickHouse |
-| Infrastructure | AWS, GCP, Azure, Kubernetes, Docker, Terraform, Ansible, CI/CD, GitHub Actions |
-| Data & ML | Spark, Kafka, Airflow, dbt, Flink, Temporal, Databricks, RabbitMQ, Pandas, NumPy, PyTorch, TensorFlow, scikit-learn |
-| Mobile | React Native, Flutter, Android, iOS |
-| Other | LLM, RAG |
+| Languages | Python, Java, TypeScript, JavaScript, C#, Go, SQL, Kotlin, Swift, Rust |
+| Frontend | React, Next.js, Angular, Vue, Tailwind, Redux, Svelte |
+| Backend | Spring Boot, Node.js, Express, NestJS, .NET, Django, FastAPI, GraphQL, REST, gRPC |
+| Databases | PostgreSQL, MySQL, MongoDB, Redis, DynamoDB, Snowflake, Elasticsearch, ClickHouse |
+| Cloud | AWS, Azure, GCP, Linux, Nginx, Cloudflare |
+| DevOps | Docker, Kubernetes, Terraform, Helm, GitHub Actions, Jenkins, ArgoCD, Prometheus, Grafana, Ansible |
+| Data & AI | Pandas, Spark, Databricks, Airflow, TensorFlow, PyTorch, LangChain, OpenAI, Vector DB, dbt, Kafka, MLflow |
+| Mobile | React Native, Flutter, SwiftUI, Android, iOS |
+| Testing | Jest, Cypress, Playwright, Selenium, JUnit, Postman |
+| AI Concepts | LLM, RAG |
 
 The canonical list lives in [`core/canonical_tech_stack.json`](../core/canonical_tech_stack.json).
 

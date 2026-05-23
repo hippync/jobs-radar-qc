@@ -56,7 +56,7 @@ Greenhouse, Lever, and Workable are what companies actually manage. If a job is 
 
 **Slide 3 — The architecture**
 Spec-driven Python pipeline → Canonical job schema → Supabase/PostgreSQL → Weekly Claude Haiku enrichment → active_qc_jobs view → Next.js Tech Stack Radar.
-3 ATS platforms. 12 companies. 73 canonical technologies. Daily fetch. Weekly LLM pass.
+3 ATS platforms. 12 companies. 76 canonical technologies. Daily fetch. Weekly LLM pass.
 
 **Slide 4 — The engineering lesson**
 Deterministic-first. LLM second. Evidence-based extraction.

@@ -11,7 +11,7 @@
 
 Jobs Radar QC is an open-source, spec-driven job market radar that tracks Quebec tech roles directly from ATS platforms, extracts the technologies companies are hiring for, and visualizes stack demand over time.
 
-| 37 companies tracked | 73 canonical technologies | ~2M tokens/week | ~41% prompt cache hit rate |
+| 37 companies tracked | 76 canonical technologies | ~2M tokens/week | ~41% prompt cache hit rate |
 |---|---|---|---|
 | across 3 ATS platforms | in extraction stack | LLM enrichment volume | ~$2/week saved vs baseline |
 
@@ -33,7 +33,7 @@ Jobs Radar QC is an open-source, spec-driven job market radar that tracks Quebec
 - 37 Quebec tech companies tracked
 - Daily automated fetch via GitHub Actions
 - Weekly LLM enrichment (Claude Haiku, Sundays)
-- 73 canonical technologies tracked
+- 76 canonical technologies tracked across 10 categories (v2)
 - Active job trends at `/trends`
 - ~41% prompt cache hit rate — ~$2/week saved vs uncached baseline (observed in production)
 
@@ -226,7 +226,7 @@ agents/
 
 core/
   canonical_schema.json     # Unified Job model (JSON Schema draft-07)
-  canonical_tech_stack.json # 73 canonical tech names by category
+  canonical_tech_stack.json # 76 canonical tech names across 10 categories (v2)
 
 specs/
   greenhouse/               # 14 QC companies (Broadsign, AppDirect, AlayaCare, Valtech, Workleap, ShareGate, Epic Games, Speechify, AON3D, LATYS, GURUS Solutions, Samsara, Ivalua, Toboggan Labs)

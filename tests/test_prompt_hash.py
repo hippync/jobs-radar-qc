@@ -55,7 +55,7 @@ class TestRenderSystemPrompt:
         rendered = render_system_prompt()
         assert "Python" in rendered
         assert "Kubernetes" in rendered
-        assert "Temporal" in rendered
+        assert "LangChain" in rendered  # new in v2; Temporal was removed
 
     def test_categories_present(self):
         rendered = render_system_prompt()

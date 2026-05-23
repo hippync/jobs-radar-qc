@@ -54,7 +54,7 @@ The `active_qc_jobs` Supabase view merges both columns (`tech_stack || enriched_
 | `pipeline/extractor.py` | Generic spec-driven fetch and extraction engine |
 | `pipeline/orchestrator.py` | Runs all specs in parallel, writes to DB |
 | `specs/{ats}/extraction.xml` | Declarative field mappings and derivation rules |
-| `core/canonical_tech_stack.json` | 73 canonical tech names used by both layers |
+| `core/canonical_tech_stack.json` | 76 canonical tech names across 10 categories (v2) used by both layers |
 | `agents/enricher.py` | LLM enrichment pass |
 | `agents/prompts/tech_extraction.md` | Versioned system prompt — editable without code changes |
 | `storage/jobs_repository.py` | `upsert_jobs()`, `mark_inactive()` |
