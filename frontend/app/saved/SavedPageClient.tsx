@@ -88,10 +88,18 @@ export default function SavedPageClient() {
   const [saved, setSaved] = useState<SavedJob[]>(() => loadSaved());
 
   /*
-   * move() is intentionally defined here and not yet wired to any UI.
-   * It will be called by the drag-and-drop handler (#33) and the ··· column
-   * menu once those features land.
+   * Drag state:
+   *  - draggingId  — id of the card currently being dragged (null when idle)
+   *  - dragOverCol — which column the cursor is over during an active drag
+   *
+   * Visual feedback rule (issue #33): when draggingId is set and dragOverCol
+   * matches a column, that column's body switches to --accent-12 bg + accent
+   * dashed border.
    */
+  const [draggingId, setDraggingId]   = useState<string | null>(null);
+  const [dragOverCol, setDragOverCol] = useState<Column | null>(null);
+
+  /* ── move: update column + persist ── */
   function move(id: string, col: Column) {
     setSaved((prev) => {
       const next = prev.map((j) => (j.id === id ? { ...j, column: col } : j));
@@ -99,8 +107,6 @@ export default function SavedPageClient() {
       return next;
     });
   }
-  // Suppress unused-variable warning until #33 wires up drag-and-drop.
-  void move;
 
   function remove(id: string) {
     setSaved((prev) => {
@@ -108,6 +114,68 @@ export default function SavedPageClient() {
       persistSaved(next);
       return next;
     });
+  }
+
+  /* ── Drag event handlers ── */
+
+  function handleDragStart(id: string) {
+    setDraggingId(id);
+  }
+
+  /*
+   * onDragEnd fires on the source card when a drag ends — whether it was
+   * dropped on a valid target, an invalid target, or cancelled.
+   * Always clears both drag state fields.
+   */
+  function handleDragEnd() {
+    setDraggingId(null);
+    setDragOverCol(null);
+  }
+
+  /*
+   * onDragEnter fires when the cursor enters a column drop zone.
+   * We set dragOverCol here (rather than onDragOver) to avoid the firing
+   * rate of onDragOver causing excessive re-renders.
+   */
+  function handleDragEnter(e: React.DragEvent, col: Column) {
+    e.preventDefault();
+    if (dragOverCol !== col) setDragOverCol(col);
+  }
+
+  /*
+   * onDragOver must call preventDefault() to signal this is a valid drop
+   * target; without it the browser shows the "forbidden" cursor and onDrop
+   * won't fire.
+   */
+  function handleDragOver(e: React.DragEvent) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  }
+
+  /*
+   * onDragLeave fires when the cursor leaves a column's drop zone.
+   * We use currentTarget.contains(relatedTarget) to avoid clearing the
+   * highlight when the cursor merely moves over a child element (e.g. a
+   * KanbanCard inside the column). Only clears when truly leaving the column.
+   */
+  function handleDragLeave(e: React.DragEvent, col: Column) {
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+      if (dragOverCol === col) setDragOverCol(null);
+    }
+  }
+
+  /*
+   * onDrop — the actual drop handler.
+   * Reads the card id from dataTransfer, calls move(), and resets drag state.
+   * Dropping outside any column (no valid onDragOver target) never reaches
+   * this handler, so the card stays unchanged.
+   */
+  function handleDrop(e: React.DragEvent, col: Column) {
+    e.preventDefault();
+    const id = e.dataTransfer.getData("text/plain");
+    if (id) move(id, col);
+    setDraggingId(null);
+    setDragOverCol(null);
   }
 
   const isEmpty = saved.length === 0;
@@ -125,7 +193,7 @@ export default function SavedPageClient() {
             Tracker
           </h1>
           <p className="text-sm" style={{ color: "var(--ink-mute)" }}>
-            Drag cards between columns. Stored locally — never sent to a server.
+            Drag cards between columns or use the ← → buttons. Stored locally.
           </p>
         </div>
         {!isEmpty && (
@@ -152,6 +220,11 @@ export default function SavedPageClient() {
          * Mobile (< 768px):  horizontal flex with scroll-snap — each column
          *   fills ~full-viewport width and snaps on swipe.
          *
+         * Native HTML5 drag-and-drop is unreliable on iOS Safari; the ← →
+         * arrow buttons on each card serve as the primary mobile fallback.
+         * Cross-column reordering is supported; within-column reordering is
+         * not implemented (cards maintain insertion order within a column).
+         *
          * Both layouts defined in globals.css (.kanban-board / .kanban-column).
          */
         <div
@@ -162,6 +235,11 @@ export default function SavedPageClient() {
           {COLUMNS.map((col) => {
             const jobs = saved.filter((j) => j.column === col.key);
             const count = colCounts[col.key];
+            /*
+             * isDropTarget: true only when a drag is active AND the cursor
+             * is currently over this specific column.
+             */
+            const isDropTarget = draggingId !== null && dragOverCol === col.key;
 
             return (
               <section
@@ -211,7 +289,7 @@ export default function SavedPageClient() {
                   <span className="flex-1" />
 
                   {/*
-                   * ··· column-actions button — placeholder for future menu (#33).
+                   * ··· column-actions button — placeholder for future menu.
                    * 44 × 44 px touch target per ux-ui_agent.md §5.
                    */}
                   <button
@@ -241,21 +319,37 @@ export default function SavedPageClient() {
                 </div>
 
                 {/*
-                 * ── Column body ──
+                 * ── Column body (drop zone) ──────────────────────────────
                  *
-                 * dashed border on the lane, bg-2 tint behind the cards.
-                 * Empty state: centered "No jobs in [Column] yet" text.
+                 * - onDragEnter / onDragOver / onDragLeave / onDrop wired here.
+                 * - aria-dropeffect="move" signals to AT that a drop will move
+                 *   the dragged item (deprecated but still read by JAWS/NVDA).
+                 * - Visual feedback: isDropTarget toggles --accent-12 bg +
+                 *   solid accent border. Transition disabled by
+                 *   prefers-reduced-motion via globals.css.
+                 *
+                 * Empty columns are valid drop targets (minHeight: 200 ensures
+                 * they remain large enough to hit).
                  */}
                 <div
+                  onDragEnter={(e) => handleDragEnter(e, col.key)}
+                  onDragOver={handleDragOver}
+                  onDragLeave={(e) => handleDragLeave(e, col.key)}
+                  onDrop={(e) => handleDrop(e, col.key)}
+                  /* aria-dropeffect is deprecated in ARIA 1.2 but retained for AT compatibility */
+                  aria-dropeffect={draggingId ? "move" : undefined}
                   style={{
-                    background: "var(--bg-2)",
+                    background: isDropTarget ? "var(--accent-12)" : "var(--bg-2)",
                     borderRadius: 6,
-                    border: "1.5px dashed var(--rule-soft)",
+                    border: isDropTarget
+                      ? "1.5px dashed var(--accent)"
+                      : "1.5px dashed var(--rule-soft)",
                     padding: 8,
                     minHeight: 200,
                     display: "flex",
                     flexDirection: "column",
                     gap: 8,
+                    transition: "background 120ms ease-out, border-color 120ms ease-out",
                   }}
                   role="region"
                   aria-label={`${col.label} job cards`}
@@ -268,11 +362,12 @@ export default function SavedPageClient() {
                       <p
                         className="text-center text-xs"
                         style={{
-                          color: "var(--ink-mute)",
+                          color: isDropTarget ? "var(--accent)" : "var(--ink-mute)",
                           fontFamily: "var(--font-mono)",
+                          transition: "color 120ms ease-out",
                         }}
                       >
-                        No jobs in {col.label} yet
+                        {isDropTarget ? "Drop here" : `No jobs in ${col.label} yet`}
                       </p>
                     </div>
                   ) : (
@@ -281,6 +376,10 @@ export default function SavedPageClient() {
                         key={job.id}
                         job={job}
                         onRemove={remove}
+                        onMove={move}
+                        onDragStart={handleDragStart}
+                        onDragEnd={handleDragEnd}
+                        isDragging={draggingId === job.id}
                       />
                     ))
                   )}
