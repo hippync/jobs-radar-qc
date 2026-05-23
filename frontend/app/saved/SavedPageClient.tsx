@@ -17,13 +17,36 @@ const VIEW_KEY    = "jobs-radar-qc:tracker-view";
 const SAVED_CHANGE = "jobs-radar-qc:saved-change";
 const VIEW_CHANGE  = "jobs-radar-qc:view-change";
 
+/* ── Snapshot cache for useSyncExternalStore ──────────────────────────────
+ *
+ * useSyncExternalStore requires getSnapshot to return a *stable reference*
+ * when the underlying data hasn't changed. JSON.parse always allocates a new
+ * object, so without caching React sees a "new" value on every render call,
+ * triggers another render, calls getSnapshot again — infinite loop with the
+ * "getSnapshot should be cached" warning.
+ *
+ * We store the last raw JSON string and the last parsed array. If the raw
+ * string is identical (same bytes in localStorage), we return the cached
+ * reference; React sees no change (Object.is) and skips the re-render.
+ *
+ * loadView returns a primitive string — React compares primitives by value,
+ * so no caching is needed there.
+ */
+let _savedRaw   : string | null = null;
+let _savedCache : SavedJob[]    = [];
+
 /* ── localStorage helpers ─────────────────────────────────────────────── */
 function loadSaved(): SavedJob[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
+    if (raw === _savedRaw) return _savedCache;   // stable ref — no re-render
+    _savedRaw   = raw;
+    _savedCache = raw ? (JSON.parse(raw) as SavedJob[]) : [];
+    return _savedCache;
   } catch {
-    return [];
+    _savedRaw   = null;
+    _savedCache = [];
+    return _savedCache;
   }
 }
 
@@ -38,6 +61,8 @@ function persistSaved(jobs: SavedJob[]) {
  *
  * View state (board | list) is stored in sessionStorage so it survives
  * a page refresh but resets when the browser tab is closed — per spec.
+ *
+ * Returns a primitive string — no reference caching needed.
  */
 function loadView(): "board" | "list" {
   try {
