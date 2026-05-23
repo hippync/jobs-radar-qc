@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { KanbanCard } from "@/components/KanbanCard";
 import type { SavedJob, Column } from "@/components/KanbanCard";
@@ -8,6 +8,14 @@ import type { SavedJob, Column } from "@/components/KanbanCard";
 /* ── Storage keys ─────────────────────────────────────────────────────── */
 const STORAGE_KEY = "jobs-radar-qc:saved";
 const VIEW_KEY    = "jobs-radar-qc:tracker-view";
+
+/*
+ * Custom DOM events used to notify useSyncExternalStore subscribers when
+ * localStorage / sessionStorage changes within the same tab.
+ * (The native "storage" event only fires for changes from other tabs.)
+ */
+const SAVED_CHANGE = "jobs-radar-qc:saved-change";
+const VIEW_CHANGE  = "jobs-radar-qc:view-change";
 
 /* ── localStorage helpers ─────────────────────────────────────────────── */
 function loadSaved(): SavedJob[] {
@@ -22,6 +30,7 @@ function loadSaved(): SavedJob[] {
 function persistSaved(jobs: SavedJob[]) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(jobs));
+    window.dispatchEvent(new Event(SAVED_CHANGE));
   } catch {}
 }
 
@@ -41,7 +50,19 @@ function loadView(): "board" | "list" {
 function persistView(v: "board" | "list") {
   try {
     sessionStorage.setItem(VIEW_KEY, v);
+    window.dispatchEvent(new Event(VIEW_CHANGE));
   } catch {}
+}
+
+/* ── useSyncExternalStore subscriber functions ────────────────────────── */
+function subscribeSaved(cb: () => void): () => void {
+  window.addEventListener(SAVED_CHANGE, cb);
+  return () => window.removeEventListener(SAVED_CHANGE, cb);
+}
+
+function subscribeView(cb: () => void): () => void {
+  window.addEventListener(VIEW_CHANGE, cb);
+  return () => window.removeEventListener(VIEW_CHANGE, cb);
 }
 
 /* ── Age helper ───────────────────────────────────────────────────────────
@@ -263,16 +284,36 @@ function SavedListRow({
 
 /* ── Page ────────────────────────────────────────────────────────────── */
 
-// Loaded with ssr:false (via SavedWrapper) so window / localStorage /
-// sessionStorage are always available at render time.
 export default function SavedPageClient() {
-  const [saved, setSaved] = useState<SavedJob[]>(() => loadSaved());
+  /*
+   * useSyncExternalStore — the correct React 18 pattern for reading
+   * browser-only external stores (localStorage / sessionStorage) without
+   * causing a hydration mismatch (error #418).
+   *
+   * React calls getServerSnapshot() during SSR to produce the initial HTML,
+   * and getSnapshot() on the client. When they differ React re-renders the
+   * client tree from the client snapshot without throwing a hydration error.
+   * Writes go directly to storage (persistSaved / persistView) and then
+   * dispatch a custom DOM event; that triggers the subscriber callback,
+   * which causes React to re-read getSnapshot() and re-render.
+   *
+   * No useEffect, no mounted flag, no setState-in-effect lint violation.
+   */
+  const saved = useSyncExternalStore(
+    subscribeSaved,
+    loadSaved,          /* client snapshot  */
+    (): SavedJob[] => [], /* server snapshot */
+  );
 
   /*
    * View toggle state: "board" (4-column Kanban) or "list" (vertical list).
    * Persisted in sessionStorage — survives refresh, resets on tab close.
    */
-  const [view, setView] = useState<"board" | "list">(() => loadView());
+  const view = useSyncExternalStore(
+    subscribeView,
+    loadView,                            /* client snapshot */
+    (): "board" | "list" => "board",     /* server snapshot */
+  );
 
   /*
    * Drag state:
@@ -282,26 +323,22 @@ export default function SavedPageClient() {
   const [draggingId, setDraggingId]   = useState<string | null>(null);
   const [dragOverCol, setDragOverCol] = useState<Column | null>(null);
 
-  /* ── Move + remove ── */
+  /* ── Move + remove ──
+   * Write directly to storage; persistSaved/persistView dispatch a custom
+   * DOM event that notifies the useSyncExternalStore subscriber, which
+   * causes React to re-read loadSaved()/loadView() and re-render.
+   */
   function move(id: string, col: Column) {
-    setSaved((prev) => {
-      const next = prev.map((j) => (j.id === id ? { ...j, column: col } : j));
-      persistSaved(next);
-      return next;
-    });
+    const next = saved.map((j) => (j.id === id ? { ...j, column: col } : j));
+    persistSaved(next);
   }
 
   function remove(id: string) {
-    setSaved((prev) => {
-      const next = prev.filter((j) => j.id !== id);
-      persistSaved(next);
-      return next;
-    });
+    persistSaved(saved.filter((j) => j.id !== id));
   }
 
   /* ── View toggle ── */
   function handleViewChange(v: "board" | "list") {
-    setView(v);
     persistView(v);
   }
 
