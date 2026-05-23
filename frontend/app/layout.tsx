@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import Link from "next/link";
 import "./globals.css";
+import BottomTabBar from "@/components/BottomTabBar";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -31,7 +32,12 @@ export default function RootLayout({
       lang="en"
       className={`${inter.variable} ${jetbrainsMono.variable} h-full`}
     >
-      <body className="flex min-h-full flex-col" style={{ background: "var(--bg)", color: "var(--ink)" }}>
+      {/*
+        * pb-14 (56 px) reserves room below scrollable content so nothing hides
+        * behind the fixed BottomTabBar on mobile.
+        * lg:pb-0 removes that padding on desktop where the bar is hidden.
+        */}
+      <body className="flex min-h-full flex-col pb-14 lg:pb-0" style={{ background: "var(--bg)", color: "var(--ink)" }}>
         {/* Top navigation */}
         <header
           className="sticky top-0 z-40 border-b"
@@ -103,6 +109,9 @@ export default function RootLayout({
             </a>
           </p>
         </footer>
+
+        {/* Mobile bottom navigation — hidden on lg+ where the top nav suffices */}
+        <BottomTabBar />
       </body>
     </html>
   );

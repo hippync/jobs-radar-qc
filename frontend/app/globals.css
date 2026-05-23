@@ -97,3 +97,14 @@ body {
     max-width: 320px;
   }
 }
+
+/* ── Bottom tab bar — focus-visible ring ──────────────────────────────── */
+/*
+ * Using a CSS rule (not Tailwind utility) because the color must come from
+ * the --accent token and the selector targets a pseudo-class.
+ */
+.btb-tab:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -3px;
+  border-radius: 4px;
+}
