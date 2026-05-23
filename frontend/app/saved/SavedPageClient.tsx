@@ -2,22 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-
-/* ── Types ──────────────────────────────────────────────────────────── */
-type Column = "watching" | "applied" | "interviewing" | "archived";
-
-interface SavedJob {
-  id: string;
-  company: string;
-  title: string;
-  source: string;
-  source_url: string;
-  location: string | null;
-  first_seen_at: string;
-  tech_stack: string[];
-  column: Column;
-  savedAt: number;
-}
+import { KanbanCard } from "@/components/KanbanCard";
+import type { SavedJob, Column } from "@/components/KanbanCard";
 
 /* ── localStorage helpers ───────────────────────────────────────────── */
 const STORAGE_KEY = "jobs-radar-qc:saved";
@@ -37,146 +23,20 @@ function persistSaved(jobs: SavedJob[]) {
   } catch {}
 }
 
-/* ── Column config ──────────────────────────────────────────────────── */
-const COLUMNS: Array<{
-  key: Column;
-  label: string;
-  color: string;
-  bg: string;
-}> = [
-  { key: "watching",     label: "Watching",     color: "var(--accent)",   bg: "var(--accent-12)" },
-  { key: "applied",      label: "Applied",       color: "#b8860b",         bg: "#fef9e7" },
-  { key: "interviewing", label: "Interviewing",  color: "var(--gh-fg)",    bg: "var(--gh-bg)" },
-  { key: "archived",     label: "Archived",      color: "var(--ink-mute)", bg: "var(--bg-2)" },
+/* ── Column config ──────────────────────────────────────────────────────
+ *
+ * Colors reference CSS custom properties — no hardcoded hex.
+ * --col-applied is defined in globals.css.
+ * Interviewing reuses --gh-fg (same value; both are trust-signal green).
+ */
+const COLUMNS: Array<{ key: Column; label: string; color: string }> = [
+  { key: "watching",     label: "Watching",     color: "var(--accent)" },
+  { key: "applied",      label: "Applied",       color: "var(--col-applied)" },
+  { key: "interviewing", label: "Interviewing",  color: "var(--gh-fg)" },
+  { key: "archived",     label: "Archived",      color: "var(--ink-mute)" },
 ];
 
-/* ── Helpers ────────────────────────────────────────────────────────── */
-function ageText(iso: string | null): string {
-  if (!iso) return "";
-  const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000);
-  if (diff === 0) return "today";
-  if (diff === 1) return "yesterday";
-  return `${diff}d`;
-}
-
-const SOURCE_COLORS: Record<string, { label: string; fg: string; bg: string }> = {
-  greenhouse: { label: "GH", fg: "var(--gh-fg)", bg: "var(--gh-bg)" },
-  lever:      { label: "LV", fg: "var(--lv-fg)", bg: "var(--lv-bg)" },
-  workable:   { label: "WK", fg: "var(--wk-fg)", bg: "var(--wk-bg)" },
-};
-
-function MiniSourceBadge({ source }: { source: string }) {
-  const s = SOURCE_COLORS[source];
-  if (!s) return null;
-  return (
-    <span
-      className="rounded px-1.5 py-0.5 text-xs font-semibold"
-      style={{ background: s.bg, color: s.fg, fontFamily: "var(--font-mono)", fontSize: 9 }}
-    >
-      {s.label}
-    </span>
-  );
-}
-
-/* ── Saved Job Card ─────────────────────────────────────────────────── */
-function SavedCard({
-  job,
-  onMove,
-  onRemove,
-}: {
-  job: SavedJob;
-  onMove: (id: string, col: Column) => void;
-  onRemove: (id: string) => void;
-}) {
-  const age = ageText(job.first_seen_at);
-
-  return (
-    <div
-      className="flex flex-col gap-2 rounded-md p-3"
-      style={{
-        background: "var(--surface)",
-        border: "1px solid var(--rule-soft)",
-        borderLeft: "3px solid var(--accent)",
-      }}
-    >
-      <div className="flex items-center gap-2">
-        <span
-          className="truncate text-xs font-semibold uppercase tracking-wide"
-          style={{ color: "var(--ink-mute)", fontFamily: "var(--font-mono)", fontSize: 9, flex: 1 }}
-        >
-          {job.company}
-        </span>
-        {age && (
-          <span
-            className="text-xs"
-            style={{ color: "var(--ink-mute)", fontFamily: "var(--font-mono)", fontSize: 9, flexShrink: 0 }}
-          >
-            {age}
-          </span>
-        )}
-      </div>
-
-      <p
-        className="line-clamp-2 text-sm font-semibold leading-snug"
-        style={{ color: "var(--ink)", fontSize: 12.5 }}
-        title={job.title}
-      >
-        {job.title}
-      </p>
-
-      <div className="flex items-center gap-2">
-        <MiniSourceBadge source={job.source} />
-
-        <select
-          value=""
-          onChange={(e) => {
-            if (e.target.value) onMove(job.id, e.target.value as Column);
-          }}
-          aria-label="Move to column"
-          className="flex-1 rounded px-1 py-0.5 text-xs"
-          style={{
-            background: "var(--bg-2)",
-            border: "1px solid var(--rule-soft)",
-            color: "var(--ink-soft)",
-            fontSize: 10,
-          }}
-        >
-          <option value="">Move to…</option>
-          {COLUMNS.map((c) => (
-            <option key={c.key} value={c.key}>{c.label}</option>
-          ))}
-        </select>
-
-        <a
-          href={job.source_url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-0.5 text-xs"
-          style={{ color: "var(--ink-mute)", fontFamily: "var(--font-mono)", fontSize: 10, flexShrink: 0 }}
-          aria-label={`Open ${job.title} on ${job.source}`}
-        >
-          open
-          <svg width="9" height="9" viewBox="0 0 9 9" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden>
-            <path d="M1.5 7.5L7.5 1.5M3.5 1.5h4v4" />
-          </svg>
-        </a>
-
-        <button
-          onClick={() => onRemove(job.id)}
-          className="text-xs transition-colors"
-          style={{ color: "var(--ink-mute)", flexShrink: 0 }}
-          aria-label="Remove from saved"
-        >
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden>
-            <path d="M2 2l8 8M10 2L2 10" />
-          </svg>
-        </button>
-      </div>
-    </div>
-  );
-}
-
-/* ── Empty state ────────────────────────────────────────────────────── */
+/* ── Empty board state ──────────────────────────────────────────────── */
 function EmptyState() {
   return (
     <div className="flex flex-col items-center py-20 text-center">
@@ -184,7 +44,19 @@ function EmptyState() {
         className="mb-4 flex h-12 w-12 items-center justify-center rounded-full"
         style={{ background: "var(--bg-2)", border: "1px solid var(--rule-soft)" }}
       >
-        <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden style={{ color: "var(--ink-mute)" }}>
+        {/* Lucide star */}
+        <svg
+          width="22"
+          height="22"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden
+          style={{ color: "var(--ink-mute)" }}
+        >
           <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
         </svg>
       </div>
@@ -197,7 +69,11 @@ function EmptyState() {
       <Link
         href="/"
         className="mt-5 rounded-md px-4 py-2.5 text-sm font-semibold"
-        style={{ background: "var(--accent)", color: "white" }}
+        style={{
+          background: "var(--accent)",
+          color: "var(--surface)",
+          transition: "opacity 120ms ease-out",
+        }}
       >
         Browse jobs
       </Link>
@@ -207,12 +83,15 @@ function EmptyState() {
 
 /* ── Page ───────────────────────────────────────────────────────────── */
 
-// Component is loaded with ssr:false so window is always available.
-// No useEffect needed for the initial localStorage read.
+// Loaded with ssr:false (via SavedWrapper) so window/localStorage are always available.
 export default function SavedPageClient() {
   const [saved, setSaved] = useState<SavedJob[]>(() => loadSaved());
-  const [activeCol, setActiveCol] = useState<Column>("watching");
 
+  /*
+   * move() is intentionally defined here and not yet wired to any UI.
+   * It will be called by the drag-and-drop handler (#33) and the ··· column
+   * menu once those features land.
+   */
   function move(id: string, col: Column) {
     setSaved((prev) => {
       const next = prev.map((j) => (j.id === id ? { ...j, column: col } : j));
@@ -220,6 +99,8 @@ export default function SavedPageClient() {
       return next;
     });
   }
+  // Suppress unused-variable warning until #33 wires up drag-and-drop.
+  void move;
 
   function remove(id: string) {
     setSaved((prev) => {
@@ -233,99 +114,181 @@ export default function SavedPageClient() {
   const colCounts = Object.fromEntries(
     COLUMNS.map((c) => [c.key, saved.filter((j) => j.column === c.key).length])
   ) as Record<Column, number>;
-  const visibleJobs = saved.filter((j) => j.column === activeCol);
 
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-6">
+
+      {/* ── Page header ── */}
       <div className="mb-5">
-        <h1 className="text-xl font-semibold" style={{ color: "var(--ink)" }}>
-          Saved jobs
-        </h1>
-        <p className="mt-0.5 text-sm" style={{ color: "var(--ink-mute)" }}>
-          Tracked locally in your browser · no account needed
-        </p>
+        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+          <h1 className="text-xl font-semibold" style={{ color: "var(--ink)" }}>
+            Tracker
+          </h1>
+          <p className="text-sm" style={{ color: "var(--ink-mute)" }}>
+            Drag cards between columns. Stored locally — never sent to a server.
+          </p>
+        </div>
+        {!isEmpty && (
+          <p
+            className="mt-1 tabular"
+            style={{
+              color: "var(--ink-mute)",
+              fontFamily: "var(--font-mono)",
+              fontSize: 11,
+            }}
+          >
+            {saved.length} saved
+          </p>
+        )}
       </div>
 
       {isEmpty ? (
         <EmptyState />
       ) : (
-        <>
-          <div
-            className="mb-4 flex gap-1 overflow-x-auto pb-1"
-            role="tablist"
-            aria-label="Tracker columns"
-          >
-            {COLUMNS.map((col) => {
-              const active = activeCol === col.key;
-              return (
-                <button
-                  key={col.key}
-                  onClick={() => setActiveCol(col.key)}
-                  role="tab"
-                  aria-selected={active}
-                  className="flex shrink-0 items-center gap-2 rounded-full px-3 py-1.5 text-sm"
-                  style={{
-                    background: active ? col.bg : "transparent",
-                    color: active ? col.color : "var(--ink-mute)",
-                    border: `1px solid ${active ? col.color : "var(--rule-soft)"}`,
-                    fontWeight: active ? 600 : 400,
-                    fontSize: 12,
-                    transition: "all 120ms ease-out",
-                  }}
-                >
-                  <span
-                    className="inline-block rounded-full"
-                    style={{ width: 6, height: 6, background: col.color, flexShrink: 0 }}
-                    aria-hidden
-                  />
-                  {col.label}
-                  {colCounts[col.key] > 0 && (
-                    <span
-                      className="tabular"
-                      style={{ fontFamily: "var(--font-mono)", fontSize: 10, opacity: 0.65 }}
-                    >
-                      {colCounts[col.key]}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
+        /*
+         * ── Kanban board ──────────────────────────────────────────────────
+         *
+         * Desktop (≥ 768px): CSS grid with 4 equal columns.
+         * Mobile (< 768px):  horizontal flex with scroll-snap — each column
+         *   fills ~full-viewport width and snaps on swipe.
+         *
+         * Both layouts defined in globals.css (.kanban-board / .kanban-column).
+         */
+        <div
+          className="kanban-board"
+          role="list"
+          aria-label="Job tracker board"
+        >
+          {COLUMNS.map((col) => {
+            const jobs = saved.filter((j) => j.column === col.key);
+            const count = colCounts[col.key];
 
-          <div
-            role="tabpanel"
-            aria-label={COLUMNS.find((c) => c.key === activeCol)?.label}
-          >
-            {visibleJobs.length === 0 ? (
-              <div
-                className="rounded-md py-16 text-center"
-                style={{ border: "1.5px dashed var(--rule-soft)" }}
+            return (
+              <section
+                key={col.key}
+                className="kanban-column"
+                role="listitem"
+                aria-label={`${col.label} — ${count} job${count !== 1 ? "s" : ""}`}
               >
-                <p className="text-sm" style={{ color: "var(--ink-mute)" }}>
-                  No jobs in {COLUMNS.find((c) => c.key === activeCol)?.label} yet.
-                </p>
-              </div>
-            ) : (
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {visibleJobs.map((job) => (
-                  <SavedCard
-                    key={job.id}
-                    job={job}
-                    onMove={move}
-                    onRemove={remove}
+                {/* ── Column header ── */}
+                <div
+                  className="mb-2 flex items-center gap-2"
+                  style={{ minHeight: 32 }}
+                >
+                  {/* Status dot */}
+                  <span
+                    aria-hidden
+                    style={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: "50%",
+                      background: col.color,
+                      flexShrink: 0,
+                    }}
                   />
-                ))}
-              </div>
-            )}
-          </div>
 
-          <p
-            className="mt-6 text-center text-xs"
-            style={{ color: "var(--ink-mute)", fontFamily: "var(--font-mono)" }}
-          >
-            {saved.length} job{saved.length !== 1 ? "s" : ""} saved · stored in this browser only
-          </p>
-        </>
+                  {/* Column label */}
+                  <span
+                    className="font-semibold"
+                    style={{ color: "var(--ink)", fontSize: 12 }}
+                  >
+                    {col.label}
+                  </span>
+
+                  {/* Job count */}
+                  <span
+                    className="tabular"
+                    style={{
+                      color: "var(--ink-mute)",
+                      fontFamily: "var(--font-mono)",
+                      fontSize: 10,
+                    }}
+                    aria-hidden /* already in the section aria-label */
+                  >
+                    {count}
+                  </span>
+
+                  <span className="flex-1" />
+
+                  {/*
+                   * ··· column-actions button — placeholder for future menu (#33).
+                   * 44 × 44 px touch target per ux-ui_agent.md §5.
+                   */}
+                  <button
+                    type="button"
+                    className="flex items-center justify-center"
+                    style={{
+                      width: 44,
+                      height: 44,
+                      marginTop: -8,
+                      marginBottom: -8,
+                      marginRight: -10,
+                      color: "var(--ink-mute)",
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      fontFamily: "var(--font-mono)",
+                      fontSize: 13,
+                      letterSpacing: "0.06em",
+                      borderRadius: 4,
+                      transition: "color 120ms ease-out",
+                    }}
+                    aria-label={`Column actions for ${col.label}`}
+                    aria-haspopup="menu"
+                  >
+                    ···
+                  </button>
+                </div>
+
+                {/*
+                 * ── Column body ──
+                 *
+                 * dashed border on the lane, bg-2 tint behind the cards.
+                 * Empty state: centered "No jobs in [Column] yet" text.
+                 */}
+                <div
+                  style={{
+                    background: "var(--bg-2)",
+                    borderRadius: 6,
+                    border: "1.5px dashed var(--rule-soft)",
+                    padding: 8,
+                    minHeight: 200,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 8,
+                  }}
+                  role="region"
+                  aria-label={`${col.label} job cards`}
+                >
+                  {jobs.length === 0 ? (
+                    <div
+                      className="flex flex-1 items-center justify-center py-10"
+                      aria-live="polite"
+                    >
+                      <p
+                        className="text-center text-xs"
+                        style={{
+                          color: "var(--ink-mute)",
+                          fontFamily: "var(--font-mono)",
+                        }}
+                      >
+                        No jobs in {col.label} yet
+                      </p>
+                    </div>
+                  ) : (
+                    jobs.map((job) => (
+                      <KanbanCard
+                        key={job.id}
+                        job={job}
+                        onRemove={remove}
+                      />
+                    ))
+                  )}
+                </div>
+              </section>
+            );
+          })}
+        </div>
       )}
     </div>
   );

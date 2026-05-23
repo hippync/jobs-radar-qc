@@ -26,6 +26,9 @@
   --lv-bg: #dfe9fb;  --lv-fg: #2f6fe0;   /* Lever */
   --wk-bg: #fce4d3;  --wk-fg: #d96b3a;   /* Workable */
 
+  /* Kanban column accent colors */
+  --col-applied: #b8860b;   /* amber — Applied column header dot */
+
   /* Fonts (set by Next.js) */
   --font-sans: var(--font-inter);
   --font-mono: var(--font-jetbrains-mono);
@@ -60,3 +63,37 @@ body {
 
 /* ── Tabular numerals (KPI strip, pagination, badges) ────────────────── */
 .tabular { font-variant-numeric: tabular-nums; }
+
+/* ── Kanban board — responsive 4-column layout ───────────────────────── */
+/*
+ * Desktop (≥ 768 px): 4 equal columns in a CSS grid.
+ * Mobile (< 768 px): horizontal scroll-snap so each column occupies
+ * most of the viewport and snaps into place on swipe.
+ */
+.kanban-board {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+.kanban-column {
+  min-width: 0;            /* prevent grid blowout on long titles */
+}
+
+@media (max-width: 767px) {
+  .kanban-board {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    gap: 12px;
+    padding-bottom: 12px;  /* room for scrollbar on non-overlay scrollbars */
+  }
+
+  .kanban-column {
+    flex: 0 0 calc(100vw - 56px);  /* ~full viewport minus page gutters */
+    scroll-snap-align: start;
+    min-width: 240px;
+    max-width: 320px;
+  }
+}
