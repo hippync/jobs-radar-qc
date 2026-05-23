@@ -27,7 +27,7 @@ Return ONLY technologies from this list:
 
 4. Do NOT include:
    - Programming paradigms or concepts (OOP, functional programming, microservices, agile)
-   - Generic terms (cloud, API, backend, frontend, database, SQL as a generic concept)
+   - Generic terms (cloud, API, backend, frontend, database)
    - Soft skills or methodologies
    - Company or product names that are not technologies
    - Technologies only mentioned in job titles or company names of other companies
@@ -43,7 +43,12 @@ Return ONLY technologies from this list:
    - **Scala** → only the programming language. Not: "scalability", "scale", "scalable"
    - **R** → only the R statistical language. Only include when the posting explicitly names "R" as a language alongside other programming languages.
    - **SAP** → only the ERP software. Not: "life sap", "maple sap"
-   - **Spring** → only the Java Spring framework. Not: "spring season", "spring cleaning"
+   - **Spring Boot** → only the Spring Boot Java framework. Prefer "Spring Boot" over "Spring" if both appear in the same posting. Not: "spring season", "spring cleaning"
+   - **Jest** → only the JavaScript testing framework. Not: "in jest" (English idiom for joking)
+   - **Helm** → only the Kubernetes package manager (Helm charts). Not: "at the helm" (leadership metaphor)
+   - **OpenAI** → the platform/API. Corresponds to: "OpenAI API", "GPT-4 via OpenAI", "ChatGPT integration", "OpenAI SDK"
+   - **Vector DB** → vector databases specifically. Corresponds to: Pinecone, Qdrant, Weaviate, Chroma, "vector store", "vector database". Not: "vector" alone in a mathematical context
+   - **SQL** → only when listed as an independent skill (e.g., "experience with SQL", "strong SQL skills"). Do not extract if "SQL" appears only as part of "MySQL" or "PostgreSQL"
 
 6. If the description provides no technical signal (or is empty), return `{"technologies": []}`.
 
@@ -83,9 +88,9 @@ We are looking for a Senior Full-Stack Software Engineer to join our Commerce pl
 - Bonus: experience with Golang microservices or gRPC
 
 **Output:**
-{"technologies": ["React", "TypeScript", "Next.js", "GraphQL", "REST", "Node.js", "PostgreSQL", "Redis", "CI/CD", "GitHub Actions", "Docker", "AWS", "Kubernetes", "Go", "gRPC"]}
+{"technologies": ["React", "TypeScript", "Next.js", "GraphQL", "REST", "Node.js", "PostgreSQL", "Redis", "GitHub Actions", "Docker", "AWS", "Kubernetes", "Go", "gRPC"]}
 
-**Why:** "ReactJS" normalized to "React"; "Postgres" normalized to "PostgreSQL"; "Golang" normalized to "Go"; REST included because "RESTful APIs" is an explicit mention; GraphQL included from both the responsibilities and requirements sections.
+**Why:** "ReactJS" normalized to "React"; "Postgres" normalized to "PostgreSQL"; "Golang" normalized to "Go"; REST included because "RESTful APIs" is an explicit mention; GraphQL included from both the responsibilities and requirements sections. CI/CD is not a canonical technology — GitHub Actions is the named tool and is already included; do not add CI/CD separately.
 
 ---
 
@@ -116,9 +121,9 @@ Our Data Platform team is hiring an Intermediate Data Engineer to help us build 
 - Knowledge of Spark internals
 
 **Output:**
-{"technologies": ["Python", "Airflow", "dbt", "GCP", "Kafka", "Flink", "BigQuery", "Pandas", "NumPy", "scikit-learn", "Docker", "Kubernetes", "Scala", "Spark", "Snowflake", "Databricks"]}
+{"technologies": ["Python", "Airflow", "dbt", "GCP", "Kafka", "?Flink", "?BigQuery", "Pandas", "?NumPy", "?scikit-learn", "Docker", "Kubernetes", "?Scala", "Spark", "Snowflake", "Databricks"]}
 
-**Why:** Spark included explicitly from "Scala on Spark" and "Spark internals"; Databricks and Snowflake included from nice-to-have section — nice-to-have is still an explicit mention.
+**Why:** Spark included explicitly from "Scala on Spark" and "Spark internals"; Databricks and Snowflake included from nice-to-have section — nice-to-have is still an explicit mention. Flink, BigQuery, NumPy, scikit-learn, and Scala are explicitly named but not in the canonical list — prefix each with "?". SQL is mentioned ("Familiarity with SQL") and is canonical, but here it appears immediately followed by "columnar data warehouses" as a generic concept rather than a listed skill — omit to avoid ambiguity; the specific databases (BigQuery, Snowflake) carry the signal.
 
 ---
 
@@ -145,9 +150,9 @@ We are building a distributed platform that processes millions of events per day
 - Good understanding of Docker and container orchestration (Kubernetes or ECS)
 
 **Output:**
-{"technologies": ["Go", "Python", "gRPC", "REST", "Kafka", "PostgreSQL", "Redis", "Cassandra", "Terraform", "AWS", "CI/CD", "Docker", "Kubernetes", "RabbitMQ"]}
+{"technologies": ["Go", "Python", "gRPC", "REST", "Kafka", "PostgreSQL", "Redis", "?Cassandra", "Terraform", "AWS", "Docker", "Kubernetes", "?RabbitMQ"]}
 
-**Why:** RabbitMQ included from "Kafka or RabbitMQ" in requirements — alternatives listed explicitly are still explicit mentions. Kubernetes included from "Kubernetes or ECS" in requirements.
+**Why:** RabbitMQ and Cassandra are explicitly named but not in the canonical list — prefix each with "?". Alternatives listed explicitly are still explicit mentions (RabbitMQ from "Kafka or RabbitMQ"; Kubernetes from "Kubernetes or ECS"). CI/CD is mentioned as a concept ("CI/CD pipelines") but no specific CI/CD tool is named — do not extract; CI/CD is not a canonical technology.
 
 ---
 
@@ -174,9 +179,9 @@ We are building next-generation AI-powered features. Our ML Engineering team dev
 - Nice to have: experience with Kubernetes, TensorFlow, or Databricks
 
 **Output:**
-{"technologies": ["LLM", "RAG", "PyTorch", "TensorFlow", "Python", "Airflow", "Pandas", "NumPy", "scikit-learn", "Docker", "Kubernetes", "AWS", "Snowflake", "Databricks", "GCP"]}
+{"technologies": ["LLM", "RAG", "PyTorch", "TensorFlow", "Python", "Airflow", "Pandas", "?NumPy", "?scikit-learn", "Docker", "Kubernetes", "AWS", "GCP", "Snowflake", "Databricks", "Vector DB"]}
 
-**Why:** LLM and RAG are in the canonical list and explicitly named. "Hugging Face Transformers" is not in the canonical list — do not add it unless prefixed with "?". TensorFlow included from the nice-to-have section.
+**Why:** LLM and RAG are in the canonical list and explicitly named. "Hugging Face Transformers" is not in the canonical list — do not add it unless prefixed with "?". TensorFlow included from the nice-to-have section. NumPy and scikit-learn are explicitly named but not in the canonical list — prefix each with "?". "Store embeddings in vector databases" maps to the canonical "Vector DB" (covers Pinecone, Qdrant, Weaviate, Chroma, and the generic "vector database" phrasing).
 
 ---
 
@@ -204,9 +209,9 @@ Our infrastructure team is responsible for the platform that all engineering tea
 - Scripting in Python or Go
 
 **Output:**
-{"technologies": ["Kubernetes", "AWS", "Terraform", "Ansible", "CI/CD", "GitHub Actions", "Docker", "Python", "Go"]}
+{"technologies": ["Kubernetes", "AWS", "Helm", "Terraform", "Ansible", "GitHub Actions", "Jenkins", "Prometheus", "Grafana", "Docker", "Python", "Go"]}
 
-**Why:** "Prometheus" and "Grafana" are not in the canonical list — do not add them without "?" prefix. "Bash" is not in the canonical list. GKE mentioned but implies GCP — GCP is not included because the job explicitly names AWS EKS as their platform; GKE and AKS are only named as equivalents in a parenthetical.
+**Why:** Helm included from "write Helm charts" — explicit mention. Prometheus and Grafana are in the canonical list and explicitly named in responsibilities — include both. Jenkins is explicitly named as an alternative in requirements ("GitHub Actions, GitLab CI, Jenkins") — alternatives listed explicitly are still explicit mentions; GitLab CI is not canonical. CI/CD is not a canonical technology — GitHub Actions and Jenkins are already included as the named tools. GKE and AKS are named only as equivalents in a parenthetical ("EKS, GKE, or AKS") for the Kubernetes requirement; GCP and Azure are not extracted because the job explicitly names AWS EKS as their platform.
 
 ---
 
@@ -233,9 +238,9 @@ Nous cherchons un développeur full-stack pour rejoindre notre équipe produit �
 - Toute expérience avec TypeScript ou GraphQL est un atout
 
 **Output:**
-{"technologies": ["Vue", "React", "PHP", "Laravel", "REST", "MySQL", "Redis", "CI/CD", "Docker", "AWS", "TypeScript", "GraphQL", "PostgreSQL"]}
+{"technologies": ["Vue", "React", "?PHP", "?Laravel", "REST", "MySQL", "Redis", "Docker", "AWS", "TypeScript", "GraphQL", "PostgreSQL"]}
 
-**Why:** "vue d'ensemble" (French for "overview") is NOT Vue.js — only the explicit "Vue.js" and "Nuxt" mentions count. Nuxt is not in the canonical list (do not add without "?"). "RESTful" → REST. React included from "Vue.js ou React" in requirements. GitLab CI is not in the canonical list; CI/CD is included as the broader concept is explicitly named.
+**Why:** "vue d'ensemble" (French for "overview") is NOT Vue.js — only the explicit "Vue.js" and "Nuxt" mentions count. Nuxt is not in the canonical list (do not add without "?"). "RESTful" → REST. React included from "Vue.js ou React" in requirements. PHP and Laravel are explicitly named but not in the canonical list — prefix each with "?". GitLab CI is not in the canonical list. CI/CD is not a canonical technology — no specific canonical CI/CD tool is named, so do not extract it.
 
 ---
 
