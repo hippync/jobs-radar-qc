@@ -263,7 +263,10 @@ For every screen:
 - **No drop shadows on cards.** Borders only.
 - **No 2012 `<select>`** dropdowns. Every filter is a chip, checkbox, or
   range slider.
-- **No skeleton loaders.** Data is server-rendered and inline.
+- **No skeleton loaders.** Data is server-rendered and inline. For route
+  transitions that produce a blank-page flash, use a `loading.tsx` that
+  renders only the persistent shell + a thin top progress bar (`--accent`,
+  ≤ 3 px). Never project a fake layout (pulsing cards, ghost columns, etc.).
 - **No third-party charting library** for the radar. Hand-rolled SVG.
 - **No renaming `/qc`.** The wordmark is part of the brand.
 
