@@ -75,7 +75,9 @@
         <kw canonical="Python">Python</kw>
         <kw canonical="JavaScript">JavaScript</kw>
         <kw canonical="TypeScript">TypeScript</kw>
-        <kw canonical="Go">Golang</kw>
+        <!-- Go: case_sensitive prevents matching lowercase "go" in prose; \b(?:Go|Golang)\b
+             matches both "Go" and "Golang" as standalone words -->
+        <kw canonical="Go" case_sensitive="true">\b(?:Go|Golang)\b</kw>
         <kw canonical="Rust">Rust</kw>
         <kw canonical="Java">Java</kw>
         <kw canonical="Kotlin">Kotlin</kw>
@@ -85,25 +87,55 @@
         <kw canonical="Ruby">Ruby</kw>
         <kw canonical="PHP">PHP</kw>
         <kw canonical="Swift">Swift</kw>
+        <!-- SQL: case_sensitive + \b prevents matching MySQL / PostgreSQL -->
+        <kw canonical="SQL" case_sensitive="true">\bSQL\b</kw>
         <kw canonical="React">React</kw>
         <kw canonical="Next.js">Next\.js</kw>
         <kw canonical="Vue">Vue(?:\.js)?</kw>
         <kw canonical="Angular">Angular</kw>
         <kw canonical="Node.js">Node(?:\.js)?</kw>
+        <kw canonical="Tailwind">Tailwind(?:\s+CSS)?</kw>
+        <kw canonical="Redux">Redux</kw>
         <kw canonical="Django">Django</kw>
         <kw canonical="FastAPI">FastAPI</kw>
-        <kw canonical="Spring">Spring(?:\s+Boot)?</kw>
+        <!-- Spring(?:\s+Boot)? matches both "Spring" and "Spring Boot";
+             canonical is "Spring Boot" to align with canonical_tech_stack.json v2 -->
+        <kw canonical="Spring Boot">Spring(?:\s+Boot)?</kw>
+        <kw canonical="NestJS">NestJS</kw>
         <kw canonical=".NET">\.NET</kw>
         <kw canonical="AWS">AWS</kw>
         <kw canonical="GCP">GCP</kw>
         <kw canonical="Azure">Azure</kw>
         <kw canonical="Kubernetes">Kubernetes</kw>
         <kw canonical="Docker">Docker</kw>
+        <kw canonical="Jenkins">Jenkins</kw>
+        <kw canonical="Helm">Helm</kw>
+        <!-- ArgoCD: Argo\s*CD matches "ArgoCD" and "Argo CD" -->
+        <kw canonical="ArgoCD">Argo\s*CD</kw>
+        <kw canonical="Prometheus">Prometheus</kw>
+        <kw canonical="Grafana">Grafana</kw>
+        <kw canonical="Nginx">Nginx</kw>
+        <kw canonical="Cloudflare">Cloudflare</kw>
+        <kw canonical="LangChain">LangChain</kw>
+        <!-- OpenAI: case_sensitive matches the brand name precisely -->
+        <kw canonical="OpenAI" case_sensitive="true">OpenAI</kw>
+        <kw canonical="MLflow">MLflow</kw>
+        <!-- Vector DB: matches named databases + plain-English descriptions -->
+        <kw canonical="Vector DB">(?:Pinecone|Qdrant|Weaviate|Chroma|vector\s+(?:database|store|DB))</kw>
         <kw canonical="PostgreSQL">Postgres(?:QL)?</kw>
         <kw canonical="MySQL">MySQL</kw>
         <kw canonical="MongoDB">MongoDB</kw>
         <kw canonical="React Native">React Native</kw>
         <kw canonical="Flutter">Flutter</kw>
+        <kw canonical="SwiftUI">SwiftUI</kw>
+
+        <!-- Testing / QA -->
+        <kw canonical="Jest">Jest</kw>
+        <kw canonical="Cypress">Cypress</kw>
+        <kw canonical="Playwright">Playwright</kw>
+        <kw canonical="Selenium">Selenium</kw>
+        <kw canonical="JUnit">JUnit</kw>
+        <kw canonical="Postman">Postman</kw>
       </keywords>
     </field>
 

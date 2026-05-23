@@ -85,10 +85,14 @@ class TestPlusgradePaymentsEngineer:
     """Bugs 2 & 3: False positives from missing word-boundary and raw-HTML search."""
 
     def test_explicit_stack_present(self, lever: Extractor, plusgrade_raw: dict) -> None:
-        """The tech stack is explicitly listed: Java, Spring, TypeScript, React, AWS, Docker, REST."""  # noqa: E501
+        """Explicitly listed stack: Java, Spring Boot, TypeScript, React, AWS, Docker, REST.
+
+        Note: canonical was renamed "Spring" → "Spring Boot" in extraction.xml v2 to align with
+        canonical_tech_stack.json v2.  The pattern Spring(?:\\s+Boot)? still matches plain "Spring".
+        """
         result = lever._apply_extraction(plusgrade_raw, _COMPANY_PLUSGRADE)
         stack = set(result["tech_stack"])
-        expected = {"Java", "Spring", "TypeScript", "React", "AWS", "Docker", "REST"}
+        expected = {"Java", "Spring Boot", "TypeScript", "React", "AWS", "Docker", "REST"}
         missing = expected - stack
         assert not missing, f"Explicitly listed technologies are missing: {missing}"
 

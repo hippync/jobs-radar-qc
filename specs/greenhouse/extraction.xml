@@ -105,6 +105,8 @@
         <kw canonical="Elixir">Elixir</kw>
         <kw canonical="Erlang">Erlang</kw>
         <kw canonical="R" case_sensitive="true">\bR\b</kw>
+        <!-- SQL: case_sensitive + \b prevents matching MySQL / PostgreSQL -->
+        <kw canonical="SQL" case_sensitive="true">\bSQL\b</kw>
 
         <!-- Frontend / Web -->
         <kw canonical="React">React</kw>
@@ -116,13 +118,19 @@
         <kw canonical="Express">Express</kw>
         <kw canonical="GraphQL">GraphQL</kw>
         <kw canonical="REST" case_sensitive="true">REST(?:ful)?</kw>
+        <kw canonical="Tailwind">Tailwind(?:\s+CSS)?</kw>
+        <kw canonical="Redux">Redux</kw>
 
         <!-- Backend frameworks -->
         <kw canonical="Django">Django</kw>
         <kw canonical="FastAPI">FastAPI</kw>
         <kw canonical="Flask">Flask</kw>
         <kw canonical="Rails">(?:Ruby on )?Rails</kw>
-        <kw canonical="Spring">Spring(?:\s+Boot)?</kw>
+        <!-- Spring(?:\s+Boot)? pattern matches both "Spring" and "Spring Boot";
+             canonical is "Spring Boot" to align with canonical_tech_stack.json v2 -->
+        <kw canonical="Spring Boot">Spring(?:\s+Boot)?</kw>
+        <kw canonical="NestJS">NestJS</kw>
+        <kw canonical="gRPC">gRPC</kw>
         <kw canonical="Laravel">Laravel</kw>
         <kw canonical="ASP.NET">ASP\.NET</kw>
         <kw canonical=".NET">\.NET</kw>
@@ -140,6 +148,12 @@
         <kw canonical="LLM" case_sensitive="true">LLM</kw>
         <kw canonical="RAG" case_sensitive="true">RAG</kw>
         <kw canonical="Flink">(?:Apache )?Flink</kw>
+        <kw canonical="LangChain">LangChain</kw>
+        <!-- OpenAI: case_sensitive matches the brand name precisely -->
+        <kw canonical="OpenAI" case_sensitive="true">OpenAI</kw>
+        <kw canonical="MLflow">MLflow</kw>
+        <!-- Vector DB: matches named databases + plain-English descriptions -->
+        <kw canonical="Vector DB">(?:Pinecone|Qdrant|Weaviate|Chroma|vector\s+(?:database|store|DB))</kw>
 
         <!-- Infrastructure / Cloud -->
         <kw canonical="AWS">AWS</kw>
@@ -151,6 +165,14 @@
         <kw canonical="Ansible">Ansible</kw>
         <kw canonical="CI/CD">CI/CD</kw>
         <kw canonical="GitHub Actions">GitHub Actions</kw>
+        <kw canonical="Jenkins">Jenkins</kw>
+        <kw canonical="Helm">Helm</kw>
+        <!-- ArgoCD: Argo\s*CD matches "ArgoCD" (0 spaces) and "Argo CD" (1 space) -->
+        <kw canonical="ArgoCD">Argo\s*CD</kw>
+        <kw canonical="Prometheus">Prometheus</kw>
+        <kw canonical="Grafana">Grafana</kw>
+        <kw canonical="Nginx">Nginx</kw>
+        <kw canonical="Cloudflare">Cloudflare</kw>
 
         <!-- Databases -->
         <kw canonical="PostgreSQL">Postgres(?:QL)?</kw>
@@ -168,6 +190,15 @@
         <kw canonical="iOS">iOS</kw>
         <kw canonical="React Native">React Native</kw>
         <kw canonical="Flutter">Flutter</kw>
+        <kw canonical="SwiftUI">SwiftUI</kw>
+
+        <!-- Testing / QA -->
+        <kw canonical="Jest">Jest</kw>
+        <kw canonical="Cypress">Cypress</kw>
+        <kw canonical="Playwright">Playwright</kw>
+        <kw canonical="Selenium">Selenium</kw>
+        <kw canonical="JUnit">JUnit</kw>
+        <kw canonical="Postman">Postman</kw>
 
       </keywords>
     </field>
