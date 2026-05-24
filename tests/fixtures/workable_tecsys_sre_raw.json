@@ -1,0 +1,13 @@
+{
+  "_comment": "Simulated raw row as produced by _parse_markdown_table + _fetch_workable_descriptions for a Tecsys SRE posting. Technologies (AWS, Kubernetes, Python, Docker, Jenkins, .NET) appear only in description_html, NOT in the title — this is the core regression scenario for issue #56.",
+  "title": "Site Reliability Engineer",
+  "department": "PT - CLOUD Infrastructure",
+  "location": "Montreal, Canada (Hybrid)",
+  "_employment_raw": "Full-time",
+  "_salary": null,
+  "_posted_raw": "2026-05-04",
+  "_detail_url": "https://apply.workable.com/tecsys/jobs/view/42A53FB11F.md",
+  "external_id": "42A53FB11F",
+  "source_url": "https://apply.workable.com/tecsys/j/42A53FB11F",
+  "description_html": "# Site Reliability Engineer\n\n> Tecsys Inc. · Montreal, Canada (Hybrid) · Full-time · Posted 2026-05-04\n\n**Workplace:** hybrid\n\n**Department:** PT - CLOUD Infrastructure\n\n## Description\n\nWe are looking for a Site Reliability Engineer to join our NOC, a team at the heart of platform reliability for mission-critical SaaS environments. You will help maintain, optimize, and ensure the reliability and performance of the systems that power our cloud infrastructure across AWS and Kubernetes, with a strong focus on automation, observability, and continuous improvement.\n\n## Requirements\n\n### Tools used\n\n- AWS (multi-account, VPC, EC2, EKS)\n- Kubernetes\n- Datadog\n- Terraform\n- GitLab CI/CD (Jenkins acceptable)\n\n### Qualifications\n\n- 5+ years in Site Reliability, Cloud, or DevOps Engineering.\n- Proven experience managing cloud infrastructure in AWS and Kubernetes at scale.\n- Strong hands-on experience with IaC and automation (Terraform, Ansible, or similar).\n- Scripting skills in Python, Bash, Java or equivalent for automation and diagnostics.\n- Familiarity with CI/CD pipelines and release automation (Jenkins).\n- Using Docker for containerization.\n- Basic knowledge of Java- or .Net-based development required."
+}

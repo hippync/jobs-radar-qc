@@ -6,17 +6,27 @@
   The extractor parses the table using schema.json "columns" as field names
   and auto-derives external_id and source_url from the _detail_url cell.
 
-  Key limitations vs JSON sources:
-  - No description_html: description is not included in the list endpoint
-  - tech_stack derived from title only (sources="title")
+  Detail-page fetch (Layer 1, deterministic):
+    After fetching the list, the extractor concurrently GETs each job's
+    _detail_url (https://apply.workable.com/{slug}/jobs/view/{SHORTCODE}.md)
+    and injects the full Markdown content into description_html before
+    XML extraction runs.  If the fetch fails the field stays null (fallback
+    constant below) and tech_stack falls back to title-only for that record.
+
+  Key differences vs JSON sources:
+  - description_html comes from the .md detail page, not the list endpoint
+  - tech_stack uses both title and description_html
   - posted_at is a date only (midnight UTC)
   - employment_type is often missing (— → null)
 -->
-<extraction source="workable" version="1">
+<extraction source="workable" version="2">
 
   <constants>
     <constant name="source"             value="workable" />
     <constant name="is_active"          value="true"     type="bool" />
+    <!-- Fallback: overridden by the description_html field below when the
+         detail-page fetch succeeds. Stays null on fetch failures so the job
+         is still upserted with title-only tech_stack. -->
     <constant name="description_html"   value="null"     />
   </constants>
 
@@ -24,6 +34,10 @@
     <!-- Auto-derived by the markdown parser from the _detail_url cell -->
     <field name="external_id" from="external_id"   type="string" />
     <field name="source_url"  from="source_url"    type="string" />
+
+    <!-- description_html is injected by the extractor from the .md detail page
+         before extraction runs; overrides the null constant above. -->
+    <field name="description_html" from="description_html" type="string" nullable="true" />
 
     <!-- Direct column mappings -->
     <field name="title"            from="title"            type="string" />
@@ -69,9 +83,10 @@
       <match source="title" pattern="(?i)\b(manager|gestionnaire|responsable)\b"           value="manager"    />
     </field>
 
-    <!-- tech_stack from title only — no description available for Workable -->
+    <!-- tech_stack from title + description_html (injected from the .md detail page).
+         Falls back to title only when description_html is null (failed detail fetch). -->
     <field name="tech_stack" type="list[string]" default="[]" strategy="collect-all">
-      <keywords sources="title" word_boundary="true" case_insensitive="true">
+      <keywords sources="title,description_html" word_boundary="true" case_insensitive="true">
         <kw canonical="Python">Python</kw>
         <kw canonical="JavaScript">JavaScript</kw>
         <kw canonical="TypeScript">TypeScript</kw>

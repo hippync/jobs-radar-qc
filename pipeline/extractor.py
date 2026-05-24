@@ -20,6 +20,10 @@ logger = structlog.get_logger()
 
 SPECS_DIR = Path(__file__).parent.parent / "specs"
 
+# Maximum number of concurrent Workable detail-page requests.
+# Keeps the per-company fetch polite while still being meaningfully parallel.
+_WORKABLE_DETAIL_CONCURRENCY = 5
+
 
 # ─── Spec loading ────────────────────────────────────────────────────────────
 
@@ -138,9 +142,7 @@ def _with_word_boundary(pattern: str) -> str:
         return pattern
     # For patterns that start with a non-capturing group (?:...), peek at the
     # first character inside the group rather than the literal '(' character.
-    effective_first = (
-        pattern[3] if pattern.startswith(r"(?:") and len(pattern) > 3 else pattern[0]
-    )
+    effective_first = pattern[3] if pattern.startswith(r"(?:") and len(pattern) > 3 else pattern[0]
     prefix = (
         r"\b"
         if not pattern.startswith(r"\b") and re.match(r"[A-Za-z0-9_]", effective_first)
@@ -151,9 +153,7 @@ def _with_word_boundary(pattern: str) -> str:
     trailing = re.search(r"([A-Za-z0-9_])\)[?*+]?(?:\{[^}]*\})?$", pattern)
     effective_last = trailing.group(1) if trailing else pattern[-1]
     suffix = (
-        r"\b"
-        if not pattern.endswith(r"\b") and re.match(r"[A-Za-z0-9_]", effective_last)
-        else ""
+        r"\b" if not pattern.endswith(r"\b") and re.match(r"[A-Za-z0-9_]", effective_last) else ""
     )
     return f"{prefix}{pattern}{suffix}"
 
@@ -229,6 +229,10 @@ class Extractor:
             data = response.json()
             raw_jobs = data if jobs_path is None else data.get(jobs_path, [])
 
+        # Source-specific pre-extraction enrichment (e.g. Workable detail-page fetch).
+        # Must not make LLM calls — Layer 1 invariant.
+        await self._enrich_raw_jobs(client, raw_jobs)
+
         required = self.schema.get("validation", {}).get("required_fields", [])
 
         results = []
@@ -244,6 +248,66 @@ class Extractor:
 
         log.info("fetched", count=len(results))
         return results
+
+    async def _enrich_raw_jobs(self, client: httpx.AsyncClient, raw_jobs: list[dict]) -> None:
+        """Source-specific hook to enrich raw jobs before extraction.
+
+        Called after the list response is parsed but before ``_apply_extraction``
+        runs on each job. Must never make LLM calls (Layer 1 invariant).
+        """
+        if self.source == "workable":
+            await self._fetch_workable_descriptions(client, raw_jobs)
+
+    async def _fetch_workable_descriptions(
+        self, client: httpx.AsyncClient, raw_jobs: list[dict]
+    ) -> None:
+        """Fetch each Workable job's ``.md`` detail page and inject ``description_html``.
+
+        The list endpoint (``jobs.md``) does not include job descriptions; each row
+        carries a ``_detail_url`` pointing to the full Markdown detail page
+        (``https://apply.workable.com/{slug}/jobs/view/{SHORTCODE}.md``).
+
+        Requests are bounded to ``_WORKABLE_DETAIL_CONCURRENCY`` concurrent fetches.
+        A failed detail fetch is logged and the job continues with ``description_html``
+        absent (the extraction XML falls back to the ``null`` constant so the job is
+        still written to the DB — tech_stack will be title-only for that record).
+        """
+        sem = asyncio.Semaphore(_WORKABLE_DETAIL_CONCURRENCY)
+        seen: set[str] = set()  # guard against duplicate shortcodes in the same run
+
+        async def _fetch_one(raw_job: dict) -> None:
+            detail_url: str | None = raw_job.get("_detail_url")
+            # Guard against absent, relative, or already-seen URLs.
+            if not detail_url or not detail_url.startswith("https://") or detail_url in seen:
+                if detail_url and not detail_url.startswith("https://"):
+                    logger.warning("workable_detail_url_not_absolute", url=detail_url)
+                return
+            seen.add(detail_url)
+
+            async with sem:
+                try:
+                    resp = await client.get(detail_url, timeout=30.0)
+                    resp.raise_for_status()
+                    raw_job["description_html"] = resp.text
+                    logger.debug(
+                        "workable_detail_fetched",
+                        url=detail_url,
+                        bytes=len(resp.content),
+                    )
+                except httpx.HTTPStatusError as exc:
+                    logger.warning(
+                        "workable_detail_http_error",
+                        url=detail_url,
+                        status=exc.response.status_code,
+                    )
+                except httpx.HTTPError as exc:
+                    logger.warning(
+                        "workable_detail_fetch_failed",
+                        url=detail_url,
+                        error=str(exc),
+                    )
+
+        await asyncio.gather(*(_fetch_one(job) for job in raw_jobs))
 
     @staticmethod
     def _parse_markdown_table(text: str, columns: list[str]) -> list[dict]:

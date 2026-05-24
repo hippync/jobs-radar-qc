@@ -102,10 +102,38 @@ curl -s "https://apply.workable.com/{slug}/jobs.md?location%5B0%5D%5Bcountry%5D=
 
 ---
 
+## Detail-page fetch strategy
+
+The list endpoint does not include job descriptions; `description_html` must be
+fetched separately for each job.
+
+**Detail URL** (already parsed from the `_detail_url` table column):
+```
+GET https://apply.workable.com/{slug}/jobs/view/{SHORTCODE}.md
+```
+This returns the full Markdown document with Description + Requirements sections.
+
+**Concurrency:** The extractor fetches all detail pages for a company in parallel,
+bounded to `_WORKABLE_DETAIL_CONCURRENCY = 5` simultaneous requests via a semaphore.
+
+**Fallback behaviour:** If a detail fetch fails (network error, 4xx/5xx), the job is
+still processed with `description_html = null`. `tech_stack` falls back to title-only
+for that record; the job is not dropped.
+
+**Why the `.md` URL and not `/j/{SHORTCODE}`?**
+The human-facing `/j/{SHORTCODE}` page is a JavaScript Single Page Application; it
+returns only a loading spinner in raw HTML. The `.md` endpoint is the same
+machine-readable URL used by the list endpoint and returns static Markdown — no
+JavaScript rendering required.
+
+---
+
 ## Known quirks
 
-1. **No description available from the list endpoint** — `description_html` will always
-   be `null` for Workable jobs. `tech_stack` is derived from `title` only.
+1. **Description from detail fetch, not the list endpoint** — the list endpoint does
+   not include descriptions; `description_html` is populated via a secondary fetch
+   of each job's `.md` detail URL. `tech_stack` uses both `title` and
+   `description_html`.
 2. **`Type` column is often `—`** — many postings omit employment type; `employment_type`
    will frequently be `null`.
 3. **Location includes workplace type** — strip `(Hybrid)`, `(Remote)`, `(On-site)` if
