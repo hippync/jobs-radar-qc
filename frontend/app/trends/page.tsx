@@ -1,79 +1,53 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 import { supabase } from "@/lib/supabase";
+import {
+  CANONICAL,
+  CATEGORY_LABELS,
+  DEFAULT_CATS,
+  type CatSlug,
+  buildTechToCatMap,
+  catToCssSlug,
+  parseCatsParam,
+} from "@/lib/radarHelpers";
+import { RadarCategorySelector } from "@/components/RadarCategorySelector";
+import { RadarDownloadPanel } from "@/components/RadarDownloadPanel";
 
 export const metadata: Metadata = {
   title: "Tech Stack Radar | Jobs Radar /qc",
-  description: "Most in-demand technologies across active Québec tech roles, visualized as a radial radar.",
+  description:
+    "Most in-demand technologies across active Québec tech roles, visualized as a radial radar.",
 };
 
 export const revalidate = 3600;
 
-/* ── Tech category mapping ──────────────────────────────────────────── */
-type Category = "Languages" | "Frameworks" | "Cloud" | "Data" | "Tools";
+/* ── Reverse lookup: tech name → canonical category slug ──────────────── */
+const TECH_TO_CAT: Record<string, string> = buildTechToCatMap(CANONICAL);
 
-const TECH_CATEGORY: Record<string, Category> = {
-  // Languages
-  Python: "Languages", JavaScript: "Languages", TypeScript: "Languages",
-  Go: "Languages", Java: "Languages", Kotlin: "Languages", Rust: "Languages",
-  Scala: "Languages", "C#": "Languages", "C++": "Languages", Ruby: "Languages",
-  Swift: "Languages", PHP: "Languages", R: "Languages", Dart: "Languages",
-  Elixir: "Languages", Clojure: "Languages", "Objective-C": "Languages",
-  Haskell: "Languages", Erlang: "Languages",
-  // Frameworks
-  React: "Frameworks", Vue: "Frameworks", Angular: "Frameworks",
-  "Next.js": "Frameworks", "Node.js": "Frameworks", Django: "Frameworks",
-  Flask: "Frameworks", FastAPI: "Frameworks", Spring: "Frameworks",
-  Rails: "Frameworks", Express: "Frameworks", GraphQL: "Frameworks",
-  gRPC: "Frameworks", ".NET": "Frameworks", "ASP.NET": "Frameworks",
-  Laravel: "Frameworks", "Spring Boot": "Frameworks", NestJS: "Frameworks",
-  "Vue.js": "Frameworks", "React Native": "Frameworks", Flutter: "Frameworks",
-  Svelte: "Frameworks", Remix: "Frameworks",
-  // Cloud
-  AWS: "Cloud", GCP: "Cloud", Azure: "Cloud", Kubernetes: "Cloud",
-  Docker: "Cloud", Terraform: "Cloud", Helm: "Cloud",
-  "Cloud Run": "Cloud", EKS: "Cloud", "AWS Lambda": "Cloud",
-  "Google Cloud": "Cloud", CI: "Cloud", "GitHub Actions": "Cloud",
-  Jenkins: "Cloud", Ansible: "Cloud",
-  // Data
-  PostgreSQL: "Data", MySQL: "Data", MongoDB: "Data", Redis: "Data",
-  Kafka: "Data", Spark: "Data", Airflow: "Data", dbt: "Data",
-  Snowflake: "Data", Elasticsearch: "Data", BigQuery: "Data",
-  Databricks: "Data", Redshift: "Data", Postgres: "Data",
-  Elastic: "Data", Flink: "Data", "Apache Spark": "Data",
-  "Apache Kafka": "Data", Pinecone: "Data", Qdrant: "Data",
-};
-
-function getCategory(tech: string): Category {
-  return TECH_CATEGORY[tech] ?? "Tools";
+function getCategory(tech: string): string {
+  return TECH_TO_CAT[tech] ?? "other";
 }
 
-/* ── Data types ─────────────────────────────────────────────────────── */
+/* ── Data types ─────────────────────────────────────────────────────────── */
 interface TechRow {
   name: string;
   count: number;
   rank: number;
-  category: Category;
+  /** Canonical category slug (e.g. "languages", "devops"). */
+  category: string;
 }
 
-type RadarSector = "Languages" | "Frameworks" | "Cloud" | "Data";
-const CATEGORIES: RadarSector[] = ["Languages", "Frameworks", "Cloud", "Data"];
-
-/* ── Time-window options ─────────────────────────────────────────── */
+/* ── Time-window options ─────────────────────────────────────────────── */
 const VALID_WINDOWS = ["7d", "30d", "90d", "all"] as const;
 type WindowOption = (typeof VALID_WINDOWS)[number];
 
-/** Validates a raw searchParam value; falls back to "30d". */
 function parseWindow(raw: string | undefined): WindowOption {
   return (VALID_WINDOWS as readonly string[]).includes(raw ?? "")
     ? (raw as WindowOption)
     : "30d";
 }
 
-/**
- * Returns an ISO date string ("YYYY-MM-DD") for the oldest allowed
- * first_seen_at, or null when the window is "all" (no cutoff).
- */
 function windowCutoff(w: WindowOption): string | null {
   if (w === "all") return null;
   const days = w === "7d" ? 7 : w === "30d" ? 30 : 90;
@@ -82,11 +56,8 @@ function windowCutoff(w: WindowOption): string | null {
   return d.toISOString().split("T")[0];
 }
 
-/* ── Fetch ──────────────────────────────────────────────────────────── */
-async function fetchRadarData(
-  filterCategory?: string,
-  window: WindowOption = "30d",
-): Promise<{
+/* ── Fetch ──────────────────────────────────────────────────────────────── */
+async function fetchRadarData(window: WindowOption = "30d"): Promise<{
   techs: TechRow[];
   jobCount: number;
   coMentions: Record<string, Array<{ name: string; pct: number }>>;
@@ -121,7 +92,7 @@ async function fetchRadarData(
     }
   }
 
-  // Build ranked tech list
+  // Build ranked tech list (all techs, no global cap — radar caps per sector)
   const all = Object.entries(counts)
     .sort((a, b) => b[1] - a[1])
     .map(([name, count], i) => ({
@@ -131,7 +102,7 @@ async function fetchRadarData(
       category: getCategory(name),
     }));
 
-  // Co-mentions as percentage of the tech's own count
+  // Co-mentions as percentage of the tech's own count (top 8 per tech)
   const coMentions: Record<string, Array<{ name: string; pct: number }>> = {};
   for (const [tech, mentions] of Object.entries(coOccurrence)) {
     const base = counts[tech] ?? 1;
@@ -141,39 +112,36 @@ async function fetchRadarData(
       .map(([name, c]) => ({ name, pct: Math.round((c / base) * 100) }));
   }
 
-  // Filter to selected category if provided
-  const filtered = filterCategory
-    ? all.filter((t) => t.category === filterCategory)
-    : all;
-
-  return { techs: filtered.slice(0, 30), jobCount: data.length, coMentions };
+  return { techs: all, jobCount: data.length, coMentions };
 }
 
-/* ── Radar SVG ──────────────────────────────────────────────────────── */
+/* ── Radar SVG ──────────────────────────────────────────────────────────── */
 function RadarChart({
-  techs,
   allTechs,
+  selectedCats,
 }: {
-  techs: TechRow[];
   allTechs: TechRow[];
+  selectedCats: string[];
 }) {
   const CX = 280, CY = 240, R = 200;
   const RINGS = [0.95, 0.68, 0.42, 0.18];
   const RING_LABELS = ["top 5", "top 10", "top 20", "long tail"];
+  /** Top-5 techs globally — used to decide inline label rendering. */
   const TOP5 = new Set(allTechs.slice(0, 5).map((t) => t.name));
 
-  // Group techs by category and position in their sector
-  const byCat: Record<RadarSector, TechRow[]> = {
-    Languages: [], Frameworks: [], Cloud: [], Data: [],
-  };
-  for (const t of techs) {
-    if (CATEGORIES.includes(t.category as RadarSector)) {
-      byCat[t.category as RadarSector].push(t);
+  /* ── Group techs by selected sector, capped at 8 per sector ──────────── */
+  const byCat: Record<string, TechRow[]> = {};
+  for (const cat of selectedCats) {
+    byCat[cat] = [];
+  }
+  for (const t of allTechs) {
+    const arr = byCat[t.category];
+    if (arr && arr.length < 8) {
+      arr.push(t);
     }
   }
 
-  const maxCount = allTechs[0]?.count ?? 1;
-
+  /* ── Place tech bubbles in polar coordinates ─────────────────────────── */
   interface PlacedTech {
     tech: TechRow;
     x: number;
@@ -185,9 +153,9 @@ function RadarChart({
 
   const placed: PlacedTech[] = [];
 
-  CATEGORIES.forEach((cat, catIdx) => {
-    const arr = byCat[cat];
-    const sectorAngle = (Math.PI * 2) / CATEGORIES.length;
+  selectedCats.forEach((cat, catIdx) => {
+    const arr = byCat[cat] ?? [];
+    const sectorAngle = (Math.PI * 2) / selectedCats.length;
     arr.forEach((tech, i) => {
       const angle =
         -Math.PI / 2 +
@@ -195,7 +163,7 @@ function RadarChart({
         (sectorAngle * (i + 1)) / (arr.length + 1);
 
       // Rank drives radial position: top rank closer to center
-      const rankFrac = tech.rank / (maxCount === 1 ? 1 : allTechs.length);
+      const rankFrac = tech.rank / Math.max(1, allTechs.length);
       const r = R * (0.16 + 0.76 * Math.min(1, rankFrac * 1.8));
 
       const x = CX + Math.cos(angle) * r;
@@ -208,24 +176,34 @@ function RadarChart({
     });
   });
 
+  /* ── Total tech count for aria desc ─────────────────────────────────── */
+  const visibleCount = placed.length;
+
   return (
     <svg
-      viewBox={`0 0 560 480`}
+      viewBox="0 0 560 480"
       style={{ width: "100%", height: "100%", display: "block" }}
       role="img"
       aria-label="Tech stack radial radar showing technology distribution across Quebec tech jobs"
     >
       <title>Tech Stack Radar — Jobs Radar /qc</title>
       <desc>
-        Radial chart showing {techs.length} technologies grouped by category. Bubble size
-        represents posting count; proximity to center represents overall rank.
+        Radial chart showing {visibleCount} technologies grouped into{" "}
+        {selectedCats.length} sectors:{" "}
+        {selectedCats
+          .map((c) => CATEGORY_LABELS[c as CatSlug] ?? c)
+          .join(", ")}
+        . Bubble size represents posting count; proximity to center represents
+        overall rank.
       </desc>
 
       {/* Concentric rings */}
       {RINGS.map((k, i) => (
         <g key={i}>
           <circle
-            cx={CX} cy={CY} r={R * k}
+            cx={CX}
+            cy={CY}
+            r={R * k}
             fill="none"
             stroke="var(--rule-soft)"
             strokeDasharray="3 5"
@@ -244,13 +222,14 @@ function RadarChart({
       ))}
 
       {/* Sector divider lines */}
-      {CATEGORIES.map((_, i) => {
-        const sector = (Math.PI * 2) / CATEGORIES.length;
+      {selectedCats.map((_, i) => {
+        const sector = (Math.PI * 2) / selectedCats.length;
         const a0 = -Math.PI / 2 + i * sector;
         return (
           <line
             key={i}
-            x1={CX} y1={CY}
+            x1={CX}
+            y1={CY}
             x2={CX + Math.cos(a0) * R}
             y2={CY + Math.sin(a0) * R}
             stroke="var(--rule-soft)"
@@ -259,31 +238,36 @@ function RadarChart({
         );
       })}
 
-      {/* Sector labels */}
-      {CATEGORIES.map((cat, i) => {
-        const sector = (Math.PI * 2) / CATEGORIES.length;
+      {/* Sector labels — colored by category token */}
+      {selectedCats.map((cat, i) => {
+        const sector = (Math.PI * 2) / selectedCats.length;
         const am = -Math.PI / 2 + i * sector + sector / 2;
         const lx = CX + Math.cos(am) * (R + 26);
         const ly = CY + Math.sin(am) * (R + 26);
+        const cssSlug = catToCssSlug(cat);
+        const label = CATEGORY_LABELS[cat as CatSlug] ?? cat;
         return (
           <text
             key={cat}
-            x={lx} y={ly}
+            x={lx}
+            y={ly}
             fontFamily="var(--font-sans)"
             fontSize="11"
             fontWeight="600"
             textAnchor="middle"
-            fill="var(--ink)"
+            fill={`var(--cat-${cssSlug})`}
           >
-            {cat}
+            {label}
           </text>
         );
       })}
 
       {/* Decorative sweep line at -32° */}
       <line
-        x1={CX} y1={CY}
-        x2={CX + R} y2={CY}
+        x1={CX}
+        y1={CY}
+        x2={CX + R}
+        y2={CY}
         stroke="var(--accent)"
         strokeWidth="1.25"
         strokeDasharray="2 5"
@@ -291,55 +275,74 @@ function RadarChart({
         transform={`rotate(-32 ${CX} ${CY})`}
       />
 
-      {/* Center */}
+      {/* Center dot */}
       <circle cx={CX} cy={CY} r={5} fill="var(--accent)" />
-      <circle cx={CX} cy={CY} r={13} fill="none" stroke="var(--accent)" strokeWidth="1" />
+      <circle
+        cx={CX}
+        cy={CY}
+        r={13}
+        fill="none"
+        stroke="var(--accent)"
+        strokeWidth="1"
+      />
 
-      {/* Bubbles */}
-      {placed.map(({ tech, x, y, size, isTop5, labelSide }) => (
-        <g key={tech.name}>
-          <title>{tech.name} — {tech.count} roles (rank #{tech.rank})</title>
-          <a href={`/?tech=${encodeURIComponent(tech.name)}`}>
-            <circle
-              cx={x} cy={y} r={size}
-              fill={isTop5 ? "var(--accent)" : "color-mix(in oklab, var(--accent) 28%, var(--surface))"}
-              stroke="var(--rule)"
-              strokeWidth="1"
-              style={{ cursor: "pointer" }}
-            />
-            {/* Inline labels for top-5 only; others use tooltip via <title> */}
-            {isTop5 && (
-              <>
-                <text
-                  x={labelSide === "right" ? x + size + 4 : x - size - 4}
-                  y={y + 3}
-                  fontFamily="var(--font-sans)"
-                  fontSize="10.5"
-                  fontWeight="600"
-                  textAnchor={labelSide === "right" ? "start" : "end"}
-                  fill="var(--ink)"
-                >
-                  {tech.name}
-                </text>
-                <text
-                  x={labelSide === "right" ? x + size + 4 : x - size - 4}
-                  y={y + 14}
-                  fontFamily="var(--font-mono)"
-                  fontSize="8.5"
-                  textAnchor={labelSide === "right" ? "start" : "end"}
-                  fill="var(--ink-mute)"
-                >
-                  {tech.count}
-                </text>
-              </>
-            )}
-          </a>
-        </g>
-      ))}
+      {/* Bubbles — colored by category token */}
+      {placed.map(({ tech, x, y, size, isTop5, labelSide }) => {
+        const cssSlug = catToCssSlug(tech.category);
+        const catColor = `var(--cat-${cssSlug}, var(--accent))`;
+        const bubbleFill = isTop5
+          ? catColor
+          : `color-mix(in oklab, ${catColor} 35%, var(--surface))`;
+        return (
+          <g key={tech.name}>
+            <title>
+              {tech.name} — {tech.count} roles (rank #{tech.rank})
+            </title>
+            <a href={`/?tech=${encodeURIComponent(tech.name)}`}>
+              <circle
+                cx={x}
+                cy={y}
+                r={size}
+                fill={bubbleFill}
+                stroke="var(--rule-soft)"
+                strokeWidth="1"
+                style={{ cursor: "pointer" }}
+              />
+              {/* Inline labels for top-5 only; others surface via <title> tooltip */}
+              {isTop5 && (
+                <>
+                  <text
+                    x={labelSide === "right" ? x + size + 4 : x - size - 4}
+                    y={y + 3}
+                    fontFamily="var(--font-sans)"
+                    fontSize="10.5"
+                    fontWeight="600"
+                    textAnchor={labelSide === "right" ? "start" : "end"}
+                    fill="var(--ink)"
+                  >
+                    {tech.name}
+                  </text>
+                  <text
+                    x={labelSide === "right" ? x + size + 4 : x - size - 4}
+                    y={y + 14}
+                    fontFamily="var(--font-mono)"
+                    fontSize="8.5"
+                    textAnchor={labelSide === "right" ? "start" : "end"}
+                    fill="var(--ink-mute)"
+                  >
+                    {tech.count}
+                  </text>
+                </>
+              )}
+            </a>
+          </g>
+        );
+      })}
 
       {/* Legend */}
       <text
-        x="16" y="470"
+        x="16"
+        y="470"
         fontFamily="var(--font-mono)"
         fontSize="9"
         fill="var(--ink-mute)"
@@ -350,31 +353,25 @@ function RadarChart({
   );
 }
 
-/* ── Page ───────────────────────────────────────────────────────────── */
+/* ── Page ───────────────────────────────────────────────────────────────── */
 export default async function TrendsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ category?: string; window?: string }>;
+  searchParams: Promise<{ cats?: string; window?: string }>;
 }) {
-  const { category, window: windowParam } = await searchParams;
-  const validCategory = CATEGORIES.includes(category as RadarSector)
-    ? (category as RadarSector)
-    : undefined;
+  const { cats: catsParam, window: windowParam } = await searchParams;
   const activeWindow = parseWindow(windowParam);
 
-  const { techs, jobCount, coMentions } = await fetchRadarData(validCategory, activeWindow);
+  /** The 4 currently selected category slugs — always length 4. */
+  const selectedCats = parseCatsParam(catsParam, CANONICAL, DEFAULT_CATS);
 
-  // Side rail uses the same window so counts stay consistent with the radar
-  const { techs: allTechs } = await fetchRadarData(undefined, activeWindow);
+  const { techs: allTechs, jobCount, coMentions } = await fetchRadarData(
+    activeWindow,
+  );
+
   const top5 = allTechs.slice(0, 5);
   const focusTech = top5[0];
   const focusCoMentions = focusTech ? (coMentions[focusTech.name] ?? []) : [];
-
-  const categoryChips: Array<{ value: string | undefined; label: string }> = [
-    { value: undefined, label: "All" },
-    ...CATEGORIES.map((c) => ({ value: c, label: c })),
-    { value: "Tools", label: "Tools" },
-  ];
 
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col px-4 py-6 lg:flex-row lg:gap-0">
@@ -391,16 +388,19 @@ export default async function TrendsPage({
             </h1>
             <span
               className="text-xs"
-              style={{ color: "var(--ink-mute)", fontFamily: "var(--font-mono)" }}
+              style={{
+                color: "var(--ink-mute)",
+                fontFamily: "var(--font-mono)",
+              }}
             >
               · {jobCount} active roles · enriched weekly
             </span>
+            {/* Time-window pills — preserve ?cats= when switching windows */}
             <nav aria-label="Time window" className="ml-auto flex items-center gap-1.5">
               {VALID_WINDOWS.map((w) => {
                 const isActive = w === activeWindow;
-                // Preserve category when switching windows
                 const params = new URLSearchParams();
-                if (validCategory) params.set("category", validCategory);
+                params.set("cats", selectedCats.join(","));
                 params.set("window", w);
                 return (
                   <Link
@@ -439,7 +439,7 @@ export default async function TrendsPage({
             minHeight: 340,
           }}
         >
-          {techs.length === 0 ? (
+          {allTechs.length === 0 ? (
             <div className="flex h-full items-center justify-center py-20 text-center">
               <div>
                 <p className="text-sm font-medium" style={{ color: "var(--ink)" }}>
@@ -451,7 +451,7 @@ export default async function TrendsPage({
               </div>
             </div>
           ) : (
-            <RadarChart techs={techs} allTechs={allTechs} />
+            <RadarChart allTechs={allTechs} selectedCats={selectedCats} />
           )}
         </div>
       </div>
@@ -461,32 +461,20 @@ export default async function TrendsPage({
         className="mt-4 flex flex-col gap-4 lg:ml-5 lg:mt-0 lg:w-72"
         style={{ flexShrink: 0 }}
       >
-        {/* Category filter chips */}
-        <div className="flex flex-wrap gap-1.5">
-          {categoryChips.map(({ value, label }) => {
-            const isActive = value === validCategory;
-            // Preserve window when switching categories
-            const catParams = new URLSearchParams();
-            if (value) catParams.set("category", value);
-            catParams.set("window", activeWindow);
-            const href = `/trends?${catParams.toString()}`;
-            return (
-              <Link
-                key={label}
-                href={href}
-                className="rounded-full px-2.5 py-1 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--accent) focus-visible:ring-offset-1"
-                style={{
-                  background: isActive ? "var(--accent)" : "var(--bg-2)",
-                  color: isActive ? "white" : "var(--ink-soft)",
-                  border: `1px solid ${isActive ? "var(--accent)" : "var(--rule-soft)"}`,
-                  fontWeight: isActive ? 600 : 400,
-                  fontSize: 11,
-                }}
-              >
-                {label}
-              </Link>
-            );
-          })}
+        {/* Radar sector selector — Client Component */}
+        <div
+          className="rounded-md p-3"
+          style={{ background: "var(--bg-2)", border: "1px solid var(--rule-soft)" }}
+        >
+          {/*
+           * Suspense boundary required because RadarCategorySelector uses
+           * useSearchParams() which opts into dynamic rendering client-side.
+           * The null fallback avoids layout shift — the server-rendered chips
+           * (from selectedCats prop) are shown immediately.
+           */}
+          <Suspense fallback={null}>
+            <RadarCategorySelector selectedCats={selectedCats} />
+          </Suspense>
         </div>
 
         {/* Top technologies */}
@@ -497,13 +485,21 @@ export default async function TrendsPage({
           <div className="mb-2 flex items-center gap-2">
             <span
               className="text-xs font-semibold uppercase tracking-widest"
-              style={{ color: "var(--ink-mute)", fontFamily: "var(--font-mono)", fontSize: 9 }}
+              style={{
+                color: "var(--ink-mute)",
+                fontFamily: "var(--font-mono)",
+                fontSize: 9,
+              }}
             >
               Top technologies
             </span>
             <span
               className="text-xs"
-              style={{ color: "var(--ink-mute)", fontFamily: "var(--font-mono)", fontSize: 9 }}
+              style={{
+                color: "var(--ink-mute)",
+                fontFamily: "var(--font-mono)",
+                fontSize: 9,
+              }}
             >
               · {activeWindow === "all" ? "all time" : `last ${activeWindow}`}
             </span>
@@ -559,13 +555,21 @@ export default async function TrendsPage({
             <div className="mb-2 flex items-center gap-1">
               <span
                 className="text-xs font-semibold uppercase tracking-widest"
-                style={{ color: "var(--ink-mute)", fontFamily: "var(--font-mono)", fontSize: 9 }}
+                style={{
+                  color: "var(--ink-mute)",
+                  fontFamily: "var(--font-mono)",
+                  fontSize: 9,
+                }}
               >
                 Often paired with{" "}
               </span>
               <span
                 className="rounded px-1 text-xs font-semibold"
-                style={{ background: "var(--accent-12)", color: "var(--accent)", fontSize: 9 }}
+                style={{
+                  background: "var(--accent-12)",
+                  color: "var(--accent)",
+                  fontSize: 9,
+                }}
               >
                 {focusTech.name}
               </span>
@@ -584,7 +588,12 @@ export default async function TrendsPage({
                   }}
                 >
                   {name}{" "}
-                  <span style={{ color: "var(--ink-mute)", fontFamily: "var(--font-mono)" }}>
+                  <span
+                    style={{
+                      color: "var(--ink-mute)",
+                      fontFamily: "var(--font-mono)",
+                    }}
+                  >
                     {pct}%
                   </span>
                 </Link>
@@ -593,26 +602,10 @@ export default async function TrendsPage({
           </div>
         )}
 
-        {/* Embed / API card */}
-        <div
-          className="rounded-md p-3"
-          style={{ background: "var(--ink)", color: "var(--bg)" }}
-        >
-          <div
-            className="flex items-center gap-1.5 text-xs"
-            style={{ fontFamily: "var(--font-mono)", fontSize: 11 }}
-          >
-            <span style={{ color: "var(--accent)" }}>$</span>
-            <span style={{ opacity: 0.85 }}>curl jobs-radar-qc.dev/api/radar.json</span>
-          </div>
-          <p
-            className="mt-1.5 text-xs"
-            style={{ color: "var(--ink-mute)", fontFamily: "var(--font-mono)", fontSize: 9 }}
-          >
-            MIT-licensed open data · embed the radar in your blog
-          </p>
-        </div>
+        {/* Embed / API card — dynamic curl commands */}
+        <RadarDownloadPanel cats={selectedCats} />
       </div>
     </div>
   );
 }
+
