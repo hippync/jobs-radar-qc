@@ -1,0 +1,124 @@
+/**
+ * GET /api/radar
+ *
+ * Returns radar data as JSON or as a standalone SVG image.
+ *
+ * Query parameters
+ * ────────────────
+ * format  (optional) "json" | "svg"   — default: "json"
+ * cats    (optional) comma-separated canonical category slugs
+ *                    — default: "languages,frontend,devops,data_ai"
+ *
+ * Examples
+ * ────────
+ * /api/radar?format=json&cats=languages,frontend,devops,data_ai
+ * /api/radar?format=svg&cats=languages,backend,testing,mobile
+ *
+ * ISR: revalidate every hour — matches /trends page cache TTL.
+ */
+
+import { NextRequest, NextResponse } from "next/server";
+import {
+  CANONICAL,
+  DEFAULT_CATS,
+  parseCatsParam,
+  renderRadarSvg,
+} from "@/lib/radarHelpers";
+import { fetchRadarData } from "@/lib/radarData";
+
+export const revalidate = 3600;
+
+/** SVG returned when Supabase is unreachable or returns no data. */
+const SVG_ERROR = `<svg viewBox="0 0 560 480" xmlns="http://www.w3.org/2000/svg">
+  <rect width="560" height="480" fill="#0d1117"/>
+  <text x="280" y="240" font-family="sans-serif" font-size="14" text-anchor="middle" fill="#6e7681">
+    Radar data temporarily unavailable
+  </text>
+</svg>`;
+
+export async function GET(request: NextRequest): Promise<NextResponse> {
+  const { searchParams } = request.nextUrl;
+
+  /* ── Validate ?format= ──────────────────────────────────────────────── */
+  const format = searchParams.get("format") ?? "json";
+  if (format !== "json" && format !== "svg") {
+    return NextResponse.json(
+      { error: "Unsupported format. Accepted values: json, svg." },
+      { status: 400 },
+    );
+  }
+
+  /* ── Parse and validate ?cats= via shared helper ─────────────────────── */
+  const catsRaw = searchParams.get("cats") ?? undefined;
+  const cats = parseCatsParam(catsRaw, CANONICAL, DEFAULT_CATS);
+
+  /* ── Fetch radar data ───────────────────────────────────────────────── */
+  let fetchResult: Awaited<ReturnType<typeof fetchRadarData>>;
+  try {
+    fetchResult = await fetchRadarData("30d");
+  } catch {
+    if (format === "svg") {
+      return new NextResponse(SVG_ERROR, {
+        status: 500,
+        headers: svgHeaders(),
+      });
+    }
+    return NextResponse.json(
+      { error: "Failed to fetch radar data." },
+      { status: 500 },
+    );
+  }
+
+  const { techs: allTechs, jobCount, coMentions } = fetchResult;
+
+  /* ── SVG response ───────────────────────────────────────────────────── */
+  if (format === "svg") {
+    let svg: string;
+    try {
+      svg = renderRadarSvg(allTechs, cats);
+    } catch {
+      svg = SVG_ERROR;
+    }
+    return new NextResponse(svg, { status: 200, headers: svgHeaders() });
+  }
+
+  /* ── JSON response ──────────────────────────────────────────────────── */
+  // Filter techs to the selected categories only, preserving rank order.
+  const catSet = new Set(cats);
+  const filteredTechs = allTechs.filter((t) => catSet.has(t.category));
+
+  // Co-mentions restricted to techs in the selected categories.
+  const filteredCoMentions: Record<
+    string,
+    Array<{ name: string; pct: number }>
+  > = {};
+  for (const t of filteredTechs) {
+    filteredCoMentions[t.name] = coMentions[t.name] ?? [];
+  }
+
+  return NextResponse.json(
+    {
+      cats,
+      jobCount,
+      generatedAt: new Date().toISOString(),
+      techs: filteredTechs,
+      coMentions: filteredCoMentions,
+    },
+    {
+      status: 200,
+      headers: {
+        "Cache-Control": "public, max-age=3600, stale-while-revalidate=86400",
+      },
+    },
+  );
+}
+
+/* ── Helpers ────────────────────────────────────────────────────────────── */
+
+function svgHeaders(): HeadersInit {
+  return {
+    "Content-Type": "image/svg+xml",
+    "Access-Control-Allow-Origin": "*",
+    "Cache-Control": "public, max-age=3600, stale-while-revalidate=86400",
+  };
+}

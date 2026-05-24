@@ -1,11 +1,13 @@
 "use client";
 
 /**
- * RadarDownloadPanel — replaces the static curl card in the /trends side rail.
+ * RadarDownloadPanel — embed/API card in the /trends side rail.
  *
- * Shows dynamic curl commands for the currently selected radar categories.
- * Each line has a copy-to-clipboard button. The API endpoints (JSON + SVG)
- * will be live once issue #62 ships the /api/radar route.
+ * Shows dynamic curl commands and a direct SVG download link for the
+ * currently selected radar categories. Updates in real-time as the user
+ * swaps sectors via RadarCategorySelector.
+ *
+ * Both curl commands point to /api/radar (issue #62).
  */
 
 import { useState } from "react";
@@ -24,8 +26,10 @@ interface CopyState {
 
 export function RadarDownloadPanel({ cats }: Props) {
   const catStr = cats.join(",");
-  const jsonCmd = `curl ${BASE_URL}/api/radar.json?cats=${catStr}`;
+  const jsonCmd = `curl "${BASE_URL}/api/radar?format=json&cats=${catStr}"`;
   const svgCmd  = `curl "${BASE_URL}/api/radar?format=svg&cats=${catStr}"`;
+  // Relative path so the download link works in both dev and production.
+  const svgHref = `/api/radar?format=svg&cats=${catStr}`;
 
   const [copied, setCopied] = useState<CopyState>({ json: false, svg: false });
 
@@ -61,9 +65,35 @@ export function RadarDownloadPanel({ cats }: Props) {
         className="mt-2"
       />
 
+      {/* Download SVG link */}
+      <div className="mt-2 flex items-center justify-between">
+        <a
+          href={svgHref}
+          download="radar.svg"
+          style={{
+            color: "var(--accent)",
+            fontFamily: "var(--font-mono)",
+            fontSize: 9,
+            textDecoration: "none",
+            opacity: 0.85,
+          }}
+        >
+          Download SVG
+        </a>
+        <span
+          style={{
+            color: "var(--ink-mute)",
+            fontFamily: "var(--font-mono)",
+            fontSize: 9,
+          }}
+        >
+          embed-ready
+        </span>
+      </div>
+
       {/* Footer note */}
       <p
-        className="mt-2"
+        className="mt-1.5"
         style={{
           color: "var(--ink-mute)",
           fontFamily: "var(--font-mono)",
@@ -71,7 +101,7 @@ export function RadarDownloadPanel({ cats }: Props) {
           lineHeight: 1.5,
         }}
       >
-        MIT-licensed open data · ![radar](url) works in a GitHub README
+        MIT-licensed open data · works in a GitHub README
       </p>
     </div>
   );

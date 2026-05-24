@@ -1,16 +1,20 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { supabase } from "@/lib/supabase";
 import {
   CANONICAL,
   CATEGORY_LABELS,
   DEFAULT_CATS,
   type CatSlug,
-  buildTechToCatMap,
+  type TechRow,
   catToCssSlug,
   parseCatsParam,
 } from "@/lib/radarHelpers";
+import {
+  fetchRadarData,
+  parseWindow,
+  VALID_WINDOWS,
+} from "@/lib/radarData";
 import { RadarCategorySelector } from "@/components/RadarCategorySelector";
 import { RadarDownloadPanel } from "@/components/RadarDownloadPanel";
 
@@ -21,99 +25,6 @@ export const metadata: Metadata = {
 };
 
 export const revalidate = 3600;
-
-/* ── Reverse lookup: tech name → canonical category slug ──────────────── */
-const TECH_TO_CAT: Record<string, string> = buildTechToCatMap(CANONICAL);
-
-function getCategory(tech: string): string {
-  return TECH_TO_CAT[tech] ?? "other";
-}
-
-/* ── Data types ─────────────────────────────────────────────────────────── */
-interface TechRow {
-  name: string;
-  count: number;
-  rank: number;
-  /** Canonical category slug (e.g. "languages", "devops"). */
-  category: string;
-}
-
-/* ── Time-window options ─────────────────────────────────────────────── */
-const VALID_WINDOWS = ["7d", "30d", "90d", "all"] as const;
-type WindowOption = (typeof VALID_WINDOWS)[number];
-
-function parseWindow(raw: string | undefined): WindowOption {
-  return (VALID_WINDOWS as readonly string[]).includes(raw ?? "")
-    ? (raw as WindowOption)
-    : "30d";
-}
-
-function windowCutoff(w: WindowOption): string | null {
-  if (w === "all") return null;
-  const days = w === "7d" ? 7 : w === "30d" ? 30 : 90;
-  const d = new Date();
-  d.setDate(d.getDate() - days);
-  return d.toISOString().split("T")[0];
-}
-
-/* ── Fetch ──────────────────────────────────────────────────────────────── */
-async function fetchRadarData(window: WindowOption = "30d"): Promise<{
-  techs: TechRow[];
-  jobCount: number;
-  coMentions: Record<string, Array<{ name: string; pct: number }>>;
-}> {
-  const cutoff = windowCutoff(window);
-  let query = supabase.from("active_qc_jobs").select("tech_stack");
-  if (cutoff) query = query.gte("first_seen_at", cutoff);
-  const { data, error } = await query;
-
-  if (error || !data) return { techs: [], jobCount: 0, coMentions: {} };
-
-  // Count frequency per tech
-  const counts: Record<string, number> = {};
-  for (const row of data) {
-    for (const tech of (row.tech_stack as string[]) ?? []) {
-      counts[tech] = (counts[tech] ?? 0) + 1;
-    }
-  }
-
-  // Compute co-occurrences
-  const coOccurrence: Record<string, Record<string, number>> = {};
-  for (const row of data) {
-    const stack = (row.tech_stack as string[]) ?? [];
-    for (let i = 0; i < stack.length; i++) {
-      for (let j = i + 1; j < stack.length; j++) {
-        const a = stack[i], b = stack[j];
-        if (!coOccurrence[a]) coOccurrence[a] = {};
-        if (!coOccurrence[b]) coOccurrence[b] = {};
-        coOccurrence[a][b] = (coOccurrence[a][b] ?? 0) + 1;
-        coOccurrence[b][a] = (coOccurrence[b][a] ?? 0) + 1;
-      }
-    }
-  }
-
-  // Build ranked tech list (all techs, no global cap — radar caps per sector)
-  const all = Object.entries(counts)
-    .sort((a, b) => b[1] - a[1])
-    .map(([name, count], i) => ({
-      name,
-      count,
-      rank: i + 1,
-      category: getCategory(name),
-    }));
-
-  // Co-mentions as percentage of the tech's own count (top 8 per tech)
-  const coMentions: Record<string, Array<{ name: string; pct: number }>> = {};
-  for (const [tech, mentions] of Object.entries(coOccurrence)) {
-    const base = counts[tech] ?? 1;
-    coMentions[tech] = Object.entries(mentions)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 8)
-      .map(([name, c]) => ({ name, pct: Math.round((c / base) * 100) }));
-  }
-
-  return { techs: all, jobCount: data.length, coMentions };
-}
 
 /* ── Radar SVG ──────────────────────────────────────────────────────────── */
 function RadarChart({
