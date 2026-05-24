@@ -59,15 +59,42 @@ interface TechRow {
 type RadarSector = "Languages" | "Frameworks" | "Cloud" | "Data";
 const CATEGORIES: RadarSector[] = ["Languages", "Frameworks", "Cloud", "Data"];
 
+/* ── Time-window options ─────────────────────────────────────────── */
+const VALID_WINDOWS = ["7d", "30d", "90d", "all"] as const;
+type WindowOption = (typeof VALID_WINDOWS)[number];
+
+/** Validates a raw searchParam value; falls back to "30d". */
+function parseWindow(raw: string | undefined): WindowOption {
+  return (VALID_WINDOWS as readonly string[]).includes(raw ?? "")
+    ? (raw as WindowOption)
+    : "30d";
+}
+
+/**
+ * Returns an ISO date string ("YYYY-MM-DD") for the oldest allowed
+ * first_seen_at, or null when the window is "all" (no cutoff).
+ */
+function windowCutoff(w: WindowOption): string | null {
+  if (w === "all") return null;
+  const days = w === "7d" ? 7 : w === "30d" ? 30 : 90;
+  const d = new Date();
+  d.setDate(d.getDate() - days);
+  return d.toISOString().split("T")[0];
+}
+
 /* ── Fetch ──────────────────────────────────────────────────────────── */
-async function fetchRadarData(filterCategory?: string): Promise<{
+async function fetchRadarData(
+  filterCategory?: string,
+  window: WindowOption = "30d",
+): Promise<{
   techs: TechRow[];
   jobCount: number;
   coMentions: Record<string, Array<{ name: string; pct: number }>>;
 }> {
-  const { data, error } = await supabase
-    .from("active_qc_jobs")
-    .select("tech_stack");
+  const cutoff = windowCutoff(window);
+  let query = supabase.from("active_qc_jobs").select("tech_stack");
+  if (cutoff) query = query.gte("first_seen_at", cutoff);
+  const { data, error } = await query;
 
   if (error || !data) return { techs: [], jobCount: 0, coMentions: {} };
 
@@ -327,17 +354,18 @@ function RadarChart({
 export default async function TrendsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ category?: string }>;
+  searchParams: Promise<{ category?: string; window?: string }>;
 }) {
-  const { category } = await searchParams;
+  const { category, window: windowParam } = await searchParams;
   const validCategory = CATEGORIES.includes(category as RadarSector)
     ? (category as RadarSector)
     : undefined;
+  const activeWindow = parseWindow(windowParam);
 
-  const { techs, jobCount, coMentions } = await fetchRadarData(validCategory);
+  const { techs, jobCount, coMentions } = await fetchRadarData(validCategory, activeWindow);
 
-  // For side rail: always show all tech for top movers list
-  const { techs: allTechs } = await fetchRadarData();
+  // Side rail uses the same window so counts stay consistent with the radar
+  const { techs: allTechs } = await fetchRadarData(undefined, activeWindow);
   const top5 = allTechs.slice(0, 5);
   const focusTech = top5[0];
   const focusCoMentions = focusTech ? (coMentions[focusTech.name] ?? []) : [];
@@ -367,26 +395,38 @@ export default async function TrendsPage({
             >
               · {jobCount} active roles · enriched weekly
             </span>
-            <div className="ml-auto flex items-center gap-1.5">
-              {(["7d", "30d", "90d", "all"] as const).map((w) => (
-                <span
-                  key={w}
-                  className="rounded-full px-2 py-0.5 text-xs"
-                  style={{
-                    border: "1px solid var(--rule-soft)",
-                    background: w === "30d" ? "var(--accent)" : "transparent",
-                    color: w === "30d" ? "white" : "var(--ink-mute)",
-                    fontFamily: "var(--font-mono)",
-                    fontSize: 10,
-                  }}
-                >
-                  {w}
-                </span>
-              ))}
-            </div>
+            <nav aria-label="Time window" className="ml-auto flex items-center gap-1.5">
+              {VALID_WINDOWS.map((w) => {
+                const isActive = w === activeWindow;
+                // Preserve category when switching windows
+                const params = new URLSearchParams();
+                if (validCategory) params.set("category", validCategory);
+                params.set("window", w);
+                return (
+                  <Link
+                    key={w}
+                    href={`/trends?${params.toString()}`}
+                    className="rounded-full px-2 py-0.5 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--accent) focus-visible:ring-offset-1"
+                    style={{
+                      border: "1px solid var(--rule-soft)",
+                      background: isActive ? "var(--accent)" : "transparent",
+                      color: isActive ? "white" : "var(--ink-mute)",
+                      fontFamily: "var(--font-mono)",
+                      fontSize: 10,
+                    }}
+                    aria-current={isActive ? "page" : undefined}
+                  >
+                    {w}
+                  </Link>
+                );
+              })}
+            </nav>
           </div>
           <p className="mt-1 text-sm" style={{ color: "var(--ink-soft)" }}>
-            Technologies across active QC tech roles. Click a bubble to filter jobs.
+            {activeWindow === "all"
+              ? "Technologies across all active QC tech roles."
+              : `Technologies from QC tech roles first seen in the last ${activeWindow}.`}{" "}
+            Click a bubble to filter jobs.
           </p>
         </div>
 
@@ -425,14 +465,16 @@ export default async function TrendsPage({
         <div className="flex flex-wrap gap-1.5">
           {categoryChips.map(({ value, label }) => {
             const isActive = value === validCategory;
-            const href = value
-              ? `?category=${encodeURIComponent(value)}`
-              : "/trends";
+            // Preserve window when switching categories
+            const catParams = new URLSearchParams();
+            if (value) catParams.set("category", value);
+            catParams.set("window", activeWindow);
+            const href = `/trends?${catParams.toString()}`;
             return (
               <Link
                 key={label}
                 href={href}
-                className="rounded-full px-2.5 py-1 text-xs transition-colors"
+                className="rounded-full px-2.5 py-1 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--accent) focus-visible:ring-offset-1"
                 style={{
                   background: isActive ? "var(--accent)" : "var(--bg-2)",
                   color: isActive ? "white" : "var(--ink-soft)",
@@ -463,7 +505,7 @@ export default async function TrendsPage({
               className="text-xs"
               style={{ color: "var(--ink-mute)", fontFamily: "var(--font-mono)", fontSize: 9 }}
             >
-              · current
+              · {activeWindow === "all" ? "all time" : `last ${activeWindow}`}
             </span>
           </div>
 
