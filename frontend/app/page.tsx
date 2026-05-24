@@ -29,6 +29,19 @@ interface Stats {
   workplaceCounts: Record<string, number>;
 }
 
+// Shape returned by the get_homepage_stats() Supabase RPC.
+// All aggregation is done DB-side — no row data is transferred.
+interface DbStats {
+  new_today:        number;
+  company_count:    number;
+  remote_percent:   number;
+  source_counts:    Record<string, number>;
+  seniority_counts: Record<string, number>;
+  workplace_counts: Record<string, number>;
+  source_options:   string[];
+  tech_options:     string[];
+}
+
 async function fetchJobs(filters: SearchParams): Promise<{ jobs: Job[]; total: number }> {
   const page = Math.max(1, parseInt(filters.page ?? "1", 10));
   const from = (page - 1) * PAGE_SIZE;
@@ -53,52 +66,39 @@ async function fetchJobs(filters: SearchParams): Promise<{ jobs: Job[]; total: n
   return { jobs: (data ?? []) as Job[], total: count ?? 0 };
 }
 
+// Calls the get_homepage_stats() Supabase RPC.
+// All aggregation runs in the database — no job rows are transferred to the client.
+// See scripts/migrate_stats_rpc.sql for the SQL definition and how to apply it.
 async function fetchStats(): Promise<Stats> {
-  const { data } = await supabase
-    .from("active_qc_jobs")
-    .select("tech_stack, source, company, is_remote, seniority, first_seen_at");
+  const { data, error } = await supabase.rpc("get_homepage_stats");
 
-  const techSet       = new Set<string>();
-  const sourceSet     = new Set<string>();
-  const companySet    = new Set<string>();
-  const sourceCounts: Record<string, number>    = {};
-  const seniorityCounts: Record<string, number> = {};
-  const workplaceCounts: Record<string, number> = {};
-
-  const todayStart = new Date();
-  todayStart.setHours(0, 0, 0, 0);
-  let newTodayCount = 0;
-  let remoteOrHybrid = 0;
-
-  for (const row of data ?? []) {
-    for (const t of row.tech_stack ?? []) techSet.add(t);
-    if (row.source)  sourceSet.add(row.source);
-    if (row.company) companySet.add(row.company);
-
-    // Counts per filter value
-    if (row.source) sourceCounts[row.source] = (sourceCounts[row.source] ?? 0) + 1;
-    if (row.seniority) seniorityCounts[row.seniority] = (seniorityCounts[row.seniority] ?? 0) + 1;
-    const rk = row.is_remote === true ? "true" : row.is_remote === false ? "false" : "null";
-    workplaceCounts[rk] = (workplaceCounts[rk] ?? 0) + 1;
-
-    // New today
-    if (row.first_seen_at && new Date(row.first_seen_at) >= todayStart) newTodayCount++;
-
-    // Remote or hybrid (is_remote = true | null)
-    if (row.is_remote !== false) remoteOrHybrid++;
+  if (error) {
+    // Log the error but return safe zero-state so the page still renders.
+    // Filter sidebar will be empty; KPI strip will show zeros.
+    console.error("[fetchStats] RPC error:", error.message);
+    return {
+      techOptions:     [],
+      sourceOptions:   [],
+      companyCount:    0,
+      newTodayCount:   0,
+      remotePercent:   0,
+      sourceCounts:    {},
+      seniorityCounts: {},
+      workplaceCounts: {},
+    };
   }
 
-  const total = data?.length ?? 0;
+  const db = (data ?? {}) as DbStats;
 
   return {
-    techOptions:    [...techSet].sort(),
-    sourceOptions:  [...sourceSet].sort(),
-    companyCount:   companySet.size,
-    newTodayCount,
-    remotePercent:  total > 0 ? Math.round((remoteOrHybrid / total) * 100) : 0,
-    sourceCounts,
-    seniorityCounts,
-    workplaceCounts,
+    techOptions:     db.tech_options      ?? [],
+    sourceOptions:   db.source_options    ?? [],
+    companyCount:    db.company_count     ?? 0,
+    newTodayCount:   db.new_today         ?? 0,
+    remotePercent:   db.remote_percent    ?? 0,
+    sourceCounts:    db.source_counts     ?? {},
+    seniorityCounts: db.seniority_counts  ?? {},
+    workplaceCounts: db.workplace_counts  ?? {},
   };
 }
 
