@@ -6,6 +6,15 @@
  * the ALL_CAT_SLUGS / CATEGORY_LABELS constants accordingly.
  */
 
+/** A single ranked technology entry returned by fetchRadarData. */
+export interface TechRow {
+  name: string;
+  count: number;
+  rank: number;
+  /** Canonical category slug (e.g. "languages", "devops"). */
+  category: string;
+}
+
 export interface CanonicalStack {
   version: string;
   categories: Record<string, string[]>;
@@ -202,4 +211,186 @@ export function buildTechToCatMap(
     }
   }
   return map;
+}
+
+// ---------------------------------------------------------------------------
+// Standalone SVG rendering
+// ---------------------------------------------------------------------------
+
+/**
+ * Hardcoded hex equivalents of the CSS custom properties.
+ * CSS vars (--cat-*) cannot be resolved in standalone SVGs used as <img> or
+ * embedded in GitHub READMEs. Values are derived from globals.css:
+ *   oklch(0.55 0.18 <H>) converted to sRGB hex.
+ */
+export const CAT_COLORS: Record<string, string> = {
+  languages:   "#4b73c4",  // oklch(0.55 0.18 252) — blue
+  frontend:    "#1b9e79",  // oklch(0.55 0.18 160) — teal
+  backend:     "#1b7d9e",  // oklch(0.55 0.18 200) — cyan
+  databases:   "#7949cc",  // oklch(0.55 0.18 295) — violet
+  cloud:       "#b89020",  // oklch(0.55 0.18  55) — amber
+  devops:      "#cc6620",  // oklch(0.55 0.18  30) — orange
+  data_ai:     "#cc5245",  // oklch(0.55 0.18  20) — coral
+  mobile:      "#cc3d70",  // oklch(0.55 0.18 330) — rose
+  testing:     "#38a847",  // oklch(0.55 0.18 130) — green
+  ai_concepts: "#849920",  // oklch(0.55 0.18  85) — lime
+};
+
+/** Escape a string for safe insertion into SVG text/attribute content. */
+function escSvg(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#x27;");
+}
+
+/**
+ * Render a standalone SVG string for the radar.
+ *
+ * Mirrors the RadarChart JSX component in trends/page.tsx but returns a
+ * self-contained SVG string with hardcoded colors (no CSS variables) so
+ * it can be embedded in a GitHub README or served via /api/radar?format=svg.
+ *
+ * viewBox: "0 0 560 480" · CX=280, CY=240, R=200 · 4 rings · 4 sectors
+ */
+export function renderRadarSvg(
+  allTechs: TechRow[],
+  selectedCats: string[],
+): string {
+  const CX = 280, CY = 240, R = 200;
+  const RINGS = [0.95, 0.68, 0.42, 0.18];
+  const RING_LABELS = ["top 5", "top 10", "top 20", "long tail"];
+  const TOP5 = new Set(allTechs.slice(0, 5).map((t) => t.name));
+
+  /* ── Group techs by sector, capped at 8 per sector ─────────────────── */
+  const byCat: Record<string, TechRow[]> = {};
+  for (const cat of selectedCats) byCat[cat] = [];
+  for (const t of allTechs) {
+    const arr = byCat[t.category];
+    if (arr && arr.length < 8) arr.push(t);
+  }
+
+  /* ── Polar placement ────────────────────────────────────────────────── */
+  interface Placed {
+    tech: TechRow;
+    x: number;
+    y: number;
+    size: number;
+    isTop5: boolean;
+    labelSide: "right" | "left";
+    color: string;
+  }
+
+  const placed: Placed[] = [];
+  selectedCats.forEach((cat, catIdx) => {
+    const arr = byCat[cat] ?? [];
+    const sectorAngle = (Math.PI * 2) / selectedCats.length;
+    arr.forEach((tech, i) => {
+      const angle =
+        -Math.PI / 2 +
+        catIdx * sectorAngle +
+        (sectorAngle * (i + 1)) / (arr.length + 1);
+      const rankFrac = tech.rank / Math.max(1, allTechs.length);
+      const r = R * (0.16 + 0.76 * Math.min(1, rankFrac * 1.8));
+      const x = CX + Math.cos(angle) * r;
+      const y = CY + Math.sin(angle) * r;
+      const size = Math.max(6, Math.min(20, Math.sqrt(tech.count) * 1.3));
+      const isTop5 = TOP5.has(tech.name);
+      const labelSide: "right" | "left" = x > CX ? "right" : "left";
+      const color = CAT_COLORS[cat] ?? "#888888";
+      placed.push({ tech, x, y, size, isTop5, labelSide, color });
+    });
+  });
+
+  /* ── Build SVG string ───────────────────────────────────────────────── */
+  const n = (v: number, d = 1) => v.toFixed(d);
+  const parts: string[] = [];
+
+  parts.push(
+    `<svg viewBox="0 0 560 480" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Tech Stack Radar — Jobs Radar /qc">`,
+  );
+  parts.push(`<title>Tech Stack Radar — Jobs Radar /qc</title>`);
+  parts.push(
+    `<desc>Radial chart showing ${placed.length} technologies grouped into ${selectedCats.length} sectors: ` +
+      `${selectedCats.map((c) => CATEGORY_LABELS[c as CatSlug] ?? c).join(", ")}. ` +
+      `Bubble size represents posting count; proximity to center represents overall rank.</desc>`,
+  );
+
+  // Background
+  parts.push(`<rect width="560" height="480" fill="#0d1117"/>`);
+
+  // Concentric rings
+  for (let i = 0; i < RINGS.length; i++) {
+    const k = RINGS[i];
+    parts.push(
+      `<circle cx="${CX}" cy="${CY}" r="${n(R * k, 1)}" fill="none" stroke="#21262d" stroke-dasharray="3 5" stroke-width="1"/>`,
+    );
+    parts.push(
+      `<text x="${n(CX + R * k + 5, 1)}" y="${n(CY - 5, 1)}" font-family="monospace" font-size="9" fill="#6e7681">${escSvg(RING_LABELS[i])}</text>`,
+    );
+  }
+
+  // Sector divider lines
+  selectedCats.forEach((_, i) => {
+    const sectorAngle = (Math.PI * 2) / selectedCats.length;
+    const a0 = -Math.PI / 2 + i * sectorAngle;
+    parts.push(
+      `<line x1="${CX}" y1="${CY}" x2="${n(CX + Math.cos(a0) * R)}" y2="${n(CY + Math.sin(a0) * R)}" stroke="#21262d" stroke-width="1"/>`,
+    );
+  });
+
+  // Sector labels
+  selectedCats.forEach((cat, i) => {
+    const sectorAngle = (Math.PI * 2) / selectedCats.length;
+    const am = -Math.PI / 2 + i * sectorAngle + sectorAngle / 2;
+    const lx = CX + Math.cos(am) * (R + 26);
+    const ly = CY + Math.sin(am) * (R + 26);
+    const color = CAT_COLORS[cat] ?? "#888888";
+    const label = CATEGORY_LABELS[cat as CatSlug] ?? cat;
+    parts.push(
+      `<text x="${n(lx)}" y="${n(ly)}" font-family="sans-serif" font-size="11" font-weight="600" text-anchor="middle" fill="${escSvg(color)}">${escSvg(label)}</text>`,
+    );
+  });
+
+  // Decorative sweep line at -32°
+  parts.push(
+    `<line x1="${CX}" y1="${CY}" x2="${CX + R}" y2="${CY}" stroke="#4b73c4" stroke-width="1.25" stroke-dasharray="2 5" opacity="0.45" transform="rotate(-32 ${CX} ${CY})"/>`,
+  );
+
+  // Center dot + ring
+  parts.push(`<circle cx="${CX}" cy="${CY}" r="5" fill="#4b73c4"/>`);
+  parts.push(
+    `<circle cx="${CX}" cy="${CY}" r="13" fill="none" stroke="#4b73c4" stroke-width="1"/>`,
+  );
+
+  // Bubbles
+  for (const { tech, x, y, size, isTop5, labelSide, color } of placed) {
+    // Top-5: solid fill; others: ~35% opacity (hex 59 ≈ 35% of 255)
+    const fill = isTop5 ? color : `${color}59`;
+    const labelX = labelSide === "right" ? x + size + 4 : x - size - 4;
+    const anchor = labelSide === "right" ? "start" : "end";
+    parts.push(
+      `<circle cx="${n(x)}" cy="${n(y)}" r="${n(size)}" fill="${escSvg(fill)}" stroke="#21262d" stroke-width="1">` +
+        `<title>${escSvg(tech.name)} — ${tech.count} roles (rank #${tech.rank})</title>` +
+        `</circle>`,
+    );
+    if (isTop5) {
+      parts.push(
+        `<text x="${n(labelX)}" y="${n(y + 3)}" font-family="sans-serif" font-size="10.5" font-weight="600" text-anchor="${anchor}" fill="#c9d1d9">${escSvg(tech.name)}</text>`,
+      );
+      parts.push(
+        `<text x="${n(labelX)}" y="${n(y + 14)}" font-family="monospace" font-size="8.5" text-anchor="${anchor}" fill="#6e7681">${tech.count}</text>`,
+      );
+    }
+  }
+
+  // Legend
+  parts.push(
+    `<text x="16" y="470" font-family="monospace" font-size="9" fill="#6e7681">size = job count · proximity to center = rank · jobs-radar-qc.dev/trends</text>`,
+  );
+
+  parts.push(`</svg>`);
+  return parts.join("\n");
 }
