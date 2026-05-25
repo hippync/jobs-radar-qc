@@ -17,6 +17,8 @@ const BASE_URL = "https://jobs-radar-qc.dev";
 interface Props {
   /** The 4 currently selected category slugs from the URL / defaults. */
   cats: string[];
+  /** Active role segment slug, or null for no segment filter. */
+  segment?: string | null;
 }
 
 interface CopyState {
@@ -24,12 +26,13 @@ interface CopyState {
   svg: boolean;
 }
 
-export function RadarDownloadPanel({ cats }: Props) {
+export function RadarDownloadPanel({ cats, segment }: Props) {
   const catStr = cats.join(",");
-  const jsonCmd = `curl "${BASE_URL}/api/radar?format=json&cats=${catStr}"`;
-  const svgCmd  = `curl "${BASE_URL}/api/radar?format=svg&cats=${catStr}"`;
+  const segStr = segment ? `&segment=${segment}` : "";
+  const jsonCmd = `curl "${BASE_URL}/api/radar?format=json&cats=${catStr}${segStr}"`;
+  const svgCmd  = `curl "${BASE_URL}/api/radar?format=svg&cats=${catStr}${segStr}"`;
   // Relative path so the download link works in both dev and production.
-  const svgHref = `/api/radar?format=svg&cats=${catStr}`;
+  const svgHref = `/api/radar?format=svg&cats=${catStr}${segStr}`;
 
   const [copied, setCopied] = useState<CopyState>({ json: false, svg: false });
 
