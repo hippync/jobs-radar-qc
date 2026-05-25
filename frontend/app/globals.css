@@ -39,6 +39,9 @@
   --cat-testing:     oklch(0.55 0.18 130);  /* green                      */
   --cat-ai-concepts: oklch(0.55 0.18 85);   /* lime                       */
 
+  /* Status / freshness */
+  --warning:     oklch(0.72 0.15 60);   /* #d97706 amber — stale pipeline indicator */
+
   /* Kanban column accent colors */
   --col-applied: #b8860b;   /* amber — Applied column header dot */
 
