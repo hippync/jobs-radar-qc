@@ -16,10 +16,32 @@ const jetbrainsMono = JetBrains_Mono({
   display: "swap",
 });
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://jobs-radar-qc.vercel.app";
+
 export const metadata: Metadata = {
-  title: "Jobs Radar /qc | The Quebec tech job market, indexed daily.",
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: "Jobs Radar QC",
+    template: "%s · Jobs Radar QC",
+  },
   description:
-    "Active tech job postings from Montreal and Quebec companies, pulled directly from Greenhouse, Lever, and Workable. Updated daily.",
+    "Open-source radar for tech jobs, skills, and hiring trends in Montreal and Quebec.",
+  openGraph: {
+    siteName: "Jobs Radar QC",
+    locale: "en_CA",
+    type: "website",
+    images: [
+      {
+        url: "/opengraph-image",
+        width: 1200,
+        height: 630,
+        alt: "Jobs Radar QC — Tech jobs in Montreal and Quebec",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+  },
 };
 
 export default function RootLayout({

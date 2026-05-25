@@ -1,3 +1,5 @@
+import type { Metadata } from "next";
+import { SHARED_OG } from "@/lib/siteMetadata";
 import { Suspense } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
@@ -7,6 +9,22 @@ import KpiStrip from "@/components/KpiStrip";
 import FilterSidebar from "@/components/FilterSidebar";
 import ActiveFilterChips from "@/components/ActiveFilterChips";
 import MobileFilterDrawer from "@/components/MobileFilterDrawer";
+
+export const metadata: Metadata = {
+  title: "Tech Jobs in Montreal and Quebec",
+  description:
+    "Track active tech roles, companies, sources, and skills across Quebec.",
+  openGraph: {
+    ...SHARED_OG,
+    title: "Tech Jobs in Montreal and Quebec",
+    description:
+      "Track active tech roles, companies, sources, and skills across Quebec.",
+    url: "/",
+  },
+  alternates: {
+    canonical: "/",
+  },
+};
 
 const PAGE_SIZE = 30;
 

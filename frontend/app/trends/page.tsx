@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { SHARED_OG } from "@/lib/siteMetadata";
 import { Suspense } from "react";
 import {
   CANONICAL,
@@ -24,9 +25,19 @@ import { RadarDownloadPanel } from "@/components/RadarDownloadPanel";
 import { SegmentFilter } from "@/components/SegmentFilter";
 
 export const metadata: Metadata = {
-  title: "Tech Stack Radar | Jobs Radar /qc",
+  title: "Tech Radar",
   description:
-    "Most in-demand technologies across active Québec tech roles, visualized as a radial radar.",
+    "Explore the technologies most requested in Quebec tech job postings.",
+  openGraph: {
+    ...SHARED_OG,
+    title: "Tech Radar",
+    description:
+      "Explore the technologies most requested in Quebec tech job postings.",
+    url: "/trends",
+  },
+  alternates: {
+    canonical: "/trends",
+  },
 };
 
 export const revalidate = 3600;
