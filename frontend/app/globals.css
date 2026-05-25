@@ -136,3 +136,29 @@ body {
   outline-offset: -3px;
   border-radius: 4px;
 }
+
+/* ── Route loading — indeterminate progress bar ──────────────────────────
+ * Used by app/loading.tsx, app/trends/loading.tsx, app/saved/loading.tsx.
+ * The animation slides the accent-filled block across the 2 px track.
+ * The global prefers-reduced-motion block above already freezes all
+ * animations (animation-duration: 0.01ms; iteration-count: 1), which
+ * would snap the bar off-screen.  The rule below overrides that for
+ * .route-progress-fill specifically, making it a static partial fill
+ * instead of invisible.
+ * ─────────────────────────────────────────────────────────────────────── */
+@keyframes route-progress {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(300%); }
+}
+
+.route-progress-fill {
+  animation: route-progress 1.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .route-progress-fill {
+    animation: none !important;
+    transform: none !important;
+    width: 30% !important; /* static partial fill — visible but not moving */
+  }
+}
