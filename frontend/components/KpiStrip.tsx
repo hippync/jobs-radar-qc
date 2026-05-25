@@ -115,7 +115,7 @@ export default function KpiStrip({
         <div
           className="mt-1.5 flex items-center gap-1.5"
           style={{
-            color: freshness.stale ? "#d97706" : "var(--ink-mute)",
+            color: freshness.stale ? "var(--warning)" : "var(--ink-mute)",
             fontFamily: "var(--font-mono)",
             fontSize: 10,
           }}
@@ -127,7 +127,7 @@ export default function KpiStrip({
               width: 5,
               height: 5,
               borderRadius: "50%",
-              background: freshness.stale ? "#d97706" : "#22c55e",
+              background: freshness.stale ? "var(--warning)" : "var(--accent)",
               flexShrink: 0,
             }}
           />
