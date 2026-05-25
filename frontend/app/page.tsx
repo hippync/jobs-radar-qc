@@ -27,6 +27,7 @@ interface Stats {
   sourceCounts: Record<string, number>;
   seniorityCounts: Record<string, number>;
   workplaceCounts: Record<string, number>;
+  lastUpdated: string | null;
 }
 
 // Shape returned by the get_homepage_stats() Supabase RPC.
@@ -40,6 +41,7 @@ interface DbStats {
   workplace_counts: Record<string, number>;
   source_options:   string[];
   tech_options:     string[];
+  last_updated:     string | null;
 }
 
 async function fetchJobs(filters: SearchParams): Promise<{ jobs: Job[]; total: number }> {
@@ -85,6 +87,7 @@ async function fetchStats(): Promise<Stats> {
       sourceCounts:    {},
       seniorityCounts: {},
       workplaceCounts: {},
+      lastUpdated:     null,
     };
   }
 
@@ -99,6 +102,7 @@ async function fetchStats(): Promise<Stats> {
     sourceCounts:    db.source_counts     ?? {},
     seniorityCounts: db.seniority_counts  ?? {},
     workplaceCounts: db.workplace_counts  ?? {},
+    lastUpdated:     db.last_updated      ?? null,
   };
 }
 
@@ -183,6 +187,7 @@ export default async function Page({
             companies={stats.companyCount}
             remotePercent={stats.remotePercent}
             hasFilters={hasFilters}
+            lastUpdated={stats.lastUpdated}
           />
         </div>
 
