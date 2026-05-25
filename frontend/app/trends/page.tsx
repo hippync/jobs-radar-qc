@@ -15,8 +15,13 @@ import {
   parseWindow,
   VALID_WINDOWS,
 } from "@/lib/radarData";
+import {
+  parseSegment,
+  SEGMENT_LABELS,
+} from "@/lib/segmentHelpers";
 import { RadarCategorySelector } from "@/components/RadarCategorySelector";
 import { RadarDownloadPanel } from "@/components/RadarDownloadPanel";
+import { SegmentFilter } from "@/components/SegmentFilter";
 
 export const metadata: Metadata = {
   title: "Tech Stack Radar | Jobs Radar /qc",
@@ -268,16 +273,18 @@ function RadarChart({
 export default async function TrendsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ cats?: string; window?: string }>;
+  searchParams: Promise<{ cats?: string; window?: string; segment?: string }>;
 }) {
-  const { cats: catsParam, window: windowParam } = await searchParams;
+  const { cats: catsParam, window: windowParam, segment: segmentParam } = await searchParams;
   const activeWindow = parseWindow(windowParam);
+  const activeSegment = parseSegment(segmentParam);
 
   /** The 4 currently selected category slugs — always length 4. */
   const selectedCats = parseCatsParam(catsParam, CANONICAL, DEFAULT_CATS);
 
   const { techs: allTechs, jobCount, coMentions } = await fetchRadarData(
     activeWindow,
+    activeSegment,
   );
 
   const top5 = allTechs.slice(0, 5);
@@ -306,13 +313,14 @@ export default async function TrendsPage({
             >
               · {jobCount} active roles · enriched weekly
             </span>
-            {/* Time-window pills — preserve ?cats= when switching windows */}
+            {/* Time-window pills — preserve ?cats= and ?segment= when switching windows */}
             <nav aria-label="Time window" className="ml-auto flex items-center gap-1.5">
               {VALID_WINDOWS.map((w) => {
                 const isActive = w === activeWindow;
                 const params = new URLSearchParams();
                 params.set("cats", selectedCats.join(","));
                 params.set("window", w);
+                if (activeSegment) params.set("segment", activeSegment);
                 return (
                   <Link
                     key={w}
@@ -334,9 +342,12 @@ export default async function TrendsPage({
             </nav>
           </div>
           <p className="mt-1 text-sm" style={{ color: "var(--ink-soft)" }}>
-            {activeWindow === "all"
-              ? "Technologies across all active QC tech roles."
-              : `Technologies from QC tech roles first seen in the last ${activeWindow}.`}{" "}
+            {activeSegment
+              ? `Technologies most in demand in ${SEGMENT_LABELS[activeSegment] ?? activeSegment} roles`
+              : "Technologies across all active QC tech roles"}
+            {activeWindow !== "all"
+              ? ` · last ${activeWindow}`
+              : ""}.{" "}
             Click a bubble to filter jobs.
           </p>
         </div>
@@ -372,6 +383,18 @@ export default async function TrendsPage({
         className="mt-4 flex flex-col gap-4 lg:ml-5 lg:mt-0 lg:w-72"
         style={{ flexShrink: 0 }}
       >
+        {/* Segment filter — Server Component (Link pills) */}
+        <div
+          className="rounded-md p-3"
+          style={{ background: "var(--bg-2)", border: "1px solid var(--rule-soft)" }}
+        >
+          <SegmentFilter
+            activeSegment={activeSegment}
+            selectedCats={selectedCats}
+            activeWindow={activeWindow}
+          />
+        </div>
+
         {/* Radar sector selector — Client Component */}
         <div
           className="rounded-md p-3"
@@ -514,7 +537,7 @@ export default async function TrendsPage({
         )}
 
         {/* Embed / API card — dynamic curl commands */}
-        <RadarDownloadPanel cats={selectedCats} />
+        <RadarDownloadPanel cats={selectedCats} segment={activeSegment} />
       </div>
     </div>
   );

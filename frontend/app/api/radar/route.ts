@@ -5,14 +5,23 @@
  *
  * Query parameters
  * ────────────────
- * format  (optional) "json" | "svg"   — default: "json"
- * cats    (optional) comma-separated canonical category slugs
- *                    — default: "languages,frontend,devops,data_ai"
+ * format   (optional) "json" | "svg"        — default: "json"
+ * cats     (optional) comma-separated canonical category slugs
+ *                     — default: "languages,frontend,devops,data_ai"
+ * window   (optional) "7d" | "30d" | "90d" | "all"  — default: "30d"
+ * segment  (optional) role segment slug to filter jobs before aggregation
+ *                     — one of: startup_saas, enterprise, ai_ml,
+ *                       cloud_platform, consulting, fintech, mobile
+ *                     — omit or "all" = no segment filter
+ *                     — unrecognised value falls back to no filter (not 400)
  *
  * Examples
  * ────────
  * /api/radar?format=json&cats=languages,frontend,devops,data_ai
  * /api/radar?format=svg&cats=languages,backend,testing,mobile
+ * /api/radar?format=json&segment=ai_ml&cats=languages,backend,data_ai,cloud
+ * /api/radar?format=svg&segment=mobile
+ * /api/radar?format=json&segment=cloud_platform&window=90d
  *
  * ISR: revalidate every hour — matches /trends page cache TTL.
  */
@@ -24,7 +33,8 @@ import {
   parseCatsParam,
   renderRadarSvg,
 } from "@/lib/radarHelpers";
-import { fetchRadarData } from "@/lib/radarData";
+import { fetchRadarData, parseWindow } from "@/lib/radarData";
+import { parseSegment, SEGMENT_LABELS } from "@/lib/segmentHelpers";
 
 export const revalidate = 3600;
 
@@ -52,10 +62,18 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const catsRaw = searchParams.get("cats") ?? undefined;
   const cats = parseCatsParam(catsRaw, CANONICAL, DEFAULT_CATS);
 
+  /* ── Parse ?window= ─────────────────────────────────────────────────── */
+  const windowRaw = searchParams.get("window") ?? undefined;
+  const window = parseWindow(windowRaw);
+
+  /* ── Parse ?segment= — invalid falls back to null (no filter) ────────── */
+  const segmentRaw = searchParams.get("segment");
+  const segment = parseSegment(segmentRaw);
+
   /* ── Fetch radar data ───────────────────────────────────────────────── */
   let fetchResult: Awaited<ReturnType<typeof fetchRadarData>>;
   try {
-    fetchResult = await fetchRadarData("30d");
+    fetchResult = await fetchRadarData(window, segment);
   } catch {
     if (format === "svg") {
       return new NextResponse(SVG_ERROR, {
@@ -99,6 +117,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   return NextResponse.json(
     {
       cats,
+      window,
+      segment: segment ?? "all",
+      segmentLabel: segment ? (SEGMENT_LABELS[segment] ?? null) : null,
       jobCount,
       generatedAt: new Date().toISOString(),
       techs: filteredTechs,

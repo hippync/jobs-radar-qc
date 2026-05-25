@@ -11,6 +11,7 @@
 
 import { supabase } from "@/lib/supabase";
 import { buildTechToCatMap, CANONICAL, type TechRow } from "@/lib/radarHelpers";
+import { classifySegment } from "@/lib/segmentHelpers";
 
 /* ── Reverse lookup: tech name → canonical category slug ──────────────── */
 const TECH_TO_CAT: Record<string, string> = buildTechToCatMap(CANONICAL);
@@ -44,8 +45,16 @@ function windowCutoff(w: WindowOption): string | null {
  * Returns ALL technologies (not filtered by cats) ranked by frequency.
  * Callers filter by selectedCats at the rendering/API response layer so
  * both /trends and /api/radar operate on the same underlying dataset.
+ *
+ * @param window   Time window for first_seen_at filtering (default "30d").
+ * @param segment  Optional role segment slug — if provided, only jobs whose
+ *                 tech_stack classifies to that segment are included in the
+ *                 frequency count. null / undefined = no segment filter.
  */
-export async function fetchRadarData(window: WindowOption = "30d"): Promise<{
+export async function fetchRadarData(
+  window: WindowOption = "30d",
+  segment?: string | null,
+): Promise<{
   techs: TechRow[];
   jobCount: number;
   coMentions: Record<string, Array<{ name: string; pct: number }>>;
@@ -57,9 +66,18 @@ export async function fetchRadarData(window: WindowOption = "30d"): Promise<{
 
   if (error || !data) return { techs: [], jobCount: 0, coMentions: {} };
 
+  // Apply segment filter if requested — classification is computed from
+  // tech_stack in TypeScript; no extra DB column or query needed.
+  const rows = segment
+    ? data.filter(
+        (row) =>
+          classifySegment((row.tech_stack as string[]) ?? []) === segment,
+      )
+    : data;
+
   // Count frequency per tech
   const counts: Record<string, number> = {};
-  for (const row of data) {
+  for (const row of rows) {
     for (const tech of (row.tech_stack as string[]) ?? []) {
       counts[tech] = (counts[tech] ?? 0) + 1;
     }
@@ -67,7 +85,7 @@ export async function fetchRadarData(window: WindowOption = "30d"): Promise<{
 
   // Compute co-occurrences
   const coOccurrence: Record<string, Record<string, number>> = {};
-  for (const row of data) {
+  for (const row of rows) {
     const stack = (row.tech_stack as string[]) ?? [];
     for (let i = 0; i < stack.length; i++) {
       for (let j = i + 1; j < stack.length; j++) {
@@ -100,5 +118,5 @@ export async function fetchRadarData(window: WindowOption = "30d"): Promise<{
       .map(([name, c]) => ({ name, pct: Math.round((c / base) * 100) }));
   }
 
-  return { techs: all, jobCount: data.length, coMentions };
+  return { techs: all, jobCount: rows.length, coMentions };
 }
