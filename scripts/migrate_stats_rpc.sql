@@ -24,7 +24,7 @@
 --   SELECT get_homepage_stats();
 -- Expected: a JSON object with new_today, company_count, remote_percent,
 --           source_counts, seniority_counts, workplace_counts,
---           source_options, tech_options — all computed from active_qc_jobs.
+--           source_options, tech_options, last_updated — all computed from active_qc_jobs.
 --
 -- NOTE ON TECH OPTIONS PERFORMANCE
 -- UNNEST over all active jobs is done entirely in the DB (no row transfer).
@@ -126,6 +126,13 @@ AS $$
       ) t
       WHERE tech IS NOT NULL
         AND tech <> ''
+    ),
+
+    -- Timestamp of the most recently added job — used for the freshness indicator
+    -- in the KPI strip. If > 25h old, the UI shows an amber warning.
+    'last_updated', (
+      SELECT MAX(first_seen_at)
+      FROM   active_qc_jobs
     )
 
   );
