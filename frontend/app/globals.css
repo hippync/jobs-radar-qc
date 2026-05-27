@@ -45,6 +45,9 @@
   /* Kanban column accent colors */
   --col-applied: #b8860b;   /* amber — Applied column header dot */
 
+  /* On-accent — white text for colored/accent chip backgrounds */
+  --on-accent: oklch(1 0 0);
+
   /* Fonts (set by Next.js) */
   --font-sans: var(--font-inter);
   --font-mono: var(--font-jetbrains-mono);
@@ -53,6 +56,51 @@
 @theme inline {
   --font-sans: var(--font-inter);
   --font-mono: var(--font-jetbrains-mono);
+}
+
+/* ── Dark mode token layer ────────────────────────────────────────────── */
+/*
+ * Overrides light-theme tokens for OS-level dark mode.
+ * No JS, no localStorage — pure CSS media query.
+ * --accent and --on-accent are unchanged (blue + white remain correct in dark).
+ * Category tokens (--cat-*) stay the same — oklch(0.55 0.18 …) reads fine
+ * on dark backgrounds and matches radar bubble fills.
+ */
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Backgrounds — cool near-black, very low chroma to avoid "blue theme" */
+    --bg:         oklch(0.13 0.005 240);
+    --bg-2:       oklch(0.17 0.005 240);
+    --surface:    oklch(0.20 0.005 240);
+
+    /* Text
+     * --ink-mute is raised to oklch(0.55) so captions clear ~4:1 on --bg-2.
+     * Trade-off: less muted-looking, but readable. Note this in the PR.       */
+    --ink:        oklch(0.95 0.005 240);
+    --ink-soft:   oklch(0.72 0.008 240);
+    --ink-mute:   oklch(0.55 0.008 240);
+
+    /* Borders — subtle elevation steps on dark surfaces */
+    --rule:       oklch(0.32 0.005 240);   /* hard border */
+    --rule-soft:  oklch(0.25 0.005 240);   /* soft border / gridlines */
+
+    /* --accent: unchanged — brand blue works on dark */
+    /* --accent-12 auto-recomputes from --accent + --bg */
+
+    /* Highlight — slightly toned down so it's not glaring on dark */
+    --hilite-new: oklch(0.88 0.12 95);
+
+    /* Source badges — dark variants preserve hue identity
+     * while avoiding harsh light pastels on dark surfaces.
+     * Each pair uses the same hue angle as the light token.           */
+    --gh-bg: oklch(0.21 0.04 160);   --gh-fg: oklch(0.72 0.14 160);   /* Greenhouse — forest green */
+    --lv-bg: oklch(0.21 0.04 252);   --lv-fg: oklch(0.72 0.14 252);   /* Lever — navy blue        */
+    --wk-bg: oklch(0.21 0.06  45);   --wk-fg: oklch(0.72 0.14  45);   /* Workable — amber         */
+
+    /* Status */
+    --warning:     oklch(0.72 0.15 60);   /* unchanged — amber reads fine on dark */
+    --col-applied: oklch(0.70 0.14 75);   /* lighter amber for dark bg            */
+  }
 }
 
 /* ── Base ─────────────────────────────────────────────────────────────── */
