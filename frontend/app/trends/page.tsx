@@ -340,7 +340,7 @@ export default async function TrendsPage({
                     style={{
                       border: "1px solid var(--rule-soft)",
                       background: isActive ? "var(--accent)" : "transparent",
-                      color: isActive ? "white" : "var(--ink-mute)",
+                      color: isActive ? "var(--on-accent)" : "var(--ink-mute)",
                       fontFamily: "var(--font-mono)",
                       fontSize: 10,
                     }}

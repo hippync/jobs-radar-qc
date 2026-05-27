@@ -77,7 +77,7 @@ export function SegmentFilter({ activeSegment, selectedCats, activeWindow }: Pro
                   isActive ? "var(--accent)" : "var(--rule-soft)"
                 }`,
                 background: isActive ? "var(--accent)" : "transparent",
-                color: isActive ? "#fff" : "var(--ink-soft)",
+                color: isActive ? "var(--on-accent)" : "var(--ink-soft)",
                 fontFamily: "var(--font-sans)",
                 fontSize: 11,
                 fontWeight: isActive ? 600 : 400,

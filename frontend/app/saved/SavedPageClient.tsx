@@ -587,7 +587,7 @@ export default function SavedPageClient() {
                 fontSize: 12,
                 fontWeight: 500,
                 background: "var(--accent)",
-                color: "#ffffff",
+                color: "var(--on-accent)",
                 border: "none",
                 borderRadius: 6,
                 cursor: "not-allowed",
