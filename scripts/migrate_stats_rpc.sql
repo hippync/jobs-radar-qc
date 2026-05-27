@@ -5,10 +5,10 @@
 -- Safe to re-run: CREATE OR REPLACE + idempotent GRANT.
 --
 -- ⚠  DATE SEMANTICS
--- new_today uses CURRENT_DATE which is UTC midnight in Supabase.
--- The previous fetchStats() used JS `new Date(); setHours(0, 0, 0, 0)` on the
--- Next.js server (Vercel, UTC). Both resolve to UTC midnight — semantics match.
--- If you ever deploy the Next.js server in a non-UTC timezone, prefer AT TIME ZONE.
+-- new_today uses NOW() - INTERVAL '24 hours' (rolling window) to match the
+-- age() function in JobCard.tsx which also uses a rolling 24 h diff.
+-- Using CURRENT_DATE (UTC midnight) caused a mismatch: jobs from yesterday's
+-- noon UTC pipeline run (~22h old) showed "today" on cards but were not counted.
 --
 -- ⚠  REMOTE / HYBRID DEFINITION
 -- is_remote = true  → remote (counts toward remote_percent)
@@ -42,11 +42,14 @@ AS $$
 
     -- ── KPI strip ────────────────────────────────────────────────────────────
 
-    -- Jobs whose first_seen_at is on or after today's UTC midnight
+    -- Jobs first seen in the last 24 hours (rolling window, matches JobCard age()).
+    -- Using NOW() - INTERVAL '24 hours' instead of CURRENT_DATE to avoid the
+    -- mismatch where jobs from yesterday's noon UTC run (~22h old) show "today"
+    -- on cards but are not counted here.
     'new_today', (
       SELECT COUNT(*)
       FROM   active_qc_jobs
-      WHERE  first_seen_at >= CURRENT_DATE
+      WHERE  first_seen_at >= NOW() - INTERVAL '24 hours'
     ),
 
     -- Deduplicated company names
