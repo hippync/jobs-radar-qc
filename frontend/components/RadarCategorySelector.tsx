@@ -57,7 +57,7 @@ export function RadarCategorySelector({ selectedCats: initialCats }: Props) {
       if (parsed.join(",") === initialCats.join(",")) return;
       const params = new URLSearchParams(searchParams.toString());
       params.set("cats", parsed.join(","));
-      router.replace(`/trends?${params.toString()}`);
+      router.replace(`/trends?${params.toString()}`, { scroll: false });
     } catch {
       // localStorage not available (SSR or private mode) — ignore
     }
@@ -82,7 +82,7 @@ export function RadarCategorySelector({ selectedCats: initialCats }: Props) {
 
     const params = new URLSearchParams(searchParams.toString());
     params.set("cats", newCats.join(","));
-    router.replace(`/trends?${params.toString()}`);
+    router.replace(`/trends?${params.toString()}`, { scroll: false });
 
     try {
       localStorage.setItem(STORAGE_KEY, newCats.join(","));
