@@ -66,6 +66,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const windowRaw = searchParams.get("window") ?? undefined;
   const window = parseWindow(windowRaw);
 
+  /* ── Parse ?bg= — controls SVG background color ─────────────────────── */
+  const bgRaw = searchParams.get("bg");
+  const bg: "light" | "dark" = bgRaw === "light" ? "light" : "dark";
+
   /* ── Parse ?segment= — invalid falls back to null (no filter) ────────── */
   const segmentRaw = searchParams.get("segment");
   const segment = parseSegment(segmentRaw);
@@ -93,7 +97,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   if (format === "svg") {
     let svg: string;
     try {
-      svg = renderRadarSvg(allTechs, cats);
+      svg = renderRadarSvg(allTechs, cats, bg);
     } catch {
       svg = SVG_ERROR;
     }

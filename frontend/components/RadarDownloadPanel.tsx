@@ -10,9 +10,30 @@
  * Both curl commands point to /api/radar (issue #62).
  */
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 
 const BASE_URL = "https://jobs-radar-qc.dev";
+const BG_STORAGE_KEY = "jobs-radar-qc:radar-bg";
+
+type BgPref = "light" | "dark" | null;
+
+function readBgPref(): BgPref {
+  try {
+    const raw = localStorage.getItem(BG_STORAGE_KEY);
+    return raw === "light" || raw === "dark" ? raw : null;
+  } catch {
+    return null;
+  }
+}
+
+function subscribeBgPref(cb: () => void): () => void {
+  window.addEventListener("jobs-radar-qc:radar-bg-change", cb);
+  window.addEventListener("storage", cb);
+  return () => {
+    window.removeEventListener("jobs-radar-qc:radar-bg-change", cb);
+    window.removeEventListener("storage", cb);
+  };
+}
 
 interface Props {
   /** The 4 currently selected category slugs from the URL / defaults. */
@@ -27,12 +48,17 @@ interface CopyState {
 }
 
 export function RadarDownloadPanel({ cats, segment }: Props) {
+  // Mirror the bg preference from RadarBgContainer so the download URL
+  // always produces an SVG that matches what the user sees.
+  const bgPref = useSyncExternalStore(subscribeBgPref, readBgPref, () => null);
+
   const catStr = cats.join(",");
   const segStr = segment ? `&segment=${segment}` : "";
+  const bgStr  = bgPref ? `&bg=${bgPref}` : "";
   const jsonCmd = `curl "${BASE_URL}/api/radar?format=json&cats=${catStr}${segStr}"`;
-  const svgCmd  = `curl "${BASE_URL}/api/radar?format=svg&cats=${catStr}${segStr}"`;
+  const svgCmd  = `curl "${BASE_URL}/api/radar?format=svg&cats=${catStr}${segStr}${bgStr}"`;
   // Relative path so the download link works in both dev and production.
-  const svgHref = `/api/radar?format=svg&cats=${catStr}${segStr}`;
+  const svgHref = `/api/radar?format=svg&cats=${catStr}${segStr}${bgStr}`;
 
   const [copied, setCopied] = useState<CopyState>({ json: false, svg: false });
 

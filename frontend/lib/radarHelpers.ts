@@ -246,6 +246,32 @@ function escSvg(str: string): string {
     .replace(/'/g, "&#x27;");
 }
 
+/** Hex color palettes for the standalone SVG — no CSS variables available. */
+const SVG_PALETTE = {
+  dark: {
+    bg:          "#0d1117",
+    gridline:    "#21262d",
+    ringLabel:   "#6e7681",
+    divider:     "#21262d",
+    leaderText:  "#c9d1d9",
+    countText:   "#6e7681",
+    bubbleStroke:"#21262d",
+    legend:      "#6e7681",
+    accent:      "#4b73c4",
+  },
+  light: {
+    bg:          "#ffffff",
+    gridline:    "#c4bdaf",
+    ringLabel:   "#8a8478",
+    divider:     "#c4bdaf",
+    leaderText:  "#1d1b18",
+    countText:   "#8a8478",
+    bubbleStroke:"#c4bdaf",
+    legend:      "#8a8478",
+    accent:      "#2f6fe0",
+  },
+} as const;
+
 /**
  * Render a standalone SVG string for the radar.
  *
@@ -258,7 +284,9 @@ function escSvg(str: string): string {
 export function renderRadarSvg(
   allTechs: TechRow[],
   selectedCats: string[],
+  bg: "light" | "dark" = "dark",
 ): string {
+  const P = SVG_PALETTE[bg];
   const CX = 280, CY = 240, R = 200;
   const RINGS = [0.95, 0.68, 0.42, 0.18];
   const RING_LABELS = ["top 5", "top 10", "top 20", "long tail"];
@@ -326,16 +354,16 @@ export function renderRadarSvg(
   );
 
   // Background
-  parts.push(`<rect width="560" height="480" fill="#0d1117"/>`);
+  parts.push(`<rect width="560" height="480" fill="${P.bg}"/>`);
 
   // Concentric rings
   for (let i = 0; i < RINGS.length; i++) {
     const k = RINGS[i];
     parts.push(
-      `<circle cx="${CX}" cy="${CY}" r="${n(R * k, 1)}" fill="none" stroke="#21262d" stroke-dasharray="3 5" stroke-width="1"/>`,
+      `<circle cx="${CX}" cy="${CY}" r="${n(R * k, 1)}" fill="none" stroke="${P.gridline}" stroke-dasharray="3 5" stroke-width="1"/>`,
     );
     parts.push(
-      `<text x="${n(CX + R * k + 5, 1)}" y="${n(CY - 5, 1)}" font-family="monospace" font-size="9" fill="#6e7681">${escSvg(RING_LABELS[i])}</text>`,
+      `<text x="${n(CX + R * k + 5, 1)}" y="${n(CY - 5, 1)}" font-family="monospace" font-size="9" fill="${P.ringLabel}">${escSvg(RING_LABELS[i])}</text>`,
     );
   }
 
@@ -344,7 +372,7 @@ export function renderRadarSvg(
     const sectorAngle = (Math.PI * 2) / selectedCats.length;
     const a0 = -Math.PI / 2 + i * sectorAngle;
     parts.push(
-      `<line x1="${CX}" y1="${CY}" x2="${n(CX + Math.cos(a0) * R)}" y2="${n(CY + Math.sin(a0) * R)}" stroke="#21262d" stroke-width="1"/>`,
+      `<line x1="${CX}" y1="${CY}" x2="${n(CX + Math.cos(a0) * R)}" y2="${n(CY + Math.sin(a0) * R)}" stroke="${P.divider}" stroke-width="1"/>`,
     );
   });
 
@@ -363,13 +391,13 @@ export function renderRadarSvg(
 
   // Decorative sweep line at -32°
   parts.push(
-    `<line x1="${CX}" y1="${CY}" x2="${CX + R}" y2="${CY}" stroke="#4b73c4" stroke-width="1.25" stroke-dasharray="2 5" opacity="0.45" transform="rotate(-32 ${CX} ${CY})"/>`,
+    `<line x1="${CX}" y1="${CY}" x2="${CX + R}" y2="${CY}" stroke="${P.accent}" stroke-width="1.25" stroke-dasharray="2 5" opacity="0.45" transform="rotate(-32 ${CX} ${CY})"/>`,
   );
 
   // Center dot + ring
-  parts.push(`<circle cx="${CX}" cy="${CY}" r="5" fill="#4b73c4"/>`);
+  parts.push(`<circle cx="${CX}" cy="${CY}" r="5" fill="${P.accent}"/>`);
   parts.push(
-    `<circle cx="${CX}" cy="${CY}" r="13" fill="none" stroke="#4b73c4" stroke-width="1"/>`,
+    `<circle cx="${CX}" cy="${CY}" r="13" fill="none" stroke="${P.accent}" stroke-width="1"/>`,
   );
 
   // Bubbles
@@ -379,23 +407,23 @@ export function renderRadarSvg(
     const labelX = labelSide === "right" ? x + size + 4 : x - size - 4;
     const anchor = labelSide === "right" ? "start" : "end";
     parts.push(
-      `<circle cx="${n(x)}" cy="${n(y)}" r="${n(size)}" fill="${escSvg(fill)}" stroke="#21262d" stroke-width="1">` +
+      `<circle cx="${n(x)}" cy="${n(y)}" r="${n(size)}" fill="${escSvg(fill)}" stroke="${P.bubbleStroke}" stroke-width="1">` +
         `<title>${escSvg(tech.name)} — ${tech.count} roles (rank #${tech.rank})</title>` +
         `</circle>`,
     );
     if (isCategoryLeader) {
       parts.push(
-        `<text x="${n(labelX)}" y="${n(y + 3)}" font-family="sans-serif" font-size="10.5" font-weight="600" text-anchor="${anchor}" fill="#c9d1d9">${escSvg(tech.name)}</text>`,
+        `<text x="${n(labelX)}" y="${n(y + 3)}" font-family="sans-serif" font-size="10.5" font-weight="600" text-anchor="${anchor}" fill="${P.leaderText}">${escSvg(tech.name)}</text>`,
       );
       parts.push(
-        `<text x="${n(labelX)}" y="${n(y + 14)}" font-family="monospace" font-size="8.5" text-anchor="${anchor}" fill="#6e7681">${tech.count}</text>`,
+        `<text x="${n(labelX)}" y="${n(y + 14)}" font-family="monospace" font-size="8.5" text-anchor="${anchor}" fill="${P.countText}">${tech.count}</text>`,
       );
     }
   }
 
   // Legend
   parts.push(
-    `<text x="16" y="470" font-family="monospace" font-size="9" fill="#6e7681">size = job count · proximity to center = rank · jobs-radar-qc.dev/trends</text>`,
+    `<text x="16" y="470" font-family="monospace" font-size="9" fill="${P.legend}">size = job count · proximity to center = rank · jobs-radar-qc.dev/trends</text>`,
   );
 
   parts.push(`</svg>`);
