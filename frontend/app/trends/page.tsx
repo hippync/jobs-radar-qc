@@ -20,6 +20,7 @@ import {
   parseSegment,
   SEGMENT_LABELS,
 } from "@/lib/segmentHelpers";
+import { RadarBgContainer } from "@/components/RadarBgContainer";
 import { RadarCategorySelector } from "@/components/RadarCategorySelector";
 import { RadarDownloadPanel } from "@/components/RadarDownloadPanel";
 import { SegmentFilter } from "@/components/SegmentFilter";
@@ -370,15 +371,8 @@ export default async function TrendsPage({
           </p>
         </div>
 
-        {/* Radar SVG */}
-        <div
-          className="relative flex-1 rounded-md"
-          style={{
-            background: "var(--surface)",
-            border: "1px solid var(--rule-soft)",
-            minHeight: 340,
-          }}
-        >
+        {/* Radar SVG — wrapped in RadarBgContainer for the light/dark bg toggle */}
+        <RadarBgContainer>
           {allTechs.length === 0 ? (
             <div className="flex h-full items-center justify-center py-20 text-center">
               <div>
@@ -393,7 +387,7 @@ export default async function TrendsPage({
           ) : (
             <RadarChart allTechs={allTechs} selectedCats={selectedCats} />
           )}
-        </div>
+        </RadarBgContainer>
       </div>
 
       {/* ── Side rail ───────────────────────────────────────────────── */}
