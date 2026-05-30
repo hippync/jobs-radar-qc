@@ -439,7 +439,7 @@ class Extractor:
 
             site = api_base.rstrip("/").rsplit("/", 1)[-1]
             job_suffix = re.sub(rf"^/{re.escape(site)}", "", ext_path, count=1)
-            detail_url = f"{api_base.rstrip('/')}{job_suffix}/details"
+            detail_url = f"{api_base.rstrip('/')}{job_suffix}"
 
             async with sem:
                 try:

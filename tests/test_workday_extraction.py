@@ -268,7 +268,12 @@ class TestFetchWorkdayDescriptions:
 
     @pytest.mark.asyncio
     async def test_detail_url_construction(self, workday: Extractor) -> None:
-        """Detail URL strips site prefix from externalPath and appends /details."""
+        """Detail URL strips site prefix from externalPath (no /details suffix).
+
+        Real Workday tenants expose job data at the path-only URL, not at a
+        separate /details endpoint.  The site prefix in externalPath (if present)
+        is stripped so the path starts with /job/…
+        """
         raw_job: dict = {
             "externalPath": "/FixtureCareers/job/Montreal/Engineer_JR-001",
             "_api_base": "https://fixturecorp.wd3.myworkdayjobs.com/wday/cxs/fixturecorp/FixtureCareers",
@@ -286,7 +291,7 @@ class TestFetchWorkdayDescriptions:
 
         expected_url = (
             "https://fixturecorp.wd3.myworkdayjobs.com/wday/cxs/fixturecorp/FixtureCareers"
-            "/job/Montreal/Engineer_JR-001/details"
+            "/job/Montreal/Engineer_JR-001"
         )
         mock_client.get.assert_awaited_once_with(expected_url, timeout=30.0)
 
