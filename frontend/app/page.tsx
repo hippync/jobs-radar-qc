@@ -62,6 +62,21 @@ interface DbStats {
   last_updated:     string | null;
 }
 
+// Contextual facet counts — each facet excludes its own active filter so the
+// count for value V reflects "how many jobs match active filters + V".
+interface FacetCounts {
+  sourceCounts:    Record<string, number>;
+  seniorityCounts: Record<string, number>;
+  workplaceCounts: Record<string, number>;
+}
+
+// Shape returned by the get_contextual_facets() Supabase RPC.
+interface DbFacetCounts {
+  source_counts:    Record<string, number>;
+  seniority_counts: Record<string, number>;
+  workplace_counts: Record<string, number>;
+}
+
 async function fetchJobs(filters: SearchParams): Promise<{ jobs: Job[]; total: number }> {
   const page = Math.max(1, parseInt(filters.page ?? "1", 10));
   const from = (page - 1) * PAGE_SIZE;
@@ -124,6 +139,31 @@ async function fetchStats(): Promise<Stats> {
   };
 }
 
+// Calls the get_contextual_facets() Supabase RPC.
+// Each facet count is computed with all OTHER active filters applied — never
+// double-counting the facet's own filter — so counts reflect what the user
+// would get by clicking that value.  All NULL params → global totals.
+async function fetchContextualFacets(filters: SearchParams): Promise<FacetCounts> {
+  const { data, error } = await supabase.rpc("get_contextual_facets", {
+    p_tech:      filters.tech      ?? null,
+    p_source:    filters.source    ?? null,
+    p_remote:    filters.remote    ?? null,
+    p_seniority: filters.seniority ?? null,
+  });
+
+  if (error) {
+    console.error("[fetchContextualFacets] RPC error:", error.message);
+    return { sourceCounts: {}, seniorityCounts: {}, workplaceCounts: {} };
+  }
+
+  const db = (data ?? {}) as DbFacetCounts;
+  return {
+    sourceCounts:    db.source_counts    ?? {},
+    seniorityCounts: db.seniority_counts ?? {},
+    workplaceCounts: db.workplace_counts ?? {},
+  };
+}
+
 export default async function Page({
   searchParams,
 }: {
@@ -132,10 +172,22 @@ export default async function Page({
   const filters = await searchParams;
   const page    = Math.max(1, parseInt(filters.page ?? "1", 10));
 
-  const [{ jobs, total }, stats] = await Promise.all([
+  const [{ jobs, total }, stats, facets] = await Promise.all([
     fetchJobs(filters),
     fetchStats(),
+    fetchContextualFacets(filters),
   ]);
+
+  // Ensure every known source and workplace option has an explicit count (0 if
+  // the combination yields no results) so FilterChip always shows a number.
+  const sourceCounts = Object.fromEntries(
+    stats.sourceOptions.map((s) => [s, facets.sourceCounts[s] ?? 0])
+  );
+  const workplaceCounts: Record<string, number> = {
+    "true":  facets.workplaceCounts["true"]  ?? 0,
+    "false": facets.workplaceCounts["false"] ?? 0,
+    "null":  facets.workplaceCounts["null"]  ?? 0,
+  };
 
   const totalPages = Math.ceil(total / PAGE_SIZE);
   const hasFilters = !!(filters.tech || filters.source || filters.remote || filters.seniority);
@@ -173,9 +225,9 @@ export default async function Page({
           <FilterSidebar
             techOptions={stats.techOptions}
             sourceOptions={stats.sourceOptions}
-            sourceCounts={stats.sourceCounts}
-            seniorityCounts={stats.seniorityCounts}
-            workplaceCounts={stats.workplaceCounts}
+            sourceCounts={sourceCounts}
+            seniorityCounts={facets.seniorityCounts}
+            workplaceCounts={workplaceCounts}
           />
         </Suspense>
 
@@ -215,9 +267,9 @@ export default async function Page({
             <MobileFilterDrawer
               techOptions={stats.techOptions}
               sourceOptions={stats.sourceOptions}
-              sourceCounts={stats.sourceCounts}
-              seniorityCounts={stats.seniorityCounts}
-              workplaceCounts={stats.workplaceCounts}
+              sourceCounts={sourceCounts}
+              seniorityCounts={facets.seniorityCounts}
+              workplaceCounts={workplaceCounts}
               activeFilterCount={activeFilterCount}
             />
           </Suspense>
