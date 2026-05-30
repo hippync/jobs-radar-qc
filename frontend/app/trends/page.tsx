@@ -336,6 +336,7 @@ export default async function TrendsPage({
                   <Link
                     key={w}
                     href={`/trends?${params.toString()}`}
+                    scroll={false}
                     className="rounded-full px-2 py-0.5 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--accent) focus-visible:ring-offset-1"
                     style={{
                       border: "1px solid var(--rule-soft)",

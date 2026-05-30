@@ -66,6 +66,7 @@ export function SegmentFilter({ activeSegment, selectedCats, activeWindow }: Pro
             <Link
               key={slug ?? "all"}
               href={href(slug)}
+              scroll={false}
               aria-current={isActive ? "page" : undefined}
               style={{
                 display: "inline-flex",
