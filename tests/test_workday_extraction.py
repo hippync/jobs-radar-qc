@@ -107,7 +107,10 @@ class TestWorkdayTechExtraction:
         result = workday._apply_extraction(swe_raw, _COMPANY)
         stack = set(result["tech_stack"])
         # All of these appear in description_html, not in the title
-        expected = {"Python", "FastAPI", "PostgreSQL", "Docker", "AWS", "Kubernetes", "GitHub Actions"}
+        expected = {
+            "Python", "FastAPI", "PostgreSQL", "Docker",
+            "AWS", "Kubernetes", "GitHub Actions",
+        }
         missing = expected - stack
         assert not missing, (
             f"Technologies from description_html are missing from tech_stack: {missing}. "
