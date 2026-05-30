@@ -262,7 +262,6 @@ export function renderRadarSvg(
   const CX = 280, CY = 240, R = 200;
   const RINGS = [0.95, 0.68, 0.42, 0.18];
   const RING_LABELS = ["top 5", "top 10", "top 20", "long tail"];
-  const TOP5 = new Set(allTechs.slice(0, 5).map((t) => t.name));
 
   /* ── Group techs by sector, capped at 8 per sector ─────────────────── */
   const byCat: Record<string, TechRow[]> = {};
@@ -272,13 +271,21 @@ export function renderRadarSvg(
     if (arr && arr.length < 8) arr.push(t);
   }
 
+  /* ── One label per active sector: highest-count tech in each category ── */
+  const CATEGORY_LEADERS = new Set(
+    selectedCats.flatMap((cat) => {
+      const leader = byCat[cat]?.[0];
+      return leader ? [leader.name] : [];
+    }),
+  );
+
   /* ── Polar placement ────────────────────────────────────────────────── */
   interface Placed {
     tech: TechRow;
     x: number;
     y: number;
     size: number;
-    isTop5: boolean;
+    isCategoryLeader: boolean;
     labelSide: "right" | "left";
     color: string;
   }
@@ -297,10 +304,10 @@ export function renderRadarSvg(
       const x = CX + Math.cos(angle) * r;
       const y = CY + Math.sin(angle) * r;
       const size = Math.max(6, Math.min(20, Math.sqrt(tech.count) * 1.3));
-      const isTop5 = TOP5.has(tech.name);
+      const isCategoryLeader = CATEGORY_LEADERS.has(tech.name);
       const labelSide: "right" | "left" = x > CX ? "right" : "left";
       const color = CAT_COLORS[cat] ?? "#888888";
-      placed.push({ tech, x, y, size, isTop5, labelSide, color });
+      placed.push({ tech, x, y, size, isCategoryLeader, labelSide, color });
     });
   });
 
@@ -366,9 +373,9 @@ export function renderRadarSvg(
   );
 
   // Bubbles
-  for (const { tech, x, y, size, isTop5, labelSide, color } of placed) {
-    // Top-5: solid fill; others: ~35% opacity (hex 59 ≈ 35% of 255)
-    const fill = isTop5 ? color : `${color}59`;
+  for (const { tech, x, y, size, isCategoryLeader, labelSide, color } of placed) {
+    // Category leader: solid fill; others: ~35% opacity (hex 59 ≈ 35% of 255)
+    const fill = isCategoryLeader ? color : `${color}59`;
     const labelX = labelSide === "right" ? x + size + 4 : x - size - 4;
     const anchor = labelSide === "right" ? "start" : "end";
     parts.push(
@@ -376,7 +383,7 @@ export function renderRadarSvg(
         `<title>${escSvg(tech.name)} — ${tech.count} roles (rank #${tech.rank})</title>` +
         `</circle>`,
     );
-    if (isTop5) {
+    if (isCategoryLeader) {
       parts.push(
         `<text x="${n(labelX)}" y="${n(y + 3)}" font-family="sans-serif" font-size="10.5" font-weight="600" text-anchor="${anchor}" fill="#c9d1d9">${escSvg(tech.name)}</text>`,
       );

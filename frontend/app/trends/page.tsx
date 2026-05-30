@@ -53,8 +53,6 @@ function RadarChart({
   const CX = 280, CY = 240, R = 200;
   const RINGS = [0.95, 0.68, 0.42, 0.18];
   const RING_LABELS = ["top 5", "top 10", "top 20", "long tail"];
-  /** Top-5 techs globally — used to decide inline label rendering. */
-  const TOP5 = new Set(allTechs.slice(0, 5).map((t) => t.name));
 
   /* ── Group techs by selected sector, capped at 8 per sector ──────────── */
   const byCat: Record<string, TechRow[]> = {};
@@ -68,13 +66,21 @@ function RadarChart({
     }
   }
 
+  /* ── One label per active sector: highest-count tech in each category ── */
+  const CATEGORY_LEADERS = new Set(
+    selectedCats.flatMap((cat) => {
+      const leader = byCat[cat]?.[0];
+      return leader ? [leader.name] : [];
+    }),
+  );
+
   /* ── Place tech bubbles in polar coordinates ─────────────────────────── */
   interface PlacedTech {
     tech: TechRow;
     x: number;
     y: number;
     size: number;
-    isTop5: boolean;
+    isCategoryLeader: boolean;
     labelSide: "right" | "left";
   }
 
@@ -96,10 +102,10 @@ function RadarChart({
       const x = CX + Math.cos(angle) * r;
       const y = CY + Math.sin(angle) * r;
       const size = Math.max(6, Math.min(20, Math.sqrt(tech.count) * 1.3));
-      const isTop5 = TOP5.has(tech.name);
+      const isCategoryLeader = CATEGORY_LEADERS.has(tech.name);
       const labelSide = x > CX ? "right" : "left";
 
-      placed.push({ tech, x, y, size, isTop5, labelSide });
+      placed.push({ tech, x, y, size, isCategoryLeader, labelSide });
     });
   });
 
@@ -214,10 +220,10 @@ function RadarChart({
       />
 
       {/* Bubbles — colored by category token */}
-      {placed.map(({ tech, x, y, size, isTop5, labelSide }) => {
+      {placed.map(({ tech, x, y, size, isCategoryLeader, labelSide }) => {
         const cssSlug = catToCssSlug(tech.category);
         const catColor = `var(--cat-${cssSlug}, var(--accent))`;
-        const bubbleFill = isTop5
+        const bubbleFill = isCategoryLeader
           ? catColor
           : `color-mix(in oklab, ${catColor} 35%, var(--surface))`;
         return (
@@ -235,8 +241,8 @@ function RadarChart({
                 strokeWidth="1"
                 style={{ cursor: "pointer" }}
               />
-              {/* Inline labels for top-5 only; others surface via <title> tooltip */}
-              {isTop5 && (
+              {/* Inline label for category leader only; others surface via <title> tooltip */}
+              {isCategoryLeader && (
                 <>
                   <text
                     x={labelSide === "right" ? x + size + 4 : x - size - 4}
