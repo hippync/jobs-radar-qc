@@ -20,9 +20,11 @@ logger = structlog.get_logger()
 
 SPECS_DIR = Path(__file__).parent.parent / "specs"
 
-# Maximum number of concurrent Workable detail-page requests.
-# Keeps the per-company fetch polite while still being meaningfully parallel.
+# Maximum number of concurrent detail-page requests (shared by Workable and Workday).
 _WORKABLE_DETAIL_CONCURRENCY = 5
+_WORKDAY_DETAIL_CONCURRENCY = 5
+# Safety cap on Workday pagination — no single company should exceed this.
+_WORKDAY_PAGINATION_CAP = 500
 
 
 # ─── Spec loading ────────────────────────────────────────────────────────────
@@ -93,6 +95,24 @@ def _parse_literal(s: str, field_type: str) -> Any:
     if field_type.startswith("list"):
         return []
     return s
+
+
+def _normalize_workday_date(date_str: str) -> str | None:
+    """Normalise a Workday startDate to an ISO 8601 UTC string.
+
+    Workday tenants emit dates in at least two formats:
+      - "MM/DD/YYYY" (e.g. "04/28/2026")
+      - ISO 8601 with or without timezone (e.g. "2026-04-28T00:00:00")
+    """
+    for fmt in ("%m/%d/%Y", "%Y-%m-%dT%H:%M:%S"):
+        try:
+            return datetime.strptime(date_str.strip(), fmt).replace(tzinfo=UTC).isoformat()
+        except (ValueError, TypeError):
+            pass
+    try:
+        return datetime.fromisoformat(date_str).astimezone(UTC).isoformat()
+    except (ValueError, TypeError):
+        return None
 
 
 # ─── Derived field helpers ───────────────────────────────────────────────────
@@ -208,6 +228,9 @@ class Extractor:
         return all_jobs
 
     async def _fetch_company(self, client: httpx.AsyncClient, company: dict) -> list[dict]:
+        if self.source == "workday":
+            return await self._fetch_workday_company(client, company)
+
         endpoint = self.schema["endpoint"]
         url = endpoint["url_template"].format(company_slug=company["slug"])
         log = logger.bind(source=self.source, company=company["name"])
@@ -303,6 +326,145 @@ class Extractor:
                 except httpx.HTTPError as exc:
                     logger.warning(
                         "workable_detail_fetch_failed",
+                        url=detail_url,
+                        error=str(exc),
+                    )
+
+        await asyncio.gather(*(_fetch_one(job) for job in raw_jobs))
+
+    # ─── Workday ─────────────────────────────────────────────────────────────
+
+    async def _fetch_workday_company(
+        self, client: httpx.AsyncClient, company: dict
+    ) -> list[dict]:
+        """Fetch all jobs for a single Workday tenant using the CXS JSON API.
+
+        Workday uses POST /jobs with offset-based pagination (20 jobs/page by default).
+        Each company defines its own ``api_url`` and ``base_url`` in schema.json because
+        Workday tenants have company-specific subdomains — there is no shared slug template.
+
+        After the list is fetched and company context is injected into each raw job,
+        detail pages are fetched concurrently to populate ``description_html`` and
+        ``_posted_at``. A failed detail fetch is logged and the job is retained with
+        ``description_html = null`` (title-only tech_stack extraction).
+        """
+        api_url = company.get("api_url", "")
+        if not api_url:
+            logger.warning("workday_missing_api_url", company=company["name"])
+            return []
+
+        log = logger.bind(source="workday", company=company["name"])
+        endpoint = self.schema["endpoint"]
+        request_body = dict(endpoint.get("request_body", {}))
+
+        raw_jobs: list[dict] = []
+        while True:
+            request_body["offset"] = len(raw_jobs)
+            try:
+                response = await client.post(api_url, json=request_body, timeout=30.0)
+                response.raise_for_status()
+            except httpx.HTTPStatusError as exc:
+                log.warning("fetch_http_error", status=exc.response.status_code, url=api_url)
+                break
+            except httpx.HTTPError as exc:
+                log.error("fetch_failed", error=str(exc), url=api_url)
+                break
+
+            data = response.json()
+            batch = data.get("jobPostings", [])
+            total = data.get("total", 0)
+            raw_jobs.extend(batch)
+
+            if not batch or len(raw_jobs) >= total:
+                break
+            if len(raw_jobs) >= _WORKDAY_PAGINATION_CAP:
+                log.warning("workday_pagination_capped", total=total, fetched=len(raw_jobs))
+                break
+
+        # Inject company URL context so the detail fetcher and extraction XML can use it.
+        # api_url ends with "/jobs"; strip that suffix to get the CXS api base.
+        api_base = api_url.removesuffix("/jobs")
+        base_url = company.get("base_url", "").rstrip("/")
+        for raw_job in raw_jobs:
+            ext_path = raw_job.get("externalPath", "")
+            raw_job["_api_base"] = api_base
+            raw_job["_base_url"] = base_url
+            raw_job["_external_id"] = raw_job.get("jobReqId") or (
+                ext_path.rstrip("/").rsplit("/", 1)[-1] if ext_path else None
+            )
+            if base_url and ext_path:
+                raw_job["_source_url"] = base_url + ext_path
+
+        await self._fetch_workday_descriptions(client, raw_jobs)
+
+        required = self.schema.get("validation", {}).get("required_fields", [])
+        results = []
+        for raw_job in raw_jobs:
+            if not all(raw_job.get(f) for f in required):
+                log.debug("job_skipped_missing_fields", job_id=raw_job.get("jobReqId"))
+                continue
+            extracted = self._apply_extraction(raw_job, company)
+            if is_non_tech_title(extracted.get("title", "")):
+                log.debug("job_skipped_non_tech_title", title=extracted.get("title"))
+                continue
+            results.append(extracted)
+
+        log.info("fetched", count=len(results))
+        return results
+
+    async def _fetch_workday_descriptions(
+        self, client: httpx.AsyncClient, raw_jobs: list[dict]
+    ) -> None:
+        """Fetch each Workday job's detail page and inject ``description_html``.
+
+        The CXS detail URL is derived by stripping the leading ``/{site}`` prefix from
+        ``externalPath`` and appending ``/details`` to the api base.  For example:
+
+            api_base    = https://example.wd3.myworkdayjobs.com/wday/cxs/example/ExampleCareers
+            externalPath = /ExampleCareers/job/Montreal/Engineer_JR-001
+            detail URL  = api_base + /job/Montreal/Engineer_JR-001 + /details
+
+        Requests are bounded to ``_WORKDAY_DETAIL_CONCURRENCY`` concurrent fetches.
+        A failed detail fetch is logged and the job continues without a description.
+        """
+        sem = asyncio.Semaphore(_WORKDAY_DETAIL_CONCURRENCY)
+
+        async def _fetch_one(raw_job: dict) -> None:
+            api_base: str = raw_job.pop("_api_base", "")
+            raw_job.pop("_base_url", None)
+            ext_path: str = raw_job.get("externalPath", "")
+
+            if not api_base or not ext_path:
+                return
+
+            site = api_base.rstrip("/").rsplit("/", 1)[-1]
+            job_suffix = re.sub(rf"^/{re.escape(site)}", "", ext_path, count=1)
+            detail_url = f"{api_base.rstrip('/')}{job_suffix}/details"
+
+            async with sem:
+                try:
+                    resp = await client.get(detail_url, timeout=30.0)
+                    resp.raise_for_status()
+                    info = resp.json().get("jobPostingInfo", {})
+                    description = info.get("jobDescription") or None
+                    raw_job["description_html"] = description
+                    start_date = info.get("startDate")
+                    if start_date:
+                        raw_job["_posted_at"] = _normalize_workday_date(start_date)
+                    logger.debug(
+                        "workday_detail_fetched",
+                        url=detail_url,
+                        bytes=len(resp.content),
+                    )
+                except httpx.HTTPStatusError as exc:
+                    logger.warning(
+                        "workday_detail_http_error",
+                        url=detail_url,
+                        status=exc.response.status_code,
+                    )
+                except httpx.HTTPError as exc:
+                    logger.warning(
+                        "workday_detail_fetch_failed",
                         url=detail_url,
                         error=str(exc),
                     )

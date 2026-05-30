@@ -1,0 +1,206 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Workday extraction rules.
+
+  Source is the Workday CXS public JSON API (POST /jobs).
+  Each company defines its own api_url and base_url in schema.json because
+  Workday tenants have company-specific hostnames — there is no shared slug template.
+
+  Field injection (performed by _fetch_workday_company before this XML runs):
+    _external_id  — jobReqId, or last path segment of externalPath as fallback
+    _source_url   — base_url + externalPath (human-facing URL)
+    description_html — fetched from the CXS detail endpoint; null on failure
+    _posted_at    — startDate from detail endpoint, normalised to ISO UTC; null on failure
+
+  Tech extraction uses title + description_html, falling back to title-only when
+  the detail fetch fails.
+
+  Key differences vs other sources:
+  - List is fetched with POST (paginated 20/page); descriptions need a secondary GET
+  - externalPath drives both source_url construction and detail URL routing
+  - locationsText is the raw location string (e.g. "Montréal, Quebec, Canada")
+  - posted_at comes from the detail endpoint, not the list response
+-->
+<extraction source="workday" version="1">
+
+  <!-- ═══════════════════════════════════════════════════════
+       CONSTANTS — stamped uniformly on every record
+       ═══════════════════════════════════════════════════════ -->
+  <constants>
+    <constant name="source"           value="workday" />
+    <constant name="is_active"        value="true"    type="bool" />
+    <!-- Overridden by the description_html field below when the detail fetch
+         succeeds. Stays null on fetch failures so the job is still upserted
+         with title-only tech_stack. -->
+    <constant name="description_html" value="null"    />
+  </constants>
+
+  <!-- ═══════════════════════════════════════════════════════
+       FIELDS — direct mappings from the enriched raw job dict
+       ═══════════════════════════════════════════════════════ -->
+  <fields>
+    <!-- Pre-injected by _fetch_workday_company from jobReqId / externalPath -->
+    <field name="external_id"      from="_external_id"    type="string" />
+    <!-- Pre-injected by _fetch_workday_company as base_url + externalPath -->
+    <field name="source_url"       from="_source_url"     type="string"   nullable="true" />
+
+    <field name="title"            from="title"           type="string" />
+    <field name="location"         from="locationsText"   type="string"   nullable="true" />
+
+    <!-- Injected by detail fetch; stays null when fetch fails (constant above) -->
+    <field name="description_html" from="description_html" type="string"  nullable="true" />
+    <!-- Injected by detail fetch as a normalised ISO datetime string -->
+    <field name="posted_at"        from="_posted_at"      type="datetime" nullable="true" />
+  </fields>
+
+  <!-- ═══════════════════════════════════════════════════════
+       DERIVED — computed from already-mapped fields
+       ═══════════════════════════════════════════════════════ -->
+  <derived>
+
+    <!-- is_qc: true when location mentions a Quebec city or region -->
+    <field name="is_qc" type="bool" default="false">
+      <match source="location"
+             pattern="(?i)(montr[eé]al|qu[eé]bec|laval|longueuil|brossard|sherbrooke|gatineau|saint-jean|terrebonne|\bqc\b)"
+             value="true" />
+    </field>
+
+    <!-- is_remote: Workday locationsText may carry the workplace mode inline
+         e.g. "Remote", "Canada (Remote)", or a bare city with no qualifier. -->
+    <field name="is_remote" type="bool" default="null" nullable="true">
+      <match source="location" pattern="(?i)\bhybrid(e)?\b"                           value="null"  />
+      <match source="location" pattern="(?i)\bremote\b"                               value="true"  />
+      <match source="location" pattern="(?i)\b(on.?site|in.?office|pr[eé]sentiel)\b" value="false" />
+      <match source="title"    pattern="(?i)\bremote\b"                               value="true"  />
+    </field>
+
+    <field name="seniority" type="string" default="null" nullable="true">
+      <match source="title" pattern="(?i)\b(intern|stage|stagiaire|internship)\b"          value="internship" />
+      <match source="title" pattern="(?i)\b(junior|jr\.?|d[eé]butant)\b"                   value="junior"     />
+      <match source="title" pattern="(?i)\b(staff)\b"                                      value="staff"      />
+      <match source="title" pattern="(?i)\b(principal)\b"                                  value="principal"  />
+      <match source="title" pattern="(?i)\b(tech(nical)?\s+lead|lead\s+(dev|engineer))\b"  value="lead"       />
+      <match source="title" pattern="(?i)\b(senior|sr\.?|exp[eé]riment[eé])\b"             value="senior"     />
+      <match source="title" pattern="(?i)\b(director|directeur)\b"                         value="director"   />
+      <match source="title" pattern="(?i)\b(manager|gestionnaire|responsable)\b"           value="manager"    />
+    </field>
+
+    <!--
+      tech_stack: collect ALL keyword matches across title and description_html.
+      Falls back to title-only when description_html is null (failed detail fetch).
+    -->
+    <field name="tech_stack" type="list[string]" default="[]" strategy="collect-all">
+      <keywords sources="title,description_html" word_boundary="true" case_insensitive="true">
+
+        <!-- Languages -->
+        <kw canonical="Python">Python</kw>
+        <kw canonical="JavaScript">JavaScript</kw>
+        <kw canonical="TypeScript">TypeScript</kw>
+        <kw canonical="Go" case_sensitive="true">\b(?:Go|Golang)\b</kw>
+        <kw canonical="Rust">Rust</kw>
+        <kw canonical="Java">Java</kw>
+        <kw canonical="Kotlin">Kotlin</kw>
+        <kw canonical="Scala">Scala</kw>
+        <kw canonical="C#">C#</kw>
+        <kw canonical="C++">C\+\+</kw>
+        <kw canonical="Ruby">Ruby</kw>
+        <kw canonical="PHP">PHP</kw>
+        <kw canonical="Swift">Swift</kw>
+        <kw canonical="Elixir">Elixir</kw>
+        <kw canonical="Erlang">Erlang</kw>
+        <kw canonical="R" case_sensitive="true">\bR\b</kw>
+        <kw canonical="SQL" case_sensitive="true">\bSQL\b</kw>
+
+        <!-- Frontend / Web -->
+        <kw canonical="React">React</kw>
+        <kw canonical="Next.js">Next\.js</kw>
+        <kw canonical="Vue">Vue(?:\.js)?</kw>
+        <kw canonical="Angular">Angular</kw>
+        <kw canonical="Svelte">Svelte</kw>
+        <kw canonical="Node.js">Node(?:\.js)?</kw>
+        <kw canonical="Express">Express</kw>
+        <kw canonical="GraphQL">GraphQL</kw>
+        <kw canonical="REST" case_sensitive="true">REST(?:ful)?</kw>
+        <kw canonical="Tailwind">Tailwind(?:\s+CSS)?</kw>
+        <kw canonical="Redux">Redux</kw>
+
+        <!-- Backend frameworks -->
+        <kw canonical="Django">Django</kw>
+        <kw canonical="FastAPI">FastAPI</kw>
+        <kw canonical="Flask">Flask</kw>
+        <kw canonical="Rails">(?:Ruby on )?Rails</kw>
+        <kw canonical="Spring Boot">Spring(?:\s+Boot)?</kw>
+        <kw canonical="NestJS">NestJS</kw>
+        <kw canonical="gRPC">gRPC</kw>
+        <kw canonical="Laravel">Laravel</kw>
+        <kw canonical="ASP.NET">ASP\.NET</kw>
+        <kw canonical=".NET">\.NET</kw>
+
+        <!-- Data / ML / AI -->
+        <kw canonical="Spark">(?:Apache )?Spark</kw>
+        <kw canonical="Kafka">(?:Apache )?Kafka</kw>
+        <kw canonical="Airflow">(?:Apache )?Airflow</kw>
+        <kw canonical="dbt">dbt</kw>
+        <kw canonical="Pandas">Pandas</kw>
+        <kw canonical="NumPy">NumPy</kw>
+        <kw canonical="PyTorch">PyTorch</kw>
+        <kw canonical="TensorFlow">TensorFlow</kw>
+        <kw canonical="scikit-learn">scikit-learn</kw>
+        <kw canonical="LLM" case_sensitive="true">LLM</kw>
+        <kw canonical="RAG" case_sensitive="true">RAG</kw>
+        <kw canonical="Flink">(?:Apache )?Flink</kw>
+        <kw canonical="LangChain">LangChain</kw>
+        <kw canonical="OpenAI" case_sensitive="true">OpenAI</kw>
+        <kw canonical="MLflow">MLflow</kw>
+        <kw canonical="Vector DB">(?:Pinecone|Qdrant|Weaviate|Chroma|vector\s+(?:database|store|DB))</kw>
+
+        <!-- Infrastructure / Cloud -->
+        <kw canonical="AWS">AWS</kw>
+        <kw canonical="GCP">GCP</kw>
+        <kw canonical="Azure">Azure</kw>
+        <kw canonical="Kubernetes">Kubernetes</kw>
+        <kw canonical="Docker">Docker</kw>
+        <kw canonical="Terraform">Terraform</kw>
+        <kw canonical="Ansible">Ansible</kw>
+        <kw canonical="CI/CD">CI/CD</kw>
+        <kw canonical="GitHub Actions">GitHub Actions</kw>
+        <kw canonical="Jenkins">Jenkins</kw>
+        <kw canonical="Helm">Helm</kw>
+        <kw canonical="ArgoCD">Argo\s*CD</kw>
+        <kw canonical="Prometheus">Prometheus</kw>
+        <kw canonical="Grafana">Grafana</kw>
+        <kw canonical="Nginx">Nginx</kw>
+        <kw canonical="Cloudflare">Cloudflare</kw>
+
+        <!-- Databases -->
+        <kw canonical="PostgreSQL">Postgres(?:QL)?</kw>
+        <kw canonical="MySQL">MySQL</kw>
+        <kw canonical="MongoDB">MongoDB</kw>
+        <kw canonical="Redis">Redis</kw>
+        <kw canonical="Elasticsearch">Elasticsearch</kw>
+        <kw canonical="Snowflake">Snowflake</kw>
+        <kw canonical="BigQuery">BigQuery</kw>
+        <kw canonical="DynamoDB">DynamoDB</kw>
+        <kw canonical="Cassandra">Cassandra</kw>
+
+        <!-- Mobile -->
+        <kw canonical="Android">Android</kw>
+        <kw canonical="iOS">iOS</kw>
+        <kw canonical="React Native">React Native</kw>
+        <kw canonical="Flutter">Flutter</kw>
+        <kw canonical="SwiftUI">SwiftUI</kw>
+
+        <!-- Testing / QA -->
+        <kw canonical="Jest">Jest</kw>
+        <kw canonical="Cypress">Cypress</kw>
+        <kw canonical="Playwright">Playwright</kw>
+        <kw canonical="Selenium">Selenium</kw>
+        <kw canonical="JUnit">JUnit</kw>
+        <kw canonical="Postman">Postman</kw>
+
+      </keywords>
+    </field>
+
+  </derived>
+
+</extraction>
