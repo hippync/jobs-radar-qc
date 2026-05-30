@@ -1,0 +1,13 @@
+{
+  "_comment": "Simulated raw Workday job dict as produced by _fetch_workday_company AFTER context injection and detail-page enrichment. Technologies (Python, FastAPI, PostgreSQL, Docker, AWS, Kubernetes, GitHub Actions) appear only in description_html, NOT in the title — mirrors the regression pattern from issue #56 for Workday.",
+  "title": "Software Engineer, Backend",
+  "externalPath": "/FixtureCareers/job/Montreal-Quebec/Software-Engineer-Backend_JR-00001",
+  "locationsText": "Montréal, Quebec, Canada",
+  "postedOn": "Posted 5 Days Ago",
+  "jobReqId": "JR-00001",
+  "bulletFields": ["Full time", "JR-00001"],
+  "_external_id": "JR-00001",
+  "_source_url": "https://fixturecorp.wd3.myworkdayjobs.com/FixtureCareers/job/Montreal-Quebec/Software-Engineer-Backend_JR-00001",
+  "description_html": "<div><h1>About the Role</h1><p>We are looking for a Backend Engineer to join our platform team. The ideal candidate has experience with Python and FastAPI to build high-performance REST APIs. You will work with PostgreSQL as our primary database, use Docker for containerization, and deploy to AWS using Kubernetes. Our team runs CI/CD pipelines through GitHub Actions.</p><h2>Requirements</h2><ul><li>3+ years of Python experience</li><li>Proficiency with FastAPI or similar async frameworks</li><li>Experience with PostgreSQL and query optimization</li><li>Docker and Kubernetes knowledge</li><li>Familiarity with AWS services (EKS, RDS, S3)</li></ul></div>",
+  "_posted_at": "2026-04-28T00:00:00+00:00"
+}
