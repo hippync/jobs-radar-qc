@@ -4,11 +4,7 @@ import { SHARED_OG } from "@/lib/siteMetadata";
 import { Suspense } from "react";
 import {
   CANONICAL,
-  CATEGORY_LABELS,
   DEFAULT_CATS,
-  type CatSlug,
-  type TechRow,
-  catToCssSlug,
   parseCatsParam,
 } from "@/lib/radarHelpers";
 import {
@@ -22,6 +18,7 @@ import {
 } from "@/lib/segmentHelpers";
 import { RadarBgContainer } from "@/components/RadarBgContainer";
 import { RadarCategorySelector } from "@/components/RadarCategorySelector";
+import { RadarChartClient } from "@/components/RadarChartClient";
 import { RadarDownloadPanel } from "@/components/RadarDownloadPanel";
 import { SegmentFilter } from "@/components/SegmentFilter";
 
@@ -42,250 +39,6 @@ export const metadata: Metadata = {
 };
 
 export const revalidate = 3600;
-
-/* ── Radar SVG ──────────────────────────────────────────────────────────── */
-function RadarChart({
-  allTechs,
-  selectedCats,
-}: {
-  allTechs: TechRow[];
-  selectedCats: string[];
-}) {
-  const CX = 280, CY = 240, R = 200;
-  const RINGS = [0.95, 0.68, 0.42, 0.18];
-  const RING_LABELS = ["top 5", "top 10", "top 20", "long tail"];
-
-  /* ── Group techs by selected sector, capped at 8 per sector ──────────── */
-  const byCat: Record<string, TechRow[]> = {};
-  for (const cat of selectedCats) {
-    byCat[cat] = [];
-  }
-  for (const t of allTechs) {
-    const arr = byCat[t.category];
-    if (arr && arr.length < 8) {
-      arr.push(t);
-    }
-  }
-
-  /* ── One label per active sector: highest-count tech in each category ── */
-  const CATEGORY_LEADERS = new Set(
-    selectedCats.flatMap((cat) => {
-      const leader = byCat[cat]?.[0];
-      return leader ? [leader.name] : [];
-    }),
-  );
-
-  /* ── Place tech bubbles in polar coordinates ─────────────────────────── */
-  interface PlacedTech {
-    tech: TechRow;
-    x: number;
-    y: number;
-    size: number;
-    isCategoryLeader: boolean;
-    labelSide: "right" | "left";
-  }
-
-  const placed: PlacedTech[] = [];
-
-  selectedCats.forEach((cat, catIdx) => {
-    const arr = byCat[cat] ?? [];
-    const sectorAngle = (Math.PI * 2) / selectedCats.length;
-    arr.forEach((tech, i) => {
-      const angle =
-        -Math.PI / 2 +
-        catIdx * sectorAngle +
-        (sectorAngle * (i + 1)) / (arr.length + 1);
-
-      // Rank drives radial position: top rank closer to center
-      const rankFrac = tech.rank / Math.max(1, allTechs.length);
-      const r = R * (0.16 + 0.76 * Math.min(1, rankFrac * 1.8));
-
-      const x = CX + Math.cos(angle) * r;
-      const y = CY + Math.sin(angle) * r;
-      const size = Math.max(6, Math.min(20, Math.sqrt(tech.count) * 1.3));
-      const isCategoryLeader = CATEGORY_LEADERS.has(tech.name);
-      const labelSide = x > CX ? "right" : "left";
-
-      placed.push({ tech, x, y, size, isCategoryLeader, labelSide });
-    });
-  });
-
-  /* ── Total tech count for aria desc ─────────────────────────────────── */
-  const visibleCount = placed.length;
-
-  return (
-    <svg
-      viewBox="0 0 560 480"
-      style={{ width: "100%", height: "100%", display: "block" }}
-      role="img"
-      aria-label="Tech stack radial radar showing technology distribution across Quebec tech jobs"
-    >
-      <title>Tech Stack Radar — Jobs Radar /qc</title>
-      <desc>
-        Radial chart showing {visibleCount} technologies grouped into{" "}
-        {selectedCats.length} sectors:{" "}
-        {selectedCats
-          .map((c) => CATEGORY_LABELS[c as CatSlug] ?? c)
-          .join(", ")}
-        . Bubble size represents posting count; proximity to center represents
-        overall rank.
-      </desc>
-
-      {/* Concentric rings */}
-      {RINGS.map((k, i) => (
-        <g key={i}>
-          <circle
-            cx={CX}
-            cy={CY}
-            r={R * k}
-            fill="none"
-            stroke="var(--rule-soft)"
-            strokeDasharray="3 5"
-            strokeWidth="1"
-          />
-          <text
-            x={CX + R * k + 5}
-            y={CY - 5}
-            fontFamily="var(--font-mono)"
-            fontSize="9"
-            fill="var(--ink-mute)"
-          >
-            {RING_LABELS[i]}
-          </text>
-        </g>
-      ))}
-
-      {/* Sector divider lines */}
-      {selectedCats.map((_, i) => {
-        const sector = (Math.PI * 2) / selectedCats.length;
-        const a0 = -Math.PI / 2 + i * sector;
-        return (
-          <line
-            key={i}
-            x1={CX}
-            y1={CY}
-            x2={CX + Math.cos(a0) * R}
-            y2={CY + Math.sin(a0) * R}
-            stroke="var(--rule-soft)"
-            strokeWidth="1"
-          />
-        );
-      })}
-
-      {/* Sector labels — colored by category token */}
-      {selectedCats.map((cat, i) => {
-        const sector = (Math.PI * 2) / selectedCats.length;
-        const am = -Math.PI / 2 + i * sector + sector / 2;
-        const lx = CX + Math.cos(am) * (R + 26);
-        const ly = CY + Math.sin(am) * (R + 26);
-        const cssSlug = catToCssSlug(cat);
-        const label = CATEGORY_LABELS[cat as CatSlug] ?? cat;
-        return (
-          <text
-            key={cat}
-            x={lx}
-            y={ly}
-            fontFamily="var(--font-sans)"
-            fontSize="11"
-            fontWeight="600"
-            textAnchor="middle"
-            fill={`var(--cat-${cssSlug})`}
-          >
-            {label}
-          </text>
-        );
-      })}
-
-      {/* Decorative sweep line at -32° */}
-      <line
-        x1={CX}
-        y1={CY}
-        x2={CX + R}
-        y2={CY}
-        stroke="var(--accent)"
-        strokeWidth="1.25"
-        strokeDasharray="2 5"
-        opacity="0.45"
-        transform={`rotate(-32 ${CX} ${CY})`}
-      />
-
-      {/* Center dot */}
-      <circle cx={CX} cy={CY} r={5} fill="var(--accent)" />
-      <circle
-        cx={CX}
-        cy={CY}
-        r={13}
-        fill="none"
-        stroke="var(--accent)"
-        strokeWidth="1"
-      />
-
-      {/* Bubbles — colored by category token */}
-      {placed.map(({ tech, x, y, size, isCategoryLeader, labelSide }) => {
-        const cssSlug = catToCssSlug(tech.category);
-        const catColor = `var(--cat-${cssSlug}, var(--accent))`;
-        const bubbleFill = isCategoryLeader
-          ? catColor
-          : `color-mix(in oklab, ${catColor} 35%, var(--surface))`;
-        return (
-          <g key={tech.name}>
-            <title>
-              {tech.name} — {tech.count} roles (rank #{tech.rank})
-            </title>
-            <a href={`/?tech=${encodeURIComponent(tech.name)}`}>
-              <circle
-                cx={x}
-                cy={y}
-                r={size}
-                fill={bubbleFill}
-                stroke="var(--rule-soft)"
-                strokeWidth="1"
-                style={{ cursor: "pointer" }}
-              />
-              {/* Inline label for category leader only; others surface via <title> tooltip */}
-              {isCategoryLeader && (
-                <>
-                  <text
-                    x={labelSide === "right" ? x + size + 4 : x - size - 4}
-                    y={y + 3}
-                    fontFamily="var(--font-sans)"
-                    fontSize="10.5"
-                    fontWeight="600"
-                    textAnchor={labelSide === "right" ? "start" : "end"}
-                    fill="var(--ink)"
-                  >
-                    {tech.name}
-                  </text>
-                  <text
-                    x={labelSide === "right" ? x + size + 4 : x - size - 4}
-                    y={y + 14}
-                    fontFamily="var(--font-mono)"
-                    fontSize="8.5"
-                    textAnchor={labelSide === "right" ? "start" : "end"}
-                    fill="var(--ink-mute)"
-                  >
-                    {tech.count}
-                  </text>
-                </>
-              )}
-            </a>
-          </g>
-        );
-      })}
-
-      {/* Legend */}
-      <text
-        x="16"
-        y="470"
-        fontFamily="var(--font-mono)"
-        fontSize="9"
-        fill="var(--ink-mute)"
-      >
-        ◯ size = job count · proximity to center = rank · hover for name
-      </text>
-    </svg>
-  );
-}
 
 /* ── Page ───────────────────────────────────────────────────────────────── */
 export default async function TrendsPage({
@@ -385,7 +138,7 @@ export default async function TrendsPage({
               </div>
             </div>
           ) : (
-            <RadarChart allTechs={allTechs} selectedCats={selectedCats} />
+            <RadarChartClient allTechs={allTechs} selectedCats={selectedCats} />
           )}
         </RadarBgContainer>
       </div>
