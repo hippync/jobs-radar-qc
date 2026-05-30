@@ -208,7 +208,7 @@ export default async function Page({
     <div className="mx-auto flex w-full max-w-7xl flex-1 px-4 py-6">
       {/* ── Desktop sidebar ───────────────────────────────────────────── */}
       <aside
-        className="hidden w-56 shrink-0 pr-6 lg:block"
+        className="hidden w-56 shrink-0 pr-6 lg:block sticky top-4 self-start max-h-[calc(100vh-2rem)] overflow-y-auto"
         aria-label="Filter panel"
       >
         {/* Sidebar header */}
