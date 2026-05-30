@@ -55,6 +55,10 @@ export function RadarCategorySelector({ selectedCats: initialCats }: Props) {
       const parsed = parseCatsParam(stored, CANONICAL, DEFAULT_CATS);
       // Only navigate if the stored selection differs from the current default
       if (parsed.join(",") === initialCats.join(",")) return;
+      // Sync local state immediately so the chips update in lockstep with the
+      // radar — without this, router.replace() re-renders the server component
+      // (updating the radar) but the selector stays mounted and keeps stale state.
+      setSelected(parsed);
       const params = new URLSearchParams(searchParams.toString());
       params.set("cats", parsed.join(","));
       router.replace(`/trends?${params.toString()}`, { scroll: false });
