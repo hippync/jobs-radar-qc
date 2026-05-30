@@ -10,9 +10,14 @@
  *   - Clicking an unselected chip when 4 are active: replaces the oldest
  *     selected chip (first in array) with the clicked one — FIFO queue.
  *   - Clicking an unselected chip when fewer than 4 are active: adds it.
+ *
+ * State model: `selected` is derived from the URL (?cats=) on every render
+ * via useSearchParams(). There is no local useState for the selection —
+ * the URL is the single source of truth. This avoids the need to call
+ * setState inside a useEffect (which triggers cascading renders).
  */
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   ALL_CAT_SLUGS,
@@ -35,30 +40,29 @@ export function RadarCategorySelector({ selectedCats: initialCats }: Props) {
   const searchParams = useSearchParams();
 
   /**
-   * Local state: an ordered array where index 0 is the *oldest* selected
-   * category (i.e. the one that will be replaced next on overflow).
+   * Derive current selection from the URL on every render.
+   * Falls back to the server-resolved initialCats when ?cats= is absent
+   * (first visit, direct URL, back-navigation without params, etc.).
    */
-  const [selected, setSelected] = useState<string[]>(initialCats);
+  const catsInUrl = searchParams.get("cats");
+  const selected = catsInUrl
+    ? parseCatsParam(catsInUrl, CANONICAL, DEFAULT_CATS)
+    : initialCats;
 
   /**
    * On mount only: if ?cats= is absent from the URL, try to restore the
-   * last selection from localStorage. This lets a returning user see their
-   * previous radar without requiring them to bookmark a ?cats= URL.
+   * last selection from localStorage. Calling router.replace() updates the
+   * URL, which causes useSearchParams() to return the new value and `selected`
+   * to reflect the stored cats — no setState needed.
    */
   useEffect(() => {
-    const catsInUrl = searchParams.get("cats");
     if (catsInUrl) return; // URL already has cats — honour it, skip restore
 
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (!stored) return;
       const parsed = parseCatsParam(stored, CANONICAL, DEFAULT_CATS);
-      // Only navigate if the stored selection differs from the current default
       if (parsed.join(",") === initialCats.join(",")) return;
-      // Sync local state immediately so the chips update in lockstep with the
-      // radar — without this, router.replace() re-renders the server component
-      // (updating the radar) but the selector stays mounted and keeps stale state.
-      setSelected(parsed);
       const params = new URLSearchParams(searchParams.toString());
       params.set("cats", parsed.join(","));
       router.replace(`/trends?${params.toString()}`, { scroll: false });
@@ -69,9 +73,7 @@ export function RadarCategorySelector({ selectedCats: initialCats }: Props) {
   }, []); // intentionally runs once on mount
 
   function handleChipClick(slug: string) {
-    const isSelected = selected.includes(slug);
-
-    if (isSelected) {
+    if (selected.includes(slug)) {
       // Cannot go below 4 — clicking a selected chip is a no-op.
       return;
     }
@@ -81,8 +83,6 @@ export function RadarCategorySelector({ selectedCats: initialCats }: Props) {
       selected.length >= 4
         ? [...selected.slice(1), slug]
         : [...selected, slug];
-
-    setSelected(newCats);
 
     const params = new URLSearchParams(searchParams.toString());
     params.set("cats", newCats.join(","));
