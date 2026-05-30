@@ -206,8 +206,9 @@ export function RadarChartClient({
           strokeWidth="1"
         />
 
-        {/* Bubbles */}
-        {placed.map(({ tech, x, y, size, isCategoryLeader, labelSide }) => {
+        {/* Pass 1 — circles only (hit targets, focus rings, visible bubbles).
+            Labels are rendered in pass 2 so they always sit above all circles. */}
+        {placed.map(({ tech, x, y, size, isCategoryLeader }) => {
           const cssSlug = catToCssSlug(tech.category);
           const catColor = `var(--cat-${cssSlug}, var(--accent))`;
           const bubbleFill = isCategoryLeader
@@ -242,7 +243,7 @@ export function RadarChartClient({
                 hideTooltip();
               }}
             >
-              {/* Expanded hit target so small bubbles are easier to click/tap */}
+              {/* Expanded transparent hit target for small bubbles / touch */}
               <circle
                 cx={x}
                 cy={y}
@@ -250,7 +251,7 @@ export function RadarChartClient({
                 fill="transparent"
                 aria-hidden
               />
-              {/* Visible focus ring — accent circle shown when keyboard-focused */}
+              {/* Accent focus ring — shown on keyboard focus */}
               {isFocused && (
                 <circle
                   cx={x}
@@ -270,33 +271,40 @@ export function RadarChartClient({
                 stroke="var(--rule-soft)"
                 strokeWidth="1"
               />
-              {/* Inline label for category leaders */}
+            </g>
+          );
+        })}
+
+        {/* Pass 2 — labels rendered after all circles so they're never obscured.
+            Category leaders: name (bold) + count below.
+            All others: name only (lighter, smaller). */}
+        {placed.map(({ tech, x, y, size, isCategoryLeader, labelSide }) => {
+          const lx = labelSide === "right" ? x + size + 4 : x - size - 4;
+          const anchor = labelSide === "right" ? "start" : "end";
+          return (
+            <g key={`lbl-${tech.name}`} aria-hidden style={{ pointerEvents: "none" }}>
+              <text
+                x={lx}
+                y={y + 4}
+                fontFamily="var(--font-sans)"
+                fontSize={isCategoryLeader ? "10.5" : "9"}
+                fontWeight={isCategoryLeader ? "600" : "400"}
+                textAnchor={anchor}
+                fill={isCategoryLeader ? "var(--ink)" : "var(--ink-soft)"}
+              >
+                {tech.name}
+              </text>
               {isCategoryLeader && (
-                <>
-                  <text
-                    x={labelSide === "right" ? x + size + 4 : x - size - 4}
-                    y={y + 3}
-                    fontFamily="var(--font-sans)"
-                    fontSize="10.5"
-                    fontWeight="600"
-                    textAnchor={labelSide === "right" ? "start" : "end"}
-                    fill="var(--ink)"
-                    aria-hidden
-                  >
-                    {tech.name}
-                  </text>
-                  <text
-                    x={labelSide === "right" ? x + size + 4 : x - size - 4}
-                    y={y + 14}
-                    fontFamily="var(--font-mono)"
-                    fontSize="8.5"
-                    textAnchor={labelSide === "right" ? "start" : "end"}
-                    fill="var(--ink-mute)"
-                    aria-hidden
-                  >
-                    {tech.count}
-                  </text>
-                </>
+                <text
+                  x={lx}
+                  y={y + 15}
+                  fontFamily="var(--font-mono)"
+                  fontSize="8.5"
+                  textAnchor={anchor}
+                  fill="var(--ink-mute)"
+                >
+                  {tech.count}
+                </text>
               )}
             </g>
           );
