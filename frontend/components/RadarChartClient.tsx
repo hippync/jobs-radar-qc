@@ -275,10 +275,9 @@ export function RadarChartClient({
           );
         })}
 
-        {/* Pass 2 — labels rendered after all circles so they're never obscured.
-            Category leaders: name (bold) + count below.
-            All others: name only (lighter, smaller). */}
-        {placed.map(({ tech, x, y, size, isCategoryLeader, labelSide }) => {
+        {/* Pass 2 — category leader labels rendered after all circles so they're
+            never obscured by a bubble from an adjacent sector. */}
+        {placed.filter(p => p.isCategoryLeader).map(({ tech, x, y, size, labelSide }) => {
           const lx = labelSide === "right" ? x + size + 4 : x - size - 4;
           const anchor = labelSide === "right" ? "start" : "end";
           return (
@@ -287,25 +286,23 @@ export function RadarChartClient({
                 x={lx}
                 y={y + 4}
                 fontFamily="var(--font-sans)"
-                fontSize={isCategoryLeader ? "10.5" : "9"}
-                fontWeight={isCategoryLeader ? "600" : "400"}
+                fontSize="10.5"
+                fontWeight="600"
                 textAnchor={anchor}
-                fill={isCategoryLeader ? "var(--ink)" : "var(--ink-soft)"}
+                fill="var(--ink)"
               >
                 {tech.name}
               </text>
-              {isCategoryLeader && (
-                <text
-                  x={lx}
-                  y={y + 15}
-                  fontFamily="var(--font-mono)"
-                  fontSize="8.5"
-                  textAnchor={anchor}
-                  fill="var(--ink-mute)"
-                >
-                  {tech.count}
-                </text>
-              )}
+              <text
+                x={lx}
+                y={y + 15}
+                fontFamily="var(--font-mono)"
+                fontSize="8.5"
+                textAnchor={anchor}
+                fill="var(--ink-mute)"
+              >
+                {tech.count}
+              </text>
             </g>
           );
         })}
