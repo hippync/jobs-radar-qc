@@ -3,6 +3,7 @@ import { Inter, JetBrains_Mono } from "next/font/google";
 import Link from "next/link";
 import "./globals.css";
 import BottomTabBar from "@/components/BottomTabBar";
+import SearchPalette from "@/components/SearchPalette";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -76,7 +77,7 @@ export default function RootLayout({
               <span style={{ color: "var(--accent)", fontFamily: "var(--font-mono)" }}>/qc</span>
             </Link>
 
-            {/* Nav links */}
+            {/* Nav links + search */}
             <div className="flex items-center gap-5">
               <Link
                 href="/"
@@ -111,6 +112,8 @@ export default function RootLayout({
                   <path d="M2 8L8 2M4 2h4v4" />
                 </svg>
               </a>
+              {/* ⌘K / Ctrl+K search palette trigger */}
+              <SearchPalette />
             </div>
           </nav>
         </header>
