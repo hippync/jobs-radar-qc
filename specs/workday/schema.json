@@ -17,7 +17,56 @@
       "delay_between_companies_ms": 500
     }
   },
-  "companies": [],
+  "companies": [
+    {
+      "name": "Desjardins",
+      "slug": "desjardins",
+      "api_url": "https://desjardins.wd10.myworkdayjobs.com/wday/cxs/desjardins/Desjardins/jobs",
+      "base_url": "https://desjardins.wd10.myworkdayjobs.com"
+    },
+    {
+      "name": "Intact Financial Corporation",
+      "slug": "intact-financial",
+      "api_url": "https://intactfc.wd3.myworkdayjobs.com/wday/cxs/intactfc/intactfc/jobs",
+      "base_url": "https://intactfc.wd3.myworkdayjobs.com"
+    },
+    {
+      "name": "CAE Inc.",
+      "slug": "cae",
+      "api_url": "https://cae.wd3.myworkdayjobs.com/wday/cxs/cae/career/jobs",
+      "base_url": "https://cae.wd3.myworkdayjobs.com"
+    },
+    {
+      "name": "McGill University",
+      "slug": "mcgill",
+      "api_url": "https://mcgill.wd3.myworkdayjobs.com/wday/cxs/mcgill/McGill_Careers/jobs",
+      "base_url": "https://mcgill.wd3.myworkdayjobs.com"
+    },
+    {
+      "name": "Cogeco",
+      "slug": "cogeco",
+      "api_url": "https://cogeco.wd3.myworkdayjobs.com/wday/cxs/cogeco/Cogeco_Careers/jobs",
+      "base_url": "https://cogeco.wd3.myworkdayjobs.com"
+    },
+    {
+      "name": "AtkinsRéalis",
+      "slug": "atkinsrealis",
+      "api_url": "https://slihrms.wd3.myworkdayjobs.com/wday/cxs/slihrms/Careers/jobs",
+      "base_url": "https://slihrms.wd3.myworkdayjobs.com"
+    },
+    {
+      "name": "Saputo Inc.",
+      "slug": "saputo",
+      "api_url": "https://saputo.wd5.myworkdayjobs.com/wday/cxs/saputo/Saputo_External_Careers/jobs",
+      "base_url": "https://saputo.wd5.myworkdayjobs.com"
+    },
+    {
+      "name": "PSP Investments",
+      "slug": "psp-investments",
+      "api_url": "https://investpsp.wd3.myworkdayjobs.com/wday/cxs/investpsp/psp_careers/jobs",
+      "base_url": "https://investpsp.wd3.myworkdayjobs.com"
+    }
+  ],
   "validation": {
     "required_fields": ["title", "_external_id"],
     "min_jobs_per_company": 0,

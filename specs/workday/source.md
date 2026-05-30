@@ -33,20 +33,25 @@ The extractor paginates automatically until all jobs are fetched, capped at 500.
 
 ### Detail endpoint
 
-**URL:** `https://{tenant}.wd{N}.myworkdayjobs.com/wday/cxs/{tenant}/{site}/job/{job-path}/details`  
+**URL:** `https://{tenant}.wd{N}.myworkdayjobs.com/wday/cxs/{tenant}/{site}/job/{job-path}`  
 **Method:** GET  
 **Auth:** None
 
 The `{job-path}` portion is derived by stripping the leading `/{site}` prefix from
-the list response's `externalPath` field. For example:
+the list response's `externalPath` field (if that prefix is present). Most real
+tenants return `externalPath` values that already start with `/job/…` and carry no
+site prefix, so no stripping is needed and the path is used verbatim. Example:
 
 ```
-externalPath = "/BellCareers/job/Montreal/Cloud-Engineer_JR-2000"
-site         = "BellCareers"   (last segment of api_url)
-job-path     = "/job/Montreal/Cloud-Engineer_JR-2000"
-detail URL   = https://bell.wd3.myworkdayjobs.com/wday/cxs/bell/BellCareers
-               /job/Montreal/Cloud-Engineer_JR-2000/details
+externalPath = "/job/Montreal/Cloud-Engineer_JR-2000"   (no site prefix)
+api_base     = https://example.wd3.myworkdayjobs.com/wday/cxs/example/ExampleCareers
+detail URL   = https://example.wd3.myworkdayjobs.com/wday/cxs/example/ExampleCareers
+               /job/Montreal/Cloud-Engineer_JR-2000
 ```
+
+Note: an older variant of the Workday CXS API appended `/details` to this URL. That
+suffix was removed because real tenants return 422 when it is present — the
+path-only URL is the correct and universally supported form.
 
 The detail response contains:
 - `jobPostingInfo.jobDescription` — full HTML job description (maps to `description_html`)
