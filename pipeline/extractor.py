@@ -385,6 +385,12 @@ class Extractor:
         # api_url ends with "/jobs"; strip that suffix to get the CXS api base.
         api_base = api_url.removesuffix("/jobs")
         base_url = company.get("base_url", "").rstrip("/")
+        # The site name is the last path segment of the CXS api base
+        # (e.g. "Desjardins" from ".../cxs/desjardins/Desjardins").
+        # Workday's CXS API returns externalPath WITHOUT the site prefix
+        # (e.g. "/job/Montreal/..." instead of "/Desjardins/job/Montreal/..."),
+        # but the public career portal URL requires it.
+        site = api_base.rstrip("/").rsplit("/", 1)[-1]
         for raw_job in raw_jobs:
             ext_path = raw_job.get("externalPath", "")
             raw_job["_api_base"] = api_base
@@ -393,7 +399,11 @@ class Extractor:
                 ext_path.rstrip("/").rsplit("/", 1)[-1] if ext_path else None
             )
             if base_url and ext_path:
-                raw_job["_source_url"] = base_url + ext_path
+                # Add site prefix if the API omitted it (the common case).
+                public_path = (
+                    ext_path if ext_path.startswith(f"/{site}") else f"/{site}{ext_path}"
+                )
+                raw_job["_source_url"] = base_url + public_path
 
         await self._fetch_workday_descriptions(client, raw_jobs)
 
