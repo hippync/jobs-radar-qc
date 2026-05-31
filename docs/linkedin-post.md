@@ -8,7 +8,7 @@ I built a Quebec tech job market radar because LinkedIn was too noisy.
 
 Every week I was manually checking a dozen company career pages to track what the Montreal/Quebec market was hiring for. So I automated it.
 
-Jobs Radar QC pulls live roles from Greenhouse, Lever, and Workable, normalizes them into a unified schema, and shows a Tech Stack Radar — which technologies are actually growing across active roles.
+Jobs Radar QC pulls live roles from Greenhouse, Lever, Workable, and Workday, normalizes them into a unified schema, and shows a Tech Stack Radar — which technologies are actually growing across active roles — with a role segment filter (Mobile, FinTech, AI/ML, Cloud/Platform, Consulting, Enterprise, Startup SaaS) so you can slice the market by archetype.
 
 The interesting part wasn't the scraping. It was building a spec-driven pipeline where adding a new ATS is three files instead of a week of glue code, and separating deterministic regex extraction from a weekly Claude Haiku enrichment pass so the feed never depends on an LLM to run.
 
@@ -26,7 +26,7 @@ Not because I enjoy it — because there's no better way to know what the Quebec
 
 After the third or fourth week of this, I decided to build the thing I was wishing existed.
 
-**Jobs Radar QC** aggregates open roles directly from Greenhouse, Lever, and Workable — the three ATS platforms used by most Montreal tech companies. Every day, a GitHub Actions cron fetches the latest postings, normalizes them into a canonical schema, and upserts them into Supabase. Every Sunday, a Claude Haiku enrichment pass fills in tech stacks for jobs that have no description in the list endpoint (looking at you, Workable).
+**Jobs Radar QC** aggregates open roles directly from Greenhouse, Lever, Workable, and Workday — the ATS platforms used by most Montreal tech companies. Every day, a GitHub Actions cron fetches the latest postings, normalizes them into a canonical schema, and upserts them into Supabase. Every Sunday, a Claude Haiku enrichment pass fills in tech stacks for jobs that have no description in the list endpoint (looking at you, Workable).
 
 The engineering that I'm actually proud of:
 
@@ -38,7 +38,7 @@ The engineering that I'm actually proud of:
 
 **Extraction accuracy.** Early on I noticed Plusgrade's ATS was generating `data-path-to-node` attributes on every paragraph, and the extractor was matching tech names inside those HTML attributes. The fix: strip HTML before keyword matching. Then there were substring issues: `Java` inside `JavaScript`, `Rust` inside `trust`, `Vue` inside `Entrevue`. The fix: `\b` anchors in the spec, enforced by the engine. These weren't bugs I anticipated — they were bugs real data surfaced, fixed with regression tests.
 
-The result is a live job radar for the Montreal/Quebec tech scene, a Tech Stack Radar at `/trends`, and a codebase I'm genuinely happy to show in an interview.
+The result is a live job radar for the Montreal/Quebec tech scene, a Tech Stack Radar at `/trends` with a role segment filter (Mobile, FinTech, AI/ML, and four more archetypes classified from tech co-occurrence at query time), and a codebase I'm genuinely happy to show in an interview.
 
 Repo: https://github.com/hippync/jobs-radar-qc
 
@@ -52,11 +52,11 @@ No single place to see what's hiring in Python, Go, or React across Montreal sta
 
 **Slide 2 — The idea**
 Track the source of truth: company ATS pages directly.
-Greenhouse, Lever, and Workable are what companies actually manage. If a job is there, it's real and it's open.
+Greenhouse, Lever, Workable, and Workday are what companies actually manage. If a job is there, it's real and it's open.
 
 **Slide 3 — The architecture**
 Spec-driven Python pipeline → Canonical job schema → Supabase/PostgreSQL → Weekly Claude Haiku enrichment → active_qc_jobs view → Next.js Tech Stack Radar.
-3 ATS platforms. 12 companies. 76 canonical technologies. Daily fetch. Weekly LLM pass.
+4 ATS platforms. 45 companies. 76 canonical technologies. Daily fetch. Weekly LLM pass. 7 role segments.
 
 **Slide 4 — The engineering lesson**
 Deterministic-first. LLM second. Evidence-based extraction.

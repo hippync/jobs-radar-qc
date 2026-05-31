@@ -7,10 +7,12 @@ flowchart TD
     GH["Greenhouse API"]
     LV["Lever API"]
     WK["Workable API"]
+    WD["Workday API"]
 
     GH --> EXT
     LV --> EXT
     WK --> EXT
+    WD --> EXT
 
     EXT["Spec-driven Python pipeline\npipeline/extractor.py + orchestrator.py"]
 
@@ -59,3 +61,5 @@ The `active_qc_jobs` Supabase view merges both columns (`tech_stack || enriched_
 | `agents/prompts/tech_extraction.md` | Versioned system prompt — editable without code changes |
 | `storage/jobs_repository.py` | `upsert_jobs()`, `mark_inactive()` |
 | `scripts/migrate_enrichment.sql` | `active_qc_jobs` view definition |
+| `core/segment_rules.py` | Role segment classification rules (Python) — mirrors `segmentHelpers.ts` |
+| `frontend/lib/segmentHelpers.ts` | Role segment classification (TypeScript) — computed at query time, no DB column |

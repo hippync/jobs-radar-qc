@@ -6,6 +6,7 @@ Use this before sharing the repo link publicly or adding it to a resume/LinkedIn
 
 - [ ] Production frontend URL is live and accessible
 - [ ] `/trends` page loads and displays technology bars
+- [ ] Role segment filter on `/trends` — click each segment and confirm results change
 - [ ] Job list filters work (stack, seniority, remote)
 - [ ] README "Live demo" links are updated with real URLs
 - [ ] Screenshots added to `docs/screenshots/` (see `docs/screenshots/README.md`)

@@ -55,6 +55,31 @@ The engine (`pipeline/extractor.py`) is generic. **Adding a company = edit `sche
 
 ---
 
+## Role segment classification
+
+Jobs on `/trends` can be filtered by market archetype. Classification is computed at query time from `tech_stack` — no DB column, no LLM call.
+
+Rules live in two files that **must be kept in sync**:
+- `core/segment_rules.py` — Python (used by scripts and tests)
+- `frontend/lib/segmentHelpers.ts` — TypeScript (used by the Next.js frontend)
+
+Priority order (first match wins):
+`mobile > fintech > ai_ml > cloud_platform > consulting > enterprise > startup_saas`
+
+| Segment | Rule |
+|---|---|
+| `mobile` | React Native, Flutter, or SwiftUI alone; or iOS+Swift pair; or Android+Kotlin pair |
+| `fintech` | (Java or Kotlin) + Kafka |
+| `ai_ml` | Python + ≥1 AI/ML tool; or ≥2 AI/ML tools regardless of language |
+| `cloud_platform` | ≥2 of: Kubernetes, Terraform, Docker, AWS, GCP, GitHub Actions, Helm, ArgoCD, Prometheus, Grafana, Jenkins, Ansible |
+| `consulting` | (.NET or C#) + Angular |
+| `enterprise` | (Java or Spring Boot) + (AWS, Azure, or GCP) + (SQL, PostgreSQL, or MySQL) |
+| `startup_saas` | (React, Next.js, Vue, or Svelte) + (Node.js, Express, NestJS, FastAPI, or Django) |
+
+No match → `null` (job appears under "All" only). Tests live in `tests/test_segmentation.py`.
+
+---
+
 ## Commands
 
 ```bash

@@ -11,9 +11,9 @@
 
 Jobs Radar QC is an open-source, spec-driven job market radar that tracks Quebec tech roles directly from ATS platforms, extracts the technologies companies are hiring for, and visualizes stack demand over time.
 
-| 37 companies tracked | 76 canonical technologies | ~2M tokens/week | ~41% prompt cache hit rate |
+| 45 companies tracked | 76 canonical technologies | ~2M tokens/week | ~41% prompt cache hit rate |
 |---|---|---|---|
-| across 3 ATS platforms | in extraction stack | LLM enrichment volume | ~$2/week saved vs baseline |
+| across 4 ATS platforms | in extraction stack | LLM enrichment volume | ~$2/week saved vs baseline |
 
 ---
 
@@ -29,8 +29,8 @@ Jobs Radar QC is an open-source, spec-driven job market radar that tracks Quebec
 
 ## Current coverage
 
-- 3 ATS platforms: Greenhouse, Lever, Workable
-- 37 Quebec tech companies tracked
+- 4 ATS platforms: Greenhouse, Lever, Workable, Workday
+- 45 Quebec tech companies tracked
 - Daily automated fetch via GitHub Actions
 - Weekly LLM enrichment (Claude Haiku, Sundays)
 - 76 canonical technologies tracked across 10 categories (v2)
@@ -55,6 +55,7 @@ Jobs Radar QC pulls open roles from major ATS platforms (Greenhouse, Lever, Work
 
 - What's hiring in Montreal/Quebec right now, filterable by tech stack, seniority, and remote
 - A [Tech Stack Radar](docs/tech-stack-radar.md) — which technologies appear most across active roles
+- A role segment filter — 7 market archetypes (Mobile, FinTech, AI/ML, Cloud/Platform, Consulting, Enterprise, Startup SaaS) classified from tech co-occurrence at query time
 - When a job first appeared and how long it's been open
 
 ## Why not just use LinkedIn?
@@ -192,6 +193,9 @@ Keyword matching runs on plain text, not raw HTML — source descriptions can co
 **6. Non-tech title filtering at the source, not at the view.**
 Paralegal, sales, HR, legal, finance, and equivalent French-language titles are skipped in `_fetch_company()` before upsert — they are never stored. The alternative (filtering in the `active_qc_jobs` view) would keep noisy data in the DB and duplicate the title logic in SQL. Filtering at source means `mark_inactive()` handles previously stored non-tech jobs automatically on the next daily run, with no manual cleanup. The enricher applies the same check as a secondary guard. Tradeoff: if a title is wrongly classified as non-tech, the job won't appear until the regex is corrected and the next fetch runs.
 
+**8. Role segment classification at query time — no DB column.**
+The 7 market segment labels (Mobile, FinTech, AI/ML, etc.) are computed from tech co-occurrence rules applied to `tech_stack[]` at query time. No DB column is needed — `classifySegment(tech_stack)` is a pure function called in the frontend and tested in isolation. Rules live in `core/segment_rules.py` (Python) and `frontend/lib/segmentHelpers.ts` (TypeScript). Tradeoff: both files must be kept in sync manually when rules change.
+
 **7. CSS-only bar chart on `/trends` — no charting library.**
 Horizontal bars are a single `<div>` with `style={{ width: X% }}` via Tailwind. The page is a Next.js Server Component with 1-hour ISR. Zero JS bundle overhead, renders server-side, each bar is a link to a pre-filtered job list. Tradeoff: no animation, no tooltips, no interactivity — intentional for a radar view.
 
@@ -227,6 +231,7 @@ agents/
 core/
   canonical_schema.json     # Unified Job model (JSON Schema draft-07)
   canonical_tech_stack.json # 76 canonical tech names across 10 categories (v2)
+  segment_rules.py          # Role segment classification rules (Python mirror of segmentHelpers.ts)
 
 specs/
   greenhouse/               # 14 QC companies (Broadsign, AppDirect, AlayaCare, Valtech, Workleap, ShareGate, Epic Games, Speechify, AON3D, LATYS, GURUS Solutions, Samsara, Ivalua, Toboggan Labs)
@@ -238,6 +243,10 @@ specs/
     schema.json
     extraction.xml
   workable/                 # 9 QC companies (Tecsys, Nuvei, VIA Science, XTM International, GHGSat, SOGECLAIR Digital Engineering, Mila, Genetec, GlobalVision)
+    source.md
+    schema.json
+    extraction.xml
+  workday/                  # 8 QC companies
     source.md
     schema.json
     extraction.xml
@@ -264,8 +273,11 @@ frontend/                   # Next.js 16 — App Router
   app/
     page.tsx                # Job list with filters + pagination
     trends/page.tsx         # Tech Stack Radar (Server Component, 1h ISR)
-  components/               # JobCard, JobFilters
-  lib/                      # Supabase client, shared types
+  components/               # JobCard, JobFilters, SegmentFilter
+  lib/
+    supabase.ts             # Supabase client
+    segmentHelpers.ts       # Role segment classification + helpers (mirrors segment_rules.py)
+    radarData.ts            # Server-side radar data fetching with segment filter
 ```
 
 ---
@@ -277,11 +289,13 @@ frontend/                   # Next.js 16 — App Router
 | Greenhouse spec | ✅ Live — 14 QC companies |
 | Lever spec | ✅ Live — 14 QC companies |
 | Workable spec | ✅ Live — 9 QC companies |
+| Workday spec | ✅ Live — 8 QC companies |
 | Extraction pipeline | ✅ Live |
 | Supabase storage | ✅ Live |
 | Daily cron (GitHub Actions) | ✅ Live |
 | Next.js frontend | ✅ Live — job list + filters |
 | Tech Stack Radar (/trends) | ✅ Live |
+| Role segment filter | ✅ Live — 7 market archetypes |
 | Enrichment agent | ✅ Live — weekly Sundays 9 AM EDT |
 
 ---
@@ -384,7 +398,7 @@ Copy `specs/_template/` to `specs/your-ats/`, then fill in the three files follo
 - Resume/profile upload and job fit scoring
 - Email/Slack alerts for new matching roles
 - 30-day trend deltas on the radar
-- More ATS coverage: Ashby, BambooHR, Workday
+- More ATS coverage: Ashby, BambooHR
 
 ---
 

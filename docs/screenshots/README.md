@@ -8,6 +8,7 @@ Drop screenshots here before sharing the repo or updating the README demo links.
 |---|---|
 | `home.png` | Home page with job list and filters visible (stack, seniority, remote toggles) |
 | `trends.png` | Tech Stack Radar (`/trends`) with several technology bars visible |
+| `trends-segment.png` | `/trends` with a segment filter active (e.g. AI/ML or Startup SaaS) — bars reflect the filtered subset |
 | `debug-extraction.png` | Terminal output of `scripts/debug_extraction.py` showing evidence JSON for a real job |
 | `github-actions.png` | GitHub Actions tab showing a successful `daily_fetch` and `weekly_enrich` run |
 | `supabase.png` _(optional)_ | Supabase Table Editor or SQL result from `active_qc_jobs` view — with all sensitive values hidden |
