@@ -80,7 +80,10 @@ two URL fields instead of a simple slug:
 | `api_url`  | Full CXS `/jobs` endpoint URL (POST target)                    |
 | `base_url` | Tenant domain root — used to construct human-facing source_url |
 
-The human-facing `source_url` is: `base_url + externalPath`  
+The human-facing `source_url` is: `base_url + /{site} + externalPath`  
+The Workday CXS API returns `externalPath` **without** the site prefix
+(e.g. `/job/Montreal/Engineer_JR-001`), but the public career portal URL requires it.
+The extractor prepends `/{site}` when it is absent.  
 (e.g., `https://example.wd3.myworkdayjobs.com/ExampleCareers/job/Montreal/Engineer_JR-001`)
 
 ---
@@ -117,7 +120,7 @@ company's actual careers page URL — the CXS API path is identical across versi
   "jobPostings": [
     {
       "title": "Cloud Engineer",
-      "externalPath": "/BellCareers/job/Montreal-Quebec/Cloud-Engineer_JR-2000",
+      "externalPath": "/job/Montreal-Quebec/Cloud-Engineer_JR-2000",
       "locationsText": "Montréal, Quebec, Canada",
       "postedOn": "Posted 3 Days Ago",
       "jobReqId": "JR-2000",
