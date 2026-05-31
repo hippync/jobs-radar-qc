@@ -78,24 +78,25 @@ export default function RootLayout({
             </Link>
 
             {/* Nav links + search */}
-            <div className="flex items-center gap-5">
+            <div className="flex items-center gap-4 lg:gap-5">
+              {/* Main nav — hidden on mobile, BottomTabBar handles these routes */}
               <Link
                 href="/"
-                className="text-sm transition-colors"
+                className="hidden lg:inline text-sm transition-colors"
                 style={{ color: "var(--ink-soft)" }}
               >
                 Jobs
               </Link>
               <Link
                 href="/trends"
-                className="text-sm transition-colors"
+                className="hidden lg:inline text-sm transition-colors"
                 style={{ color: "var(--ink-soft)" }}
               >
                 Radar
               </Link>
               <Link
                 href="/saved"
-                className="text-sm transition-colors"
+                className="hidden lg:inline text-sm transition-colors"
                 style={{ color: "var(--ink-soft)" }}
               >
                 Saved
@@ -104,7 +105,7 @@ export default function RootLayout({
                 href="https://github.com/hippync/jobs-radar-qc"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1 text-sm transition-colors"
+                className="hidden sm:flex items-center gap-1 text-sm transition-colors"
                 style={{ color: "var(--ink-mute)" }}
               >
                 GitHub
@@ -112,7 +113,7 @@ export default function RootLayout({
                   <path d="M2 8L8 2M4 2h4v4" />
                 </svg>
               </a>
-              {/* ⌘K / Ctrl+K search palette trigger */}
+              {/* ⌘K / Ctrl+K — visible on all sizes */}
               <SearchPalette />
             </div>
           </nav>
