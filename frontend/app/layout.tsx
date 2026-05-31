@@ -60,10 +60,10 @@ export default function RootLayout({
         * behind the fixed BottomTabBar on mobile.
         * lg:pb-0 removes that padding on desktop where the bar is hidden.
         */}
-      <body className="flex min-h-full flex-col pb-14 lg:pb-0" style={{ background: "var(--bg)", color: "var(--ink)" }}>
+      <body className="flex min-h-full flex-col pb-14 pt-11.25 lg:pb-0" style={{ background: "var(--bg)", color: "var(--ink)" }}>
         {/* Top navigation */}
         <header
-          className="sticky top-0 z-40 border-b"
+          className="fixed inset-x-0 top-0 z-40 border-b"
           style={{ background: "var(--surface)", borderColor: "var(--rule-soft)" }}
         >
           <nav className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3">
