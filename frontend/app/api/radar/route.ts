@@ -7,7 +7,7 @@
  * ────────────────
  * format   (optional) "json" | "svg"        — default: "json"
  * cats     (optional) comma-separated canonical category slugs
- *                     — default: "languages,frontend,devops,data_ai"
+ *                     — default: "languages,frontend,devops,data"
  * window   (optional) "7d" | "30d" | "90d" | "all"  — default: "30d"
  * segment  (optional) role segment slug to filter jobs before aggregation
  *                     — one of: startup_saas, enterprise, ai_ml,
@@ -17,9 +17,9 @@
  *
  * Examples
  * ────────
- * /api/radar?format=json&cats=languages,frontend,devops,data_ai
+ * /api/radar?format=json&cats=languages,frontend,devops,data
  * /api/radar?format=svg&cats=languages,backend,testing,mobile
- * /api/radar?format=json&segment=ai_ml&cats=languages,backend,data_ai,cloud
+ * /api/radar?format=json&segment=ai_ml&cats=languages,backend,data,cloud
  * /api/radar?format=svg&segment=mobile
  * /api/radar?format=json&segment=cloud_platform&window=90d
  *

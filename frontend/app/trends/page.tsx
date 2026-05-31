@@ -155,7 +155,6 @@ export default async function TrendsPage({
         >
           <SegmentFilter
             activeSegment={activeSegment}
-            selectedCats={selectedCats}
             activeWindow={activeWindow}
           />
         </div>
