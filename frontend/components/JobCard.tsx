@@ -1,6 +1,5 @@
 import { Job } from "@/lib/types";
 import SaveButton from "./SaveButton";
-import SourceBadge from "./SourceBadge";
 
 const SENIORITY_LABEL: Record<string, string> = {
   internship: "Intern",
@@ -162,7 +161,6 @@ export default function JobCard({ job }: { job: Job }) {
           >
             {remoteLabel(job.is_remote)}
           </span>
-          <SourceBadge source={job.source} />
         </div>
 
         {/* ── Tech chips ── */}
