@@ -11,7 +11,7 @@
 
 Jobs Radar QC is an open-source, spec-driven job market radar that tracks Quebec tech roles directly from ATS platforms, extracts the technologies companies are hiring for, and visualizes stack demand over time.
 
-| 45 companies tracked | 76 canonical technologies | ~2M tokens/week | ~41% prompt cache hit rate |
+| 45 companies tracked | 76 canonical technologies | ~1M tokens/week | ~90% prompt cache hit rate |
 |---|---|---|---|
 | across 4 ATS platforms | in extraction stack | LLM enrichment volume | ~$2/week saved vs baseline |
 
