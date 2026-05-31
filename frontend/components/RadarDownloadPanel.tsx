@@ -12,7 +12,7 @@
 
 import { useState, useSyncExternalStore } from "react";
 
-const BASE_URL = "https://jobs-radar-qc.dev";
+const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://jobs-radar-qc.vercel.app";
 const BG_STORAGE_KEY = "jobs-radar-qc:radar-bg";
 
 type BgPref = "light" | "dark" | null;

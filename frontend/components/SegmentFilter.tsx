@@ -10,28 +10,30 @@
  *
  * Props:
  *   activeSegment  — currently active slug, or null for "All"
- *   selectedCats   — current ?cats= value (preserved in generated hrefs)
  *   activeWindow   — current ?window= value (preserved in generated hrefs)
  */
 
 import Link from "next/link";
 import { ALL_SEGMENT_SLUGS, SEGMENT_LABELS } from "@/lib/segmentHelpers";
+import { DEFAULT_CATS, SEGMENT_DEFAULT_CATS } from "@/lib/radarHelpers";
 import type { WindowOption } from "@/lib/radarData";
 
 interface Props {
   activeSegment: string | null;
-  selectedCats: string[];
   activeWindow: WindowOption;
 }
 
-export function SegmentFilter({ activeSegment, selectedCats, activeWindow }: Props) {
+export function SegmentFilter({ activeSegment, activeWindow }: Props) {
   /**
-   * Build a href that sets ?segment=<slug> while preserving ?cats= and ?window=.
-   * Passing null produces the "All" href (no ?segment= param).
+   * Build a href that sets ?segment=<slug> and ?cats= to the segment's preset
+   * sectors. "All" (null) resets to global defaults.
    */
   function href(slug: string | null): string {
+    const cats = slug
+      ? [...(SEGMENT_DEFAULT_CATS[slug] ?? DEFAULT_CATS)]
+      : [...DEFAULT_CATS];
     const params = new URLSearchParams();
-    params.set("cats", selectedCats.join(","));
+    params.set("cats", cats.join(","));
     params.set("window", activeWindow);
     if (slug) params.set("segment", slug);
     return `/trends?${params.toString()}`;
@@ -109,7 +111,7 @@ export function SegmentFilter({ activeSegment, selectedCats, activeWindow }: Pro
           fontSize: 9,
         }}
       >
-        Filter radar to one market segment
+        Sectors adapt to the selected segment
       </p>
     </div>
   );

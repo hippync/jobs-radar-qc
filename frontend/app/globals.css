@@ -27,14 +27,14 @@
   --wk-bg: #fce4d3;  --wk-fg: #d96b3a;   /* Workable */
 
   /* Category tokens — radar sector colors (one per canonical slug)      */
-  /* Slug → CSS name: replace _ with - e.g. data_ai → --cat-data-ai     */
+  /* Slug → CSS name: replace _ with - e.g. ai_concepts → --cat-ai-concepts */
   --cat-languages:   oklch(0.55 0.18 252);  /* blue    — same as --accent */
   --cat-frontend:    oklch(0.55 0.18 160);  /* teal                       */
   --cat-backend:     oklch(0.55 0.18 200);  /* cyan                       */
   --cat-databases:   oklch(0.55 0.18 295);  /* violet                     */
   --cat-cloud:       oklch(0.55 0.18 55);   /* amber                      */
   --cat-devops:      oklch(0.55 0.18 30);   /* orange                     */
-  --cat-data-ai:     oklch(0.55 0.18 20);   /* coral                      */
+  --cat-data:        oklch(0.55 0.18 20);   /* coral                      */
   --cat-mobile:      oklch(0.55 0.18 330);  /* rose                       */
   --cat-testing:     oklch(0.55 0.18 130);  /* green                      */
   --cat-ai-concepts: oklch(0.55 0.18 85);   /* lime                       */

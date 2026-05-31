@@ -28,7 +28,7 @@ export const ALL_CAT_SLUGS = [
   "databases",
   "cloud",
   "devops",
-  "data_ai",
+  "data",
   "mobile",
   "testing",
   "ai_concepts",
@@ -44,7 +44,7 @@ export const CATEGORY_LABELS: Record<CatSlug, string> = {
   databases:   "Databases",
   cloud:       "Cloud",
   devops:      "DevOps",
-  data_ai:     "Data / AI",
+  data:        "Data",
   mobile:      "Mobile",
   testing:     "Testing",
   ai_concepts: "AI Concepts",
@@ -52,7 +52,7 @@ export const CATEGORY_LABELS: Record<CatSlug, string> = {
 
 /**
  * CSS slug — convert underscore-separated slug to hyphen for CSS custom
- * property names. Example: "data_ai" → "data-ai", "ai_concepts" → "ai-concepts".
+ * property names. Example: "ai_concepts" → "ai-concepts".
  */
 export function catToCssSlug(slug: string): string {
   return slug.replace(/_/g, "-");
@@ -63,8 +63,19 @@ export const DEFAULT_CATS: readonly string[] = [
   "languages",
   "frontend",
   "devops",
-  "data_ai",
+  "data",
 ];
+
+/** Pre-set radar sectors for each role segment, derived from segment classification rules. */
+export const SEGMENT_DEFAULT_CATS: Record<string, readonly [CatSlug, CatSlug, CatSlug, CatSlug]> = {
+  startup_saas:   ["frontend",  "backend",    "databases",  "languages"],
+  enterprise:     ["languages", "backend",    "databases",  "cloud"],
+  ai_ml:          ["data",      "ai_concepts","languages",  "cloud"],
+  cloud_platform: ["cloud",     "devops",     "backend",    "databases"],
+  consulting:     ["languages", "backend",    "frontend",   "databases"],
+  fintech:        ["languages", "backend",    "databases",  "devops"],
+  mobile:         ["mobile",    "languages",  "frontend",   "backend"],
+};
 
 /**
  * Inline canonical data — mirrors core/canonical_tech_stack.json v2.
@@ -97,7 +108,7 @@ export const CANONICAL: CanonicalStack = {
       "GitHub Actions", "Jenkins", "ArgoCD",
       "Prometheus", "Grafana", "Ansible",
     ],
-    data_ai: [
+    data: [
       "Pandas", "Spark", "Databricks", "Airflow",
       "TensorFlow", "PyTorch", "LangChain", "OpenAI",
       "Vector DB", "dbt", "Kafka", "MLflow",
@@ -230,7 +241,7 @@ export const CAT_COLORS: Record<string, string> = {
   databases:   "#7949cc",  // oklch(0.55 0.18 295) — violet
   cloud:       "#b89020",  // oklch(0.55 0.18  55) — amber
   devops:      "#cc6620",  // oklch(0.55 0.18  30) — orange
-  data_ai:     "#cc5245",  // oklch(0.55 0.18  20) — coral
+  data:        "#cc5245",  // oklch(0.55 0.18  20) — coral
   mobile:      "#cc3d70",  // oklch(0.55 0.18 330) — rose
   testing:     "#38a847",  // oklch(0.55 0.18 130) — green
   ai_concepts: "#849920",  // oklch(0.55 0.18  85) — lime
