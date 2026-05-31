@@ -6,13 +6,13 @@ so that a FinTech stack (Java + Kafka + PostgreSQL) is not swallowed by the
 broader Enterprise rule (Java + Azure + SQL).
 
 Priority (highest → lowest):
-  1. mobile        — unique platform signal (React Native/Flutter + mobile OS)
-  2. fintech       — narrow combo (Java + Kafka + DB/container)
-  3. ai_ml         — Python + at least one AI/ML tool
-  4. cloud_platform — infra density (≥ 2 infra tools)
-  5. consulting    — .NET/C# + SQL + Angular
-  6. enterprise    — Java/Spring + Azure + SQL flavour
-  7. startup_saas  — broadest web-stack pattern
+  1. mobile        — mobile framework or native platform pair
+  2. fintech       — JVM language + Kafka
+  3. ai_ml         — Python + AI tool, or ≥ 2 AI tools
+  4. cloud_platform — ≥ 2 infra/DevOps tools
+  5. consulting    — .NET/C# + Angular
+  6. enterprise    — Java/Spring + major cloud + SQL flavour
+  7. startup_saas  — frontend framework + backend runtime
 
 No match → None  ("other" — job is still visible under the "All" filter).
 
@@ -51,20 +51,21 @@ def _count(stack: frozenset[str], *names: str) -> int:
 
 
 def _is_mobile(stack: frozenset[str]) -> bool:
-    """React Native or Flutter  +  at least one mobile platform/language."""
-    has_framework = _has(stack, "React Native", "Flutter")
-    has_platform = _has(stack, "iOS", "Android", "Swift", "Kotlin", "SwiftUI")
-    return has_framework and has_platform
+    """Mobile framework alone, or a native platform pair (iOS+Swift, Android+Kotlin)."""
+    return (
+        _has(stack, "React Native", "Flutter", "SwiftUI")
+        or (_has(stack, "iOS") and _has(stack, "Swift"))
+        or (_has(stack, "Android") and _has(stack, "Kotlin"))
+    )
 
 
 def _is_fintech(stack: frozenset[str]) -> bool:
-    """Java  +  Kafka  +  (PostgreSQL or Docker)."""
-    has_persistence = _has(stack, "PostgreSQL", "Docker")
-    return _has(stack, "Java") and _has(stack, "Kafka") and has_persistence
+    """JVM language + Kafka — event-driven architecture is a strong fintech signal."""
+    return _has(stack, "Java", "Kotlin") and _has(stack, "Kafka")
 
 
 def _is_ai_ml(stack: frozenset[str]) -> bool:
-    """Python  +  at least one AI/ML tool from the canonical set."""
+    """Python + any AI/ML tool, or any two AI/ML tools regardless of language."""
     ai_tools = frozenset(
         {
             "PyTorch",
@@ -78,7 +79,7 @@ def _is_ai_ml(stack: frozenset[str]) -> bool:
             "LLM",
         }
     )
-    return _has(stack, "Python") and bool(stack & ai_tools)
+    return (_has(stack, "Python") and bool(stack & ai_tools)) or _count(stack, *ai_tools) >= 2
 
 
 def _is_cloud_platform(stack: frozenset[str]) -> bool:
@@ -94,29 +95,30 @@ def _is_cloud_platform(stack: frozenset[str]) -> bool:
         "ArgoCD",
         "Prometheus",
         "Grafana",
+        "Jenkins",
+        "Ansible",
     )
     return _count(stack, *infra_tools) >= 2
 
 
 def _is_consulting(stack: frozenset[str]) -> bool:
-    """.NET or C#  +  SQL  +  Angular."""
-    return _has(stack, ".NET", "C#") and _has(stack, "SQL") and _has(stack, "Angular")
+    """.NET or C#  +  Angular (Microsoft consulting archetype)."""
+    return _has(stack, ".NET", "C#") and _has(stack, "Angular")
 
 
 def _is_enterprise(stack: frozenset[str]) -> bool:
-    """Java or Spring Boot  +  Azure  +  SQL flavour (SQL, PostgreSQL, MySQL)."""
+    """Java or Spring Boot  +  any major cloud  +  SQL flavour."""
     has_java = _has(stack, "Java", "Spring Boot")
-    has_cloud = _has(stack, "Azure")
+    has_cloud = _has(stack, "AWS", "Azure", "GCP")
     has_sql = _has(stack, "SQL", "PostgreSQL", "MySQL")
     return has_java and has_cloud and has_sql
 
 
 def _is_startup_saas(stack: frozenset[str]) -> bool:
-    """(React or Next.js)  +  (Node.js or FastAPI)  +  PostgreSQL."""
-    has_frontend = _has(stack, "React", "Next.js")
-    has_backend = _has(stack, "Node.js", "FastAPI")
-    has_db = _has(stack, "PostgreSQL")
-    return has_frontend and has_backend and has_db
+    """Frontend framework + backend runtime — modern web stack."""
+    has_frontend = _has(stack, "React", "Next.js", "Vue", "Svelte")
+    has_backend = _has(stack, "Node.js", "Express", "NestJS", "FastAPI", "Django")
+    return has_frontend and has_backend
 
 
 # ── Public API ────────────────────────────────────────────────────────────────
@@ -133,12 +135,16 @@ def classify_segment(tech_stack: list[str]) -> str | None:
 
     Examples
     --------
-    >>> classify_segment(["React Native", "iOS", "TypeScript"])
+    >>> classify_segment(["SwiftUI", "iOS"])
     'mobile'
-    >>> classify_segment(["Java", "Kafka", "PostgreSQL"])
+    >>> classify_segment(["Java", "Kafka"])
     'fintech'
+    >>> classify_segment(["LangChain", "OpenAI"])
+    'ai_ml'   # two AI tools, no Python needed
     >>> classify_segment(["Python", "PyTorch", "AWS", "Kubernetes"])
     'ai_ml'   # ai_ml beats cloud_platform
+    >>> classify_segment(["React", "Django"])
+    'startup_saas'
     >>> classify_segment(["COBOL"])
     None
     """

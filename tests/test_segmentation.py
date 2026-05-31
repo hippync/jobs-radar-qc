@@ -39,13 +39,32 @@ class TestMobile:
     def test_flutter_swift(self) -> None:
         assert classify_segment(["Flutter", "Swift"]) == "mobile"
 
-    def test_framework_only_not_mobile(self) -> None:
-        # Framework present but no mobile platform signal → not mobile
-        result = classify_segment(["React Native"])
+    def test_swiftui_alone_is_mobile(self) -> None:
+        assert classify_segment(["SwiftUI"]) == "mobile"
+
+    def test_react_native_alone_is_mobile(self) -> None:
+        assert classify_segment(["React Native"]) == "mobile"
+
+    def test_flutter_alone_is_mobile(self) -> None:
+        assert classify_segment(["Flutter"]) == "mobile"
+
+    def test_ios_swift_pair_is_mobile(self) -> None:
+        assert classify_segment(["iOS", "Swift"]) == "mobile"
+
+    def test_android_kotlin_pair_is_mobile(self) -> None:
+        assert classify_segment(["Android", "Kotlin"]) == "mobile"
+
+    def test_ios_without_swift_not_mobile(self) -> None:
+        # iOS alone, no framework, no Swift → not mobile
+        result = classify_segment(["iOS"])
         assert result != "mobile"
 
-    def test_platform_only_not_mobile(self) -> None:
-        # Platform without a recognised mobile framework → not mobile
+    def test_android_without_kotlin_not_mobile(self) -> None:
+        result = classify_segment(["Android"])
+        assert result != "mobile"
+
+    def test_ios_android_without_framework_not_mobile(self) -> None:
+        # Platform pair but no framework or language pair → not mobile
         result = classify_segment(["iOS", "Android"])
         assert result != "mobile"
 
@@ -60,10 +79,12 @@ class TestFintech:
     def test_java_kafka_docker(self) -> None:
         assert classify_segment(["Java", "Kafka", "Docker"]) == "fintech"
 
-    def test_no_persistence_not_fintech(self) -> None:
-        # Kafka without PostgreSQL or Docker → not fintech
-        result = classify_segment(["Java", "Kafka"])
-        assert result != "fintech"
+    def test_java_kafka_alone_is_fintech(self) -> None:
+        # Kafka is the key signal; persistence not required
+        assert classify_segment(["Java", "Kafka"]) == "fintech"
+
+    def test_kotlin_kafka_is_fintech(self) -> None:
+        assert classify_segment(["Kotlin", "Kafka"]) == "fintech"
 
     def test_no_kafka_not_fintech(self) -> None:
         result = classify_segment(["Java", "PostgreSQL"])
@@ -100,8 +121,14 @@ class TestAiMl:
         result = classify_segment(["Python", "FastAPI", "PostgreSQL"])
         assert result != "ai_ml"
 
-    def test_ai_tool_no_python_not_ai_ml(self) -> None:
-        result = classify_segment(["PyTorch", "TensorFlow"])
+    def test_two_ai_tools_no_python_is_ai_ml(self) -> None:
+        # Two AI tools without Python still qualifies (e.g. TypeScript LLM apps)
+        assert classify_segment(["LangChain", "OpenAI"]) == "ai_ml"
+        assert classify_segment(["PyTorch", "TensorFlow"]) == "ai_ml"
+
+    def test_single_ai_tool_no_python_not_ai_ml(self) -> None:
+        # One AI tool, no Python → not enough signal
+        result = classify_segment(["LangChain"])
         assert result != "ai_ml"
 
 
@@ -144,9 +171,9 @@ class TestConsulting:
         result = classify_segment([".NET", "SQL"])
         assert result != "consulting"
 
-    def test_dotnet_no_sql_not_consulting(self) -> None:
-        result = classify_segment([".NET", "Angular"])
-        assert result != "consulting"
+    def test_dotnet_angular_without_sql_is_consulting(self) -> None:
+        # SQL is no longer required; Angular is the key differentiator
+        assert classify_segment([".NET", "Angular"]) == "consulting"
 
 
 # ── Enterprise ────────────────────────────────────────────────────────────────
@@ -162,7 +189,13 @@ class TestEnterprise:
     def test_java_azure_mysql(self) -> None:
         assert classify_segment(["Java", "Azure", "MySQL"]) == "enterprise"
 
-    def test_java_no_azure_not_enterprise(self) -> None:
+    def test_java_aws_postgres(self) -> None:
+        assert classify_segment(["Java", "AWS", "PostgreSQL"]) == "enterprise"
+
+    def test_springboot_gcp_mysql(self) -> None:
+        assert classify_segment(["Spring Boot", "GCP", "MySQL"]) == "enterprise"
+
+    def test_java_no_cloud_not_enterprise(self) -> None:
         result = classify_segment(["Java", "SQL"])
         assert result != "enterprise"
 
@@ -185,9 +218,18 @@ class TestStartupSaas:
         result = classify_segment(["React", "PostgreSQL"])
         assert result != "startup_saas"
 
-    def test_react_no_db_not_startup(self) -> None:
-        result = classify_segment(["React", "Node.js"])
-        assert result != "startup_saas"
+    def test_react_nodejs_without_db_is_startup(self) -> None:
+        # DB is no longer required; frontend + backend runtime is enough
+        assert classify_segment(["React", "Node.js"]) == "startup_saas"
+
+    def test_vue_express_is_startup(self) -> None:
+        assert classify_segment(["Vue", "Express"]) == "startup_saas"
+
+    def test_nextjs_nestjs_is_startup(self) -> None:
+        assert classify_segment(["Next.js", "NestJS"]) == "startup_saas"
+
+    def test_svelte_django_is_startup(self) -> None:
+        assert classify_segment(["Svelte", "Django"]) == "startup_saas"
 
     def test_backend_no_frontend_not_startup(self) -> None:
         result = classify_segment(["Node.js", "PostgreSQL"])
@@ -226,19 +268,16 @@ class TestPrecedence:
         assert classify_segment(stack) == "ai_ml"
 
     def test_consulting_beats_startup_saas(self) -> None:
-        # .NET + SQL + Angular + React → consulting wins (higher priority)
-        # Note: React alone doesn't trigger startup_saas without Node/FastAPI + PostgreSQL
-        # consulting = .NET + SQL + Angular
-        # startup_saas needs React + Node.js + PostgreSQL (Angular replaces Node → no startup)
-        stack = [".NET", "C#", "SQL", "Angular"]
-        # This is only consulting (no startup_saas trigger — no Node.js/FastAPI + PostgreSQL)
+        # .NET + Angular + React + Node.js → consulting wins (higher priority)
+        # consulting = .NET + Angular; startup_saas = React + Node.js
+        stack = [".NET", "Angular", "React", "Node.js"]
         assert classify_segment(stack) == "consulting"
 
     def test_enterprise_beats_startup_saas(self) -> None:
         # Java + Azure + PostgreSQL + React + Node.js → enterprise wins
         stack = ["Java", "Azure", "PostgreSQL", "React", "Node.js"]
-        # enterprise: Java + Azure + PostgreSQL ✓
-        # startup_saas: React + Node.js + PostgreSQL ✓
+        # enterprise: Java + Azure (cloud) + PostgreSQL (SQL) ✓
+        # startup_saas: React + Node.js ✓
         # enterprise has higher priority
         assert classify_segment(stack) == "enterprise"
 
@@ -259,9 +298,10 @@ class TestNoMatch:
     def test_unrecognised_techs_is_none(self) -> None:
         assert classify_segment(["COBOL", "Mainframe", "Fortran"]) is None
 
-    def test_partial_startup_saas_is_none(self) -> None:
-        # React + Node.js without PostgreSQL → no match
-        assert classify_segment(["React", "Node.js"]) is None
+    def test_frontend_only_is_none(self) -> None:
+        # Frontend framework without a backend runtime → no match
+        assert classify_segment(["React"]) is None
+        assert classify_segment(["Vue"]) is None
 
     def test_python_alone_is_none(self) -> None:
         # Python without AI tools → not ai_ml; no other rule fires either

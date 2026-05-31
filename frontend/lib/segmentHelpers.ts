@@ -59,26 +59,28 @@ function count(stack: Set<string>, ...names: string[]): number {
 
 // ── Segment classifiers ───────────────────────────────────────────────────────
 
-/** React Native or Flutter  +  at least one mobile platform/language. */
+/** Mobile framework alone, or a native platform pair (iOS+Swift, Android+Kotlin). */
 function isMobile(stack: Set<string>): boolean {
-  const hasFramework = has(stack, "React Native", "Flutter");
-  const hasPlatform  = has(stack, "iOS", "Android", "Swift", "Kotlin", "SwiftUI");
-  return hasFramework && hasPlatform;
+  return (
+    has(stack, "React Native", "Flutter", "SwiftUI") ||
+    (has(stack, "iOS") && has(stack, "Swift")) ||
+    (has(stack, "Android") && has(stack, "Kotlin"))
+  );
 }
 
-/** Java  +  Kafka  +  (PostgreSQL or Docker). */
+/** JVM language + Kafka — event-driven architecture is a strong fintech signal. */
 function isFintech(stack: Set<string>): boolean {
-  const hasPersistence = has(stack, "PostgreSQL", "Docker");
-  return has(stack, "Java") && has(stack, "Kafka") && hasPersistence;
+  return has(stack, "Java", "Kotlin") && has(stack, "Kafka");
 }
 
-/** Python  +  at least one AI/ML tool from the canonical set. */
+/** Python + any AI/ML tool, or any two AI/ML tools regardless of language. */
 function isAiMl(stack: Set<string>): boolean {
   const aiTools = [
     "PyTorch", "TensorFlow", "Databricks", "MLflow",
     "LangChain", "OpenAI", "Vector DB", "RAG", "LLM",
   ];
-  return has(stack, "Python") && count(stack, ...aiTools) >= 1;
+  return (has(stack, "Python") && count(stack, ...aiTools) >= 1) ||
+    count(stack, ...aiTools) >= 2;
 }
 
 /** At least 2 of the recognised infra/DevOps tools. */
@@ -86,30 +88,30 @@ function isCloudPlatform(stack: Set<string>): boolean {
   const infraTools = [
     "Kubernetes", "Terraform", "Docker", "AWS", "GCP",
     "GitHub Actions", "Helm", "ArgoCD", "Prometheus", "Grafana",
+    "Jenkins", "Ansible",
   ];
   return count(stack, ...infraTools) >= 2;
 }
 
-/** .NET or C#  +  SQL  +  Angular. */
+/** .NET or C#  +  Angular (Microsoft consulting archetype). */
 function isConsulting(stack: Set<string>): boolean {
-  return has(stack, ".NET", "C#") && has(stack, "SQL") && has(stack, "Angular");
+  return has(stack, ".NET", "C#") && has(stack, "Angular");
 }
 
-/** Java or Spring Boot  +  Azure  +  SQL flavour (SQL, PostgreSQL, MySQL). */
+/** Java or Spring Boot  +  any major cloud  +  SQL flavour. */
 function isEnterprise(stack: Set<string>): boolean {
   return (
     has(stack, "Java", "Spring Boot") &&
-    has(stack, "Azure") &&
+    has(stack, "AWS", "Azure", "GCP") &&
     has(stack, "SQL", "PostgreSQL", "MySQL")
   );
 }
 
-/** (React or Next.js)  +  (Node.js or FastAPI)  +  PostgreSQL. */
+/** Frontend framework + backend runtime — modern web stack. */
 function isStartupSaaS(stack: Set<string>): boolean {
   return (
-    has(stack, "React", "Next.js") &&
-    has(stack, "Node.js", "FastAPI") &&
-    has(stack, "PostgreSQL")
+    has(stack, "React", "Next.js", "Vue", "Svelte") &&
+    has(stack, "Node.js", "Express", "NestJS", "FastAPI", "Django")
   );
 }
 
@@ -124,10 +126,12 @@ function isStartupSaaS(stack: Set<string>): boolean {
  * Returns null if no rule matches (job is classified as "other").
  *
  * @example
- * classifySegment(["React Native", "iOS"])          // "mobile"
- * classifySegment(["Java", "Kafka", "PostgreSQL"])  // "fintech"
+ * classifySegment(["SwiftUI", "iOS"])                         // "mobile"
+ * classifySegment(["Java", "Kafka"])                          // "fintech"
+ * classifySegment(["LangChain", "OpenAI"])                    // "ai_ml" (2 AI tools)
  * classifySegment(["Python", "PyTorch", "AWS", "Kubernetes"]) // "ai_ml" (beats cloud_platform)
- * classifySegment(["COBOL"])                        // null
+ * classifySegment(["React", "Next.js", "Django"])             // "startup_saas"
+ * classifySegment(["COBOL"])                                  // null
  */
 export function classifySegment(techStack: string[]): string | null {
   const stack = new Set(techStack);
