@@ -2,7 +2,7 @@ name: Daily fetch
 
 on:
   schedule:
-    - cron: "0 12 * * *"  # 12:00 UTC = 8:00 AM EDT — after most companies post morning jobs
+    - cron: "17 12 * * *" # 12:17 UTC = 8:17 AM EDT — avoid top-of-hour GitHub Actions load
   workflow_dispatch:       # allow manual trigger from GitHub UI
 
 jobs:
@@ -26,4 +26,3 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: python -m pipeline.orchestrator
-
