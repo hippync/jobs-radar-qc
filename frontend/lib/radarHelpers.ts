@@ -300,7 +300,7 @@ export function renderRadarSvg(
   const P = SVG_PALETTE[bg];
   const CX = 280, CY = 240, R = 200;
   const RINGS = [0.95, 0.68, 0.42, 0.18];
-  const RING_LABELS = ["top 5", "top 10", "top 20", "long tail"];
+  const RING_LABELS = ["Niche", "Common", "Popular", "Most in demand"];
 
   /* ── Group techs by sector, capped at 8 per sector ─────────────────── */
   const byCat: Record<string, TechRow[]> = {};
@@ -432,9 +432,21 @@ export function renderRadarSvg(
     }
   }
 
-  // Legend
+  // How to read — bottom-left guide
   parts.push(
-    `<text x="16" y="470" font-family="monospace" font-size="9" fill="${P.legend}">size = job count · proximity to center = rank · jobs-radar-qc.dev/trends</text>`,
+    `<rect x="8" y="372" width="192" height="72" rx="4" fill="${P.bg}" fill-opacity="0.9" stroke="${P.gridline}" stroke-width="1"/>`,
+  );
+  parts.push(
+    `<text x="16" y="387" font-family="monospace" font-size="8" font-weight="600" fill="${P.legend}" letter-spacing="0.08em">HOW TO READ</text>`,
+  );
+  parts.push(
+    `<text x="16" y="402" font-family="sans-serif" font-size="9" fill="${P.legend}">&#x25CF; Bigger bubble = more jobs</text>`,
+  );
+  parts.push(
+    `<text x="16" y="415" font-family="sans-serif" font-size="9" fill="${P.legend}">&#x25CE; Closer to center = stronger demand</text>`,
+  );
+  parts.push(
+    `<text x="16" y="428" font-family="sans-serif" font-size="9" fill="${P.legend}">&#x2192; Click to filter roles</text>`,
   );
 
   parts.push(`</svg>`);

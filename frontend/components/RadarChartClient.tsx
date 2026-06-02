@@ -11,7 +11,7 @@ import {
 
 const CX = 280, CY = 240, R = 200;
 const RINGS = [0.95, 0.68, 0.42, 0.18];
-const RING_LABELS = ["top 5", "top 10", "top 20", "long tail"];
+const RING_LABELS = ["Niche", "Common", "Popular", "Most in demand"];
 
 interface TooltipState {
   name: string;
@@ -307,16 +307,40 @@ export function RadarChartClient({
           );
         })}
 
-        {/* Legend */}
-        <text
-          x="16"
-          y="470"
-          fontFamily="var(--font-mono)"
-          fontSize="9"
-          fill="var(--ink-mute)"
-        >
-          ◯ size = job count · proximity to center = rank · click to filter
-        </text>
+        {/* How to read — bottom-left guide */}
+        <g aria-hidden style={{ pointerEvents: "none" }}>
+          <rect
+            x="8"
+            y="372"
+            width="192"
+            height="72"
+            rx="4"
+            fill="var(--surface)"
+            fillOpacity="0.9"
+            stroke="var(--rule-soft)"
+            strokeWidth="1"
+          />
+          <text
+            x="16"
+            y="387"
+            fontFamily="var(--font-mono)"
+            fontSize="8"
+            fontWeight="600"
+            fill="var(--ink-mute)"
+            letterSpacing="0.08em"
+          >
+            HOW TO READ
+          </text>
+          <text x="16" y="402" fontFamily="var(--font-sans)" fontSize="9" fill="var(--ink-mute)">
+            ● Bigger bubble = more jobs
+          </text>
+          <text x="16" y="415" fontFamily="var(--font-sans)" fontSize="9" fill="var(--ink-mute)">
+            ◎ Closer to center = stronger demand
+          </text>
+          <text x="16" y="428" fontFamily="var(--font-sans)" fontSize="9" fill="var(--ink-mute)">
+            → Click to filter roles
+          </text>
+        </g>
       </svg>
 
       {/* HTML tooltip overlay — positioned in % coords over the SVG viewBox.
