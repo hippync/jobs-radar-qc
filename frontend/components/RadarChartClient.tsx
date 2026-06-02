@@ -11,7 +11,7 @@ import {
 
 const CX = 280, CY = 240, R = 200;
 const RINGS = [0.95, 0.68, 0.42, 0.18];
-const RING_LABELS = ["top 5", "top 10", "top 20", "long tail"];
+const RING_LABELS = ["Niche", "Common", "Popular", "Most in demand"];
 
 interface TooltipState {
   name: string;
@@ -119,26 +119,16 @@ export function RadarChartClient({
 
         {/* Concentric rings */}
         {RINGS.map((k, i) => (
-          <g key={i}>
-            <circle
-              cx={CX}
-              cy={CY}
-              r={R * k}
-              fill="none"
-              stroke="var(--rule-soft)"
-              strokeDasharray="3 5"
-              strokeWidth="1"
-            />
-            <text
-              x={CX + R * k + 5}
-              y={CY - 5}
-              fontFamily="var(--font-mono)"
-              fontSize="9"
-              fill="var(--ink-mute)"
-            >
-              {RING_LABELS[i]}
-            </text>
-          </g>
+          <circle
+            key={i}
+            cx={CX}
+            cy={CY}
+            r={R * k}
+            fill="none"
+            stroke="var(--rule-soft)"
+            strokeDasharray="3 5"
+            strokeWidth="1"
+          />
         ))}
 
         {/* Sector divider lines */}
@@ -307,16 +297,29 @@ export function RadarChartClient({
           );
         })}
 
-        {/* Legend */}
-        <text
-          x="16"
-          y="470"
-          fontFamily="var(--font-mono)"
-          fontSize="9"
-          fill="var(--ink-mute)"
-        >
-          ◯ size = job count · proximity to center = rank · click to filter
-        </text>
+        {/* How to read — full-width strip below the radar circle (y > 440) */}
+        <g aria-hidden style={{ pointerEvents: "none" }}>
+          <rect
+            x="8"
+            y="443"
+            width="544"
+            height="28"
+            rx="3"
+            fill="var(--surface)"
+            fillOpacity="0.88"
+            stroke="var(--rule-soft)"
+            strokeWidth="1"
+          />
+          <text x="16" y="461" fontFamily="var(--font-sans)" fontSize="9" fill="var(--ink-mute)">
+            ● Bigger bubble = more jobs
+          </text>
+          <text x="280" y="461" fontFamily="var(--font-sans)" fontSize="9" fill="var(--ink-mute)" textAnchor="middle">
+            ◎ Closer to center = stronger demand
+          </text>
+          <text x="544" y="461" fontFamily="var(--font-sans)" fontSize="9" fill="var(--ink-mute)" textAnchor="end">
+            → Click to filter roles
+          </text>
+        </g>
       </svg>
 
       {/* HTML tooltip overlay — positioned in % coords over the SVG viewBox.

@@ -300,7 +300,6 @@ export function renderRadarSvg(
   const P = SVG_PALETTE[bg];
   const CX = 280, CY = 240, R = 200;
   const RINGS = [0.95, 0.68, 0.42, 0.18];
-  const RING_LABELS = ["top 5", "top 10", "top 20", "long tail"];
 
   /* ── Group techs by sector, capped at 8 per sector ─────────────────── */
   const byCat: Record<string, TechRow[]> = {};
@@ -373,9 +372,6 @@ export function renderRadarSvg(
     parts.push(
       `<circle cx="${CX}" cy="${CY}" r="${n(R * k, 1)}" fill="none" stroke="${P.gridline}" stroke-dasharray="3 5" stroke-width="1"/>`,
     );
-    parts.push(
-      `<text x="${n(CX + R * k + 5, 1)}" y="${n(CY - 5, 1)}" font-family="monospace" font-size="9" fill="${P.ringLabel}">${escSvg(RING_LABELS[i])}</text>`,
-    );
   }
 
   // Sector divider lines
@@ -432,10 +428,6 @@ export function renderRadarSvg(
     }
   }
 
-  // Legend
-  parts.push(
-    `<text x="16" y="470" font-family="monospace" font-size="9" fill="${P.legend}">size = job count · proximity to center = rank · jobs-radar-qc.dev/trends</text>`,
-  );
 
   parts.push(`</svg>`);
   return parts.join("\n");
