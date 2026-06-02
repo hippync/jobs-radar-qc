@@ -119,26 +119,16 @@ export function RadarChartClient({
 
         {/* Concentric rings */}
         {RINGS.map((k, i) => (
-          <g key={i}>
-            <circle
-              cx={CX}
-              cy={CY}
-              r={R * k}
-              fill="none"
-              stroke="var(--rule-soft)"
-              strokeDasharray="3 5"
-              strokeWidth="1"
-            />
-            <text
-              x={CX + R * k + 5}
-              y={CY - 5}
-              fontFamily="var(--font-mono)"
-              fontSize="9"
-              fill="var(--ink-mute)"
-            >
-              {RING_LABELS[i]}
-            </text>
-          </g>
+          <circle
+            key={i}
+            cx={CX}
+            cy={CY}
+            r={R * k}
+            fill="none"
+            stroke="var(--rule-soft)"
+            strokeDasharray="3 5"
+            strokeWidth="1"
+          />
         ))}
 
         {/* Sector divider lines */}
@@ -307,37 +297,26 @@ export function RadarChartClient({
           );
         })}
 
-        {/* How to read — bottom-left guide */}
+        {/* How to read — full-width strip below the radar circle (y > 440) */}
         <g aria-hidden style={{ pointerEvents: "none" }}>
           <rect
             x="8"
-            y="372"
-            width="192"
-            height="72"
-            rx="4"
+            y="443"
+            width="544"
+            height="28"
+            rx="3"
             fill="var(--surface)"
-            fillOpacity="0.9"
+            fillOpacity="0.88"
             stroke="var(--rule-soft)"
             strokeWidth="1"
           />
-          <text
-            x="16"
-            y="387"
-            fontFamily="var(--font-mono)"
-            fontSize="8"
-            fontWeight="600"
-            fill="var(--ink-mute)"
-            letterSpacing="0.08em"
-          >
-            HOW TO READ
-          </text>
-          <text x="16" y="402" fontFamily="var(--font-sans)" fontSize="9" fill="var(--ink-mute)">
+          <text x="16" y="461" fontFamily="var(--font-sans)" fontSize="9" fill="var(--ink-mute)">
             ● Bigger bubble = more jobs
           </text>
-          <text x="16" y="415" fontFamily="var(--font-sans)" fontSize="9" fill="var(--ink-mute)">
+          <text x="280" y="461" fontFamily="var(--font-sans)" fontSize="9" fill="var(--ink-mute)" textAnchor="middle">
             ◎ Closer to center = stronger demand
           </text>
-          <text x="16" y="428" fontFamily="var(--font-sans)" fontSize="9" fill="var(--ink-mute)">
+          <text x="544" y="461" fontFamily="var(--font-sans)" fontSize="9" fill="var(--ink-mute)" textAnchor="end">
             → Click to filter roles
           </text>
         </g>
