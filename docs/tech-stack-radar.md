@@ -76,6 +76,31 @@ The canonical list lives in [`core/canonical_tech_stack.json`](../core/canonical
 
 ---
 
+## Planned UI polish
+
+Update the radar legend and reading instructions.
+
+Current issue: the bottom legend "size = job count · proximity to center = rank · click to filter" feels too technical, too subtle, and visually disconnected from the radar. It should be easier to understand for a first-time visitor.
+
+Replace the old bottom text legend with a compact "How to read" guide using this copy:
+
+- Bigger bubble = more jobs
+- Closer to center = stronger demand
+- Click to filter roles
+
+Also include the demand zones:
+
+- Most in demand
+- Popular
+- Common
+- Niche
+
+Preferred layout: place a small "How to read" card inside the radar area near the bottom-left corner, with the three short reading guide lines.
+
+Design constraints: remove the old bottom text legend, keep the guide subtle but more readable than the current legend, make it clear that bubble size and position mean different things, avoid technical wording like "rank" or "proximity", and preserve the existing minimalist dark dashboard aesthetic.
+
+---
+
 ## Adding a technology
 
 Edit [`core/canonical_tech_stack.json`](../core/canonical_tech_stack.json) and add the name under the appropriate category. On the next Sunday run, all jobs will be re-enriched automatically — no other changes needed.
