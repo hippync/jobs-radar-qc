@@ -85,7 +85,7 @@ function StarIcon() {
   );
 }
 
-function BellIcon() {
+function InfoIcon() {
   return (
     <svg
       width="20" height="20" viewBox="0 0 24 24"
@@ -93,8 +93,8 @@ function BellIcon() {
       strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
       aria-hidden
     >
-      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-      <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+      <circle cx="12" cy="12" r="10" />
+      <path d="M12 16v-4M12 8h.01" />
     </svg>
   );
 }
@@ -189,6 +189,7 @@ export default function BottomTabBar() {
     pathname === "/"       ? "jobs"  :
     pathname === "/trends" ? "radar" :
     pathname === "/saved"  ? "saved" :
+    pathname === "/about"  ? "about" :
     "none";
 
   function tabColor(key: string) {
@@ -266,18 +267,19 @@ export default function BottomTabBar() {
         {active === "saved" && <ActiveUnderline />}
       </Link>
 
-      {/* ── Alerts (no route yet — button placeholder) ─────────────────── */}
-      <button
-        type="button"
+      {/* ── About ──────────────────────────────────────────────────────── */}
+      <Link
+        href="/about"
         role="tab"
-        aria-selected={false}
-        aria-label="Alerts"
+        aria-selected={active === "about"}
+        aria-label="About"
         className="btb-tab"
-        style={{ ...tabBase, color: "var(--ink-mute)", fontWeight: 400 }}
+        style={{ ...tabBase, color: tabColor("about"), fontWeight: tabWeight("about") }}
       >
-        <BellIcon />
-        <span>Alerts</span>
-      </button>
+        <InfoIcon />
+        <span>About</span>
+        {active === "about" && <ActiveUnderline />}
+      </Link>
     </nav>
   );
 }

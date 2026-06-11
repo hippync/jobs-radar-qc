@@ -101,6 +101,13 @@ export default function RootLayout({
               >
                 Saved
               </Link>
+              <Link
+                href="/about"
+                className="hidden lg:inline text-sm transition-colors"
+                style={{ color: "var(--ink-soft)" }}
+              >
+                About
+              </Link>
               <a
                 href="https://github.com/hippync/jobs-radar-qc"
                 target="_blank"
