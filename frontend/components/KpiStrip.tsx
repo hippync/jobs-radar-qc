@@ -37,9 +37,11 @@ interface CardProps {
 }
 
 function KpiCard({ label, value, sub, accent }: CardProps) {
+  const accessibleLabel = sub ? `${label}: ${value} ${sub}` : `${label}: ${value}`;
   return (
     <div
       className="flex flex-col gap-0.5 rounded-md px-3 py-2.5"
+      aria-label={accessibleLabel}
       style={{
         background: accent ? "var(--accent-12)" : "var(--bg-2)",
         border: `1px solid ${accent ? "var(--accent)" : "var(--rule-soft)"}`,
@@ -49,12 +51,14 @@ function KpiCard({ label, value, sub, accent }: CardProps) {
     >
       <span
         className="text-xs uppercase tracking-wide"
+        aria-hidden
         style={{ color: "var(--ink-mute)", fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: "0.06em" }}
       >
         {label}
       </span>
       <span
         className="text-xl font-semibold leading-none tabular"
+        aria-hidden
         style={{ color: accent ? "var(--accent)" : "var(--ink)", fontFamily: "var(--font-mono)" }}
       >
         {value}
@@ -62,6 +66,7 @@ function KpiCard({ label, value, sub, accent }: CardProps) {
       {sub && (
         <span
           className="text-xs"
+          aria-hidden
           style={{ color: accent ? "var(--accent)" : "var(--ink-soft)", fontFamily: "var(--font-mono)", fontSize: 10 }}
         >
           {sub}
