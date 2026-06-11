@@ -144,11 +144,29 @@ export default function FilterSidebar({
     startTransition(() => router.replace(`?${next.toString()}`));
   }
 
+  function toggleTech(value: string) {
+    const next = new URLSearchParams(params.toString());
+    const current = (next.get("tech") ?? "").split(",").map((t) => t.trim()).filter(Boolean);
+    const idx = current.indexOf(value);
+    if (idx >= 0) {
+      current.splice(idx, 1);
+    } else {
+      current.push(value);
+    }
+    if (current.length === 0) {
+      next.delete("tech");
+    } else {
+      next.set("tech", current.join(","));
+    }
+    next.delete("page");
+    startTransition(() => router.replace(`?${next.toString()}`));
+  }
+
   function toggleSection(key: keyof typeof sections) {
     setSections((s) => ({ ...s, [key]: !s[key] }));
   }
 
-  const currentTech      = params.get("tech")      ?? "";
+  const currentTechs     = (params.get("tech") ?? "").split(",").map((t) => t.trim()).filter(Boolean);
   const currentSource    = params.get("source")    ?? "";
   const currentRemote    = params.get("remote")    ?? "";
   const currentSeniority = params.get("seniority") ?? "";
@@ -258,8 +276,8 @@ export default function FilterSidebar({
                 <FilterChip
                   key={t}
                   label={t}
-                  active={currentTech === t}
-                  onClick={() => toggle("tech", t)}
+                  active={currentTechs.includes(t)}
+                  onClick={() => toggleTech(t)}
                 />
               ))}
               {filteredTechs.length === 0 && (

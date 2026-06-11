@@ -110,7 +110,10 @@ const fetchJobsCached = unstable_cache(
       .order("first_seen_at", { ascending: sort === "asc" })
       .range(from, to);
 
-    if (tech)      query = query.contains("tech_stack", [tech]);
+    if (tech) {
+      const techs = tech.split(",").map((t) => t.trim()).filter(Boolean);
+      query = query.contains("tech_stack", techs);
+    }
     if (source)    query = query.eq("source", source);
     if (seniority) query = query.eq("seniority", seniority);
     if (remote === "true")  query = query.eq("is_remote", true);
@@ -224,8 +227,13 @@ async function fetchContextualFacets(filters: SearchParams, stats: Stats): Promi
     };
   }
 
+  // RPC accepts one tech value — use first selected tech (v1 approximation for multi-select).
+  const firstTech = normalized.tech
+    ? normalized.tech.split(",").map((t) => t.trim()).filter(Boolean)[0] ?? ""
+    : "";
+
   return fetchContextualFacetsCached(
-    normalized.tech,
+    firstTech,
     normalized.source,
     normalized.remote,
     normalized.seniority,
@@ -259,7 +267,8 @@ export default async function Page({
 
   const totalPages = Math.ceil(total / PAGE_SIZE);
   const hasFilters = !!(filters.tech || filters.source || filters.remote || filters.seniority);
-  const activeFilterCount = [filters.tech, filters.source, filters.remote, filters.seniority].filter(Boolean).length;
+  const techCount = filters.tech ? filters.tech.split(",").map((t) => t.trim()).filter(Boolean).length : 0;
+  const activeFilterCount = techCount + [filters.source, filters.remote, filters.seniority].filter(Boolean).length;
 
   const currentSort = filters.sort === "asc" ? "asc" : "desc";
 
