@@ -63,7 +63,17 @@ export default async function TrendsPage({
   const focusCoMentions = focusTech ? (coMentions[focusTech.name] ?? []) : [];
 
   return (
-    <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col px-4 py-6 lg:flex-row lg:gap-0">
+    <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col px-4 py-6">
+      {/* ── Segment filter — full width above the radar ──────────────── */}
+      <div
+        className="mb-4 pb-3"
+        style={{ borderBottom: "1px solid var(--rule-soft)" }}
+      >
+        <SegmentFilter activeSegment={activeSegment} activeWindow={activeWindow} />
+      </div>
+
+      {/* ── Main content row ─────────────────────────────────────────── */}
+      <div className="flex flex-1 flex-col lg:flex-row lg:gap-0">
       {/* ── Main radar area ─────────────────────────────────────────── */}
       <div className="flex flex-1 flex-col">
         {/* Page header */}
@@ -148,17 +158,6 @@ export default async function TrendsPage({
         className="mt-4 flex flex-col gap-4 lg:ml-5 lg:mt-0 lg:w-72"
         style={{ flexShrink: 0 }}
       >
-        {/* Segment filter — Server Component (Link pills) */}
-        <div
-          className="rounded-md p-3"
-          style={{ background: "var(--bg-2)", border: "1px solid var(--rule-soft)" }}
-        >
-          <SegmentFilter
-            activeSegment={activeSegment}
-            activeWindow={activeWindow}
-          />
-        </div>
-
         {/* Radar sector selector — Client Component */}
         <div
           className="rounded-md p-3"
@@ -303,6 +302,7 @@ export default async function TrendsPage({
         {/* Embed / API card — dynamic curl commands */}
         <RadarDownloadPanel cats={selectedCats} segment={activeSegment} />
       </div>
+      </div>{/* ── end main content row ── */}
     </div>
   );
 }
