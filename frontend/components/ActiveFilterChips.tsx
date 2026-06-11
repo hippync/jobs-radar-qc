@@ -37,7 +37,8 @@ export default function ActiveFilterChips() {
   const remote    = params.get("remote");
   const seniority = params.get("seniority");
 
-  if (tech)      chips.push({ key: "tech",      label: tech });
+  const techs = tech ? tech.split(",").map((t) => t.trim()).filter(Boolean) : [];
+  techs.forEach((t) => chips.push({ key: `tech:${t}`, label: t }));
   if (source)    chips.push({ key: "source",    label: source.charAt(0).toUpperCase() + source.slice(1) });
   if (remote)    chips.push({ key: "remote",    label: WORKPLACE_LABEL[remote] ?? remote });
   if (seniority) chips.push({ key: "seniority", label: SENIORITY_LABEL[seniority] ?? seniority });
@@ -46,7 +47,18 @@ export default function ActiveFilterChips() {
 
   function remove(key: string) {
     const next = new URLSearchParams(params.toString());
-    next.delete(key);
+    if (key.startsWith("tech:")) {
+      const techToRemove = key.slice(5);
+      const current = (next.get("tech") ?? "").split(",").map((t) => t.trim()).filter(Boolean);
+      const updated = current.filter((t) => t !== techToRemove);
+      if (updated.length === 0) {
+        next.delete("tech");
+      } else {
+        next.set("tech", updated.join(","));
+      }
+    } else {
+      next.delete(key);
+    }
     next.delete("page");
     startTransition(() => router.replace(`?${next.toString()}`));
   }
