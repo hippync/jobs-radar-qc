@@ -106,6 +106,7 @@
         <kw canonical="Ruby">Ruby</kw>
         <kw canonical="PHP">PHP</kw>
         <kw canonical="Swift">Swift</kw>
+        <kw canonical="Dart">Dart</kw>
         <kw canonical="Elixir">Elixir</kw>
         <kw canonical="Erlang">Erlang</kw>
         <kw canonical="R" case_sensitive="true">\bR\b</kw>
@@ -123,6 +124,11 @@
         <kw canonical="REST" case_sensitive="true">REST(?:ful)?</kw>
         <kw canonical="Tailwind">Tailwind(?:\s+CSS)?</kw>
         <kw canonical="Redux">Redux</kw>
+        <!-- Vite: case_sensitive avoids matching French "vite" (quickly) in bilingual postings -->
+        <kw canonical="Vite" case_sensitive="true">Vite</kw>
+        <kw canonical="tRPC" case_sensitive="true">tRPC</kw>
+        <kw canonical="Remix">Remix</kw>
+        <kw canonical="Storybook">Storybook</kw>
 
         <!-- Backend frameworks -->
         <kw canonical="Django">Django</kw>
@@ -132,45 +138,61 @@
         <kw canonical="Spring Boot">Spring(?:\s+Boot)?</kw>
         <kw canonical="NestJS">NestJS</kw>
         <kw canonical="gRPC">gRPC</kw>
+        <kw canonical="Celery">Celery</kw>
         <kw canonical="Laravel">Laravel</kw>
         <kw canonical="ASP.NET">ASP\.NET</kw>
         <kw canonical=".NET">\.NET</kw>
+        <!-- Gin: case_sensitive avoids matching the common English noun -->
+        <kw canonical="Gin" case_sensitive="true">Gin</kw>
 
         <!-- Data / ML / AI -->
         <kw canonical="Spark">(?:Apache )?Spark</kw>
         <kw canonical="Kafka">(?:Apache )?Kafka</kw>
         <kw canonical="Airflow">(?:Apache )?Airflow</kw>
+        <kw canonical="Flink">(?:Apache )?Flink</kw>
         <kw canonical="dbt">dbt</kw>
         <kw canonical="Pandas">Pandas</kw>
         <kw canonical="NumPy">NumPy</kw>
         <kw canonical="PyTorch">PyTorch</kw>
         <kw canonical="TensorFlow">TensorFlow</kw>
         <kw canonical="scikit-learn">scikit-learn</kw>
+        <kw canonical="Databricks">Databricks</kw>
+        <kw canonical="RabbitMQ">RabbitMQ</kw>
         <kw canonical="LLM" case_sensitive="true">LLM</kw>
         <kw canonical="RAG" case_sensitive="true">RAG</kw>
-        <kw canonical="Flink">(?:Apache )?Flink</kw>
         <kw canonical="LangChain">LangChain</kw>
         <kw canonical="OpenAI" case_sensitive="true">OpenAI</kw>
         <kw canonical="MLflow">MLflow</kw>
+        <!-- Vector DB: matches named databases + plain-English descriptions -->
         <kw canonical="Vector DB">(?:Pinecone|Qdrant|Weaviate|Chroma|vector\s+(?:database|store|DB))</kw>
+        <kw canonical="Hugging Face">(?:Hugging\s+Face|HuggingFace)</kw>
+        <kw canonical="Weights &amp; Biases">Weights\s+(?:&amp;|and)\s+Biases</kw>
 
         <!-- Infrastructure / Cloud -->
         <kw canonical="AWS">AWS</kw>
         <kw canonical="GCP">GCP</kw>
         <kw canonical="Azure">Azure</kw>
+        <kw canonical="Vercel">Vercel</kw>
+        <kw canonical="DigitalOcean">DigitalOcean</kw>
+        <kw canonical="Heroku">Heroku</kw>
         <kw canonical="Kubernetes">Kubernetes</kw>
         <kw canonical="Docker">Docker</kw>
         <kw canonical="Terraform">Terraform</kw>
         <kw canonical="Ansible">Ansible</kw>
         <kw canonical="CI/CD">CI/CD</kw>
         <kw canonical="GitHub Actions">GitHub Actions</kw>
+        <kw canonical="GitLab CI">GitLab\s+CI(?:/CD)?</kw>
+        <kw canonical="CircleCI">CircleCI</kw>
         <kw canonical="Jenkins">Jenkins</kw>
         <kw canonical="Helm">Helm</kw>
         <kw canonical="ArgoCD">Argo\s*CD</kw>
+        <kw canonical="Pulumi">Pulumi</kw>
         <kw canonical="Prometheus">Prometheus</kw>
         <kw canonical="Grafana">Grafana</kw>
         <kw canonical="Nginx">Nginx</kw>
         <kw canonical="Cloudflare">Cloudflare</kw>
+        <!-- Vault: case_sensitive avoids matching lowercase "vault" (common English noun) -->
+        <kw canonical="Vault" case_sensitive="true">(?:HashiCorp\s+)?Vault</kw>
 
         <!-- Databases -->
         <kw canonical="PostgreSQL">Postgres(?:QL)?</kw>
@@ -182,6 +204,10 @@
         <kw canonical="BigQuery">BigQuery</kw>
         <kw canonical="DynamoDB">DynamoDB</kw>
         <kw canonical="Cassandra">Cassandra</kw>
+        <kw canonical="ClickHouse">ClickHouse</kw>
+        <kw canonical="Firebase">Firebase</kw>
+        <kw canonical="Supabase">Supabase</kw>
+        <kw canonical="SQLite">SQLite</kw>
 
         <!-- Mobile -->
         <kw canonical="Android">Android</kw>
@@ -192,11 +218,27 @@
 
         <!-- Testing / QA -->
         <kw canonical="Jest">Jest</kw>
+        <kw canonical="Vitest">Vitest</kw>
         <kw canonical="Cypress">Cypress</kw>
         <kw canonical="Playwright">Playwright</kw>
         <kw canonical="Selenium">Selenium</kw>
         <kw canonical="JUnit">JUnit</kw>
+        <kw canonical="pytest">pytest</kw>
+        <kw canonical="Mocha">Mocha</kw>
+        <kw canonical="RSpec">RSpec</kw>
         <kw canonical="Postman">Postman</kw>
+
+        <!-- AI Concepts -->
+        <kw canonical="AI Agents">(?:AI\s+agents?|agentic(?:\s+AI)?|agents?\s+IA)</kw>
+        <kw canonical="Prompt Engineering">(?:prompt\s+engineering|ing[eé]nierie\s+(?:de\s+)?prompts?)</kw>
+        <kw canonical="Fine-tuning">(?:fine[-\s]?tuning|finetuning)</kw>
+        <kw canonical="Embeddings">(?:vector\s+)?embeddings</kw>
+        <kw canonical="Semantic Search">(?:semantic\s+search|recherche\s+s[eé]mantique)</kw>
+        <!-- NLP: case_sensitive for the acronym; second entry covers the full phrase -->
+        <kw canonical="NLP" case_sensitive="true">NLP</kw>
+        <kw canonical="NLP">(?:natural\s+language\s+processing|traitement\s+du\s+langage\s+naturel)</kw>
+        <kw canonical="Computer Vision">(?:computer\s+vision|vision\s+par\s+ordinateur)</kw>
+        <kw canonical="GenAI">(?:GenAI|generative\s+AI|IA\s+g[eé]n[eé]rative)</kw>
 
       </keywords>
     </field>
