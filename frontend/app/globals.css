@@ -162,11 +162,24 @@ body {
   }
 }
 
+/* ── Global focus-visible ring ────────────────────────────────────────── */
+/*
+ * Applies to all interactive elements (buttons, links, inputs, etc.)
+ * that receive keyboard focus. Suppressed on mouse/touch so the visual
+ * treatment is only added when navigating by keyboard.
+ */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
 /* ── Radar category chip — focus-visible ring ────────────────────────── */
 /*
  * The chip's CSS token color isn't available in a Tailwind ring utility,
  * so we apply it via a plain CSS rule targeting the data-cat attribute.
  * Fallback to --accent when the category token isn't defined.
+ * border-radius override matches the pill shape of radar chips.
  */
 [data-cat]:focus-visible {
   outline: 2px solid var(--accent);

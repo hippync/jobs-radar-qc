@@ -325,6 +325,11 @@ export default async function Page({
           </div>
           <a
             href={sortUrl()}
+            aria-label={
+              currentSort === "asc"
+                ? "Sort: oldest first — click for newest first"
+                : "Sort: newest first — click for oldest first"
+            }
             title={currentSort === "asc" ? "Plus récents en premier" : "Plus anciens en premier"}
             className="flex items-center gap-1 rounded-md px-2 py-1 text-xs transition-colors"
             style={{
@@ -370,11 +375,15 @@ export default async function Page({
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="mt-10 flex items-center justify-center gap-3">
+          <nav
+            className="mt-10 flex items-center justify-center gap-3"
+            aria-label="Pagination"
+          >
             {page > 1 ? (
               <a
                 href={pageUrl(page - 1)}
                 className="rounded-md px-4 py-2 text-sm transition-colors"
+                aria-label="Go to previous page"
                 style={{
                   border: "1px solid var(--rule-soft)",
                   color: "var(--ink-soft)",
@@ -385,8 +394,9 @@ export default async function Page({
             ) : (
               <span
                 className="rounded-md px-4 py-2 text-sm"
+                aria-disabled="true"
+                aria-label="Previous page (unavailable)"
                 style={{ border: "1px solid transparent", color: "var(--ink-mute)" }}
-                aria-hidden
               >
                 ← Prev
               </span>
@@ -394,6 +404,8 @@ export default async function Page({
 
             <span
               className="text-sm tabular"
+              aria-current="page"
+              aria-label={`Page ${page} of ${totalPages}`}
               style={{ color: "var(--ink-mute)", fontFamily: "var(--font-mono)", fontSize: 12 }}
             >
               {page} / {totalPages}
@@ -403,6 +415,7 @@ export default async function Page({
               <a
                 href={pageUrl(page + 1)}
                 className="rounded-md px-4 py-2 text-sm transition-colors"
+                aria-label="Go to next page"
                 style={{
                   border: "1px solid var(--rule-soft)",
                   color: "var(--ink-soft)",
@@ -413,13 +426,14 @@ export default async function Page({
             ) : (
               <span
                 className="rounded-md px-4 py-2 text-sm"
+                aria-disabled="true"
+                aria-label="Next page (unavailable)"
                 style={{ border: "1px solid transparent", color: "var(--ink-mute)" }}
-                aria-hidden
               >
                 Next →
               </span>
             )}
-          </div>
+          </nav>
         )}
       </div>
     </div>

@@ -504,33 +504,29 @@ export default function SavedPageClient() {
           <div className="flex items-center gap-2">
 
             {/*
-             * Board / List toggle pills.
+             * Board / List toggle — implemented as a tablist.
+             * Each tab controls the corresponding view panel below (board or list).
+             * role="tablist" + role="tab" + aria-selected is the correct ARIA
+             * pattern for switching between mutually exclusive content panels.
              *
-             * Rendered as a group of two adjacent buttons:
-             *   active  = var(--bg-2) background + var(--rule) border
-             *   inactive = transparent background + transparent border
-             *             (transparent border preserves layout so no jump on switch)
-             *
-             * aria-pressed on each button communicates the active state to
-             * screen readers; the group role="group" labels the pair.
+             * Use longhand border-* properties only — mixing the `border`
+             * shorthand with `borderRight` / `borderLeft` triggers a React
+             * style-conflict warning on rerender.
              */}
-            <div role="group" aria-label="View toggle" className="flex">
-              {/*
-               * Use longhand border-* properties only — mixing the `border`
-               * shorthand with `borderRight` / `borderLeft` triggers a React
-               * style-conflict warning on rerender.
-               */}
+            <div role="tablist" aria-label="Tracker view" className="flex">
               <button
                 type="button"
+                role="tab"
+                aria-selected={view === "board"}
+                aria-controls="tracker-panel"
+                id="tab-board"
                 onClick={() => handleViewChange("board")}
-                aria-pressed={view === "board"}
                 style={{
                   padding: "4px 12px",
                   fontSize: 12,
                   fontWeight: 500,
                   color: view === "board" ? "var(--ink)" : "var(--ink-mute)",
                   background: view === "board" ? "var(--bg-2)" : "transparent",
-                  /* longhand only — no `border` shorthand */
                   borderTop:    view === "board" ? "1px solid var(--rule)" : "1px solid transparent",
                   borderBottom: view === "board" ? "1px solid var(--rule)" : "1px solid transparent",
                   borderLeft:   view === "board" ? "1px solid var(--rule)" : "1px solid transparent",
@@ -545,19 +541,20 @@ export default function SavedPageClient() {
               </button>
               <button
                 type="button"
+                role="tab"
+                aria-selected={view === "list"}
+                aria-controls="tracker-panel"
+                id="tab-list"
                 onClick={() => handleViewChange("list")}
-                aria-pressed={view === "list"}
                 style={{
                   padding: "4px 12px",
                   fontSize: 12,
                   fontWeight: 500,
                   color: view === "list" ? "var(--ink)" : "var(--ink-mute)",
                   background: view === "list" ? "var(--bg-2)" : "transparent",
-                  /* longhand only — no `border` shorthand */
                   borderTop:    view === "list" ? "1px solid var(--rule)" : "1px solid transparent",
                   borderBottom: view === "list" ? "1px solid var(--rule)" : "1px solid transparent",
                   borderRight:  view === "list" ? "1px solid var(--rule)" : "1px solid transparent",
-                  /* separator visible when List is inactive; matches active Board's right edge */
                   borderLeft:   view === "list" ? "1px solid var(--rule)" : "1px solid var(--rule-soft)",
                   borderRadius: "0 6px 6px 0",
                   cursor: "pointer",
@@ -628,7 +625,15 @@ export default function SavedPageClient() {
 
       {/* ── Content ──────────────────────────────────────────────────────── */}
       {isEmpty ? (
-        <EmptyState />
+        /* Tabs are always visible; wrap EmptyState in a panel so the tablist
+         * always has a corresponding tabpanel regardless of content. */
+        <div
+          id="tracker-panel"
+          role="tabpanel"
+          aria-labelledby={view === "board" ? "tab-board" : "tab-list"}
+        >
+          <EmptyState />
+        </div>
       ) : view === "list" ? (
 
         /* ── List view ─────────────────────────────────────────────────────
@@ -637,9 +642,10 @@ export default function SavedPageClient() {
          * Simplified layout — no drag-and-drop; switch to Board for that.
          */
         <div
+          id="tracker-panel"
+          role="tabpanel"
+          aria-labelledby="tab-list"
           className="flex flex-col gap-2"
-          role="list"
-          aria-label="Saved jobs list"
         >
           {listJobs.map((job) => (
             <SavedListRow
@@ -659,9 +665,10 @@ export default function SavedPageClient() {
          * Both layouts defined in globals.css (.kanban-board / .kanban-column).
          */
         <div
+          id="tracker-panel"
+          role="tabpanel"
+          aria-labelledby="tab-board"
           className="kanban-board"
-          role="list"
-          aria-label="Job tracker board"
         >
           {COLUMNS.map((col) => {
             const jobs   = saved.filter((j) => j.column === col.key);
