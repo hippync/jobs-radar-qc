@@ -45,23 +45,25 @@ export function SegmentFilter({ activeSegment, activeWindow }: Props) {
   ];
 
   return (
-    <div>
-      {/* Section header */}
-      <div className="mb-2">
-        <span
-          className="text-xs font-semibold uppercase tracking-widest"
-          style={{
-            color: "var(--ink-mute)",
-            fontFamily: "var(--font-mono)",
-            fontSize: 9,
-          }}
-        >
-          Role segment
-        </span>
-      </div>
+    <div className="flex min-w-0 items-center gap-3">
+      {/* Label — visible on sm+, hidden on smallest mobile */}
+      <span
+        className="hidden shrink-0 text-xs font-semibold uppercase tracking-widest sm:block"
+        style={{
+          color: "var(--ink-mute)",
+          fontFamily: "var(--font-mono)",
+          fontSize: 9,
+        }}
+      >
+        Segment
+      </span>
 
-      {/* Pill row */}
-      <nav aria-label="Filter by role segment" className="flex flex-wrap gap-1.5">
+      {/* Pill row — no wrap, horizontal scroll on mobile */}
+      <nav
+        aria-label="Filter by role segment"
+        className="flex min-w-0 gap-1.5 overflow-x-auto pb-0.5"
+        style={{ scrollbarWidth: "none" }}
+      >
         {allItems.map(({ slug, label }) => {
           const isActive = slug === activeSegment;
           return (
@@ -71,6 +73,7 @@ export function SegmentFilter({ activeSegment, activeWindow }: Props) {
               scroll={false}
               aria-current={isActive ? "page" : undefined}
               style={{
+                flexShrink: 0,
                 display: "inline-flex",
                 alignItems: "center",
                 minHeight: 28,
@@ -88,31 +91,14 @@ export function SegmentFilter({ activeSegment, activeWindow }: Props) {
                 transition:
                   "background 120ms ease-out, border-color 120ms ease-out, color 120ms ease-out",
                 cursor: "pointer",
-                /* Ensure keyboard focus ring is visible — ring applied via
-                   focus-visible in globals.css; outline:none suppresses native ring
-                   in favour of the custom one. */
                 outline: "none",
               }}
-              /* Inline focus-visible ring as inline style fallback */
-              onFocus={undefined}
             >
               {label}
             </Link>
           );
         })}
       </nav>
-
-      {/* Hint */}
-      <p
-        className="mt-1.5"
-        style={{
-          color: "var(--ink-mute)",
-          fontFamily: "var(--font-mono)",
-          fontSize: 9,
-        }}
-      >
-        Sectors adapt to the selected segment
-      </p>
     </div>
   );
 }
