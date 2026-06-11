@@ -41,6 +41,7 @@ function KpiCard({ label, value, sub, accent }: CardProps) {
   return (
     <div
       className="flex flex-col gap-0.5 rounded-md px-3 py-2.5"
+      role="group"
       aria-label={accessibleLabel}
       style={{
         background: accent ? "var(--accent-12)" : "var(--bg-2)",

@@ -221,7 +221,7 @@ export default async function Page({
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-7xl flex-1 px-4 py-6">
+    <main className="mx-auto flex w-full max-w-7xl flex-1 px-4 py-6">
       {/* ── Desktop sidebar ───────────────────────────────────────────── */}
       <aside
         className="hidden w-56 shrink-0 pr-6 lg:block sticky top-4 self-start max-h-[calc(100vh-2rem)] overflow-y-auto"
@@ -327,8 +327,8 @@ export default async function Page({
             href={sortUrl()}
             aria-label={
               currentSort === "asc"
-                ? "Sort: oldest first — click for newest first"
-                : "Sort: newest first — click for oldest first"
+                ? "↑ Date — sorted oldest first, click for newest first"
+                : "↓ Date — sorted newest first, click for oldest first"
             }
             title={currentSort === "asc" ? "Plus récents en premier" : "Plus anciens en premier"}
             className="flex items-center gap-1 rounded-md px-2 py-1 text-xs transition-colors"
@@ -436,6 +436,6 @@ export default async function Page({
           </nav>
         )}
       </div>
-    </div>
+    </main>
   );
 }

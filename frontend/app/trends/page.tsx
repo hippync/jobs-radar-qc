@@ -63,7 +63,7 @@ export default async function TrendsPage({
   const focusCoMentions = focusTech ? (coMentions[focusTech.name] ?? []) : [];
 
   return (
-    <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col px-4 py-6">
+    <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col px-4 py-6">
       {/* ── Segment filter — full width above the radar ──────────────── */}
       <div
         className="mb-4 pb-3"
@@ -303,7 +303,7 @@ export default async function TrendsPage({
         <RadarDownloadPanel cats={selectedCats} segment={activeSegment} />
       </div>
       </div>{/* ── end main content row ── */}
-    </div>
+    </main>
   );
 }
 

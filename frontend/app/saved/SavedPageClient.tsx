@@ -462,7 +462,7 @@ export default function SavedPageClient() {
   const listJobs = [...saved].sort((a, b) => b.savedAt - a.savedAt);
 
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 py-6">
+    <main className="mx-auto w-full max-w-7xl px-4 py-6">
 
       {/* ── Rich header (issue #40) ──────────────────────────────────────
        *
@@ -804,6 +804,6 @@ export default function SavedPageClient() {
           })}
         </div>
       )}
-    </div>
+    </main>
   );
 }
