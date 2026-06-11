@@ -20,6 +20,9 @@ jobs:
           python-version: "3.12"
           cache: pip
 
+      - name: Upgrade pip
+        run: pip install --upgrade "pip>=26.1.2"
+
       - name: Install dependencies
         run: pip install -e ".[dev]" pip-audit
 
