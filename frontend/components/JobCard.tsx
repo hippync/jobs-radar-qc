@@ -21,7 +21,7 @@ const SOURCE_LABEL: Record<string, string> = {
 function remoteLabel(is_remote: boolean | null): string {
   if (is_remote === true)  return "Remote";
   if (is_remote === false) return "On-site";
-  return "Hybrid";
+  return "Hybride / NS";
 }
 
 function age(iso: string | null): { text: string; fresh: boolean } {
@@ -158,6 +158,7 @@ export default function JobCard({ job }: { job: Job }) {
               border: "1px solid var(--rule-soft)",
               fontSize: 11,
             }}
+            title={job.is_remote === null ? "Hybride ou sans information de localisation" : undefined}
           >
             {remoteLabel(job.is_remote)}
           </span>

@@ -16,7 +16,7 @@ const SENIORITY_LABEL: Record<string, string> = {
 
 const WORKPLACE_LABEL: Record<string, string> = {
   true:  "Remote",
-  null:  "Hybrid",
+  null:  "Hybride / Non spécifié",
   false: "On-site",
 };
 
