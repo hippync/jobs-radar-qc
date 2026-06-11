@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { SHARED_OG } from "@/lib/siteMetadata";
 import { Suspense } from "react";
 import Link from "next/link";
+import { unstable_cache } from "next/cache";
 import { supabase } from "@/lib/supabase";
 import { Job } from "@/lib/types";
 import JobCard from "@/components/JobCard";
@@ -27,6 +28,7 @@ export const metadata: Metadata = {
 };
 
 const PAGE_SIZE = 30;
+const CACHE_SECONDS = 900;
 
 interface SearchParams {
   tech?: string;
@@ -78,34 +80,68 @@ interface DbFacetCounts {
   workplace_counts: Record<string, number>;
 }
 
+function normalizeFilters(filters: SearchParams): Required<SearchParams> {
+  return {
+    tech:      filters.tech      ?? "",
+    source:    filters.source    ?? "",
+    remote:    filters.remote    ?? "",
+    seniority: filters.seniority ?? "",
+    sort:      filters.sort === "asc" ? "asc" : "desc",
+    page:      String(Math.max(1, parseInt(filters.page ?? "1", 10))),
+  };
+}
+
+const fetchJobsCached = unstable_cache(
+  async (
+    tech: string,
+    source: string,
+    remote: string,
+    seniority: string,
+    sort: string,
+    pageValue: string,
+  ): Promise<{ jobs: Job[]; total: number }> => {
+    const page = Math.max(1, parseInt(pageValue, 10));
+    const from = (page - 1) * PAGE_SIZE;
+    const to   = from + PAGE_SIZE - 1;
+
+    let query = supabase
+      .from("active_qc_jobs")
+      .select("*", { count: "exact" })
+      .order("first_seen_at", { ascending: sort === "asc" })
+      .range(from, to);
+
+    if (tech)      query = query.contains("tech_stack", [tech]);
+    if (source)    query = query.eq("source", source);
+    if (seniority) query = query.eq("seniority", seniority);
+    if (remote === "true")  query = query.eq("is_remote", true);
+    else if (remote === "false") query = query.eq("is_remote", false);
+    else if (remote === "null")  query = query.is("is_remote", null);
+
+    const { data, count, error } = await query;
+    if (error) throw new Error(error.message);
+
+    return { jobs: (data ?? []) as Job[], total: count ?? 0 };
+  },
+  ["homepage-jobs-v1"],
+  { revalidate: CACHE_SECONDS },
+);
+
 async function fetchJobs(filters: SearchParams): Promise<{ jobs: Job[]; total: number }> {
-  const page = Math.max(1, parseInt(filters.page ?? "1", 10));
-  const from = (page - 1) * PAGE_SIZE;
-  const to   = from + PAGE_SIZE - 1;
-
-  let query = supabase
-    .from("active_qc_jobs")
-    .select("*", { count: "exact" })
-    .order("first_seen_at", { ascending: filters.sort === "asc" })
-    .range(from, to);
-
-  if (filters.tech)      query = query.contains("tech_stack", [filters.tech]);
-  if (filters.source)    query = query.eq("source", filters.source);
-  if (filters.seniority) query = query.eq("seniority", filters.seniority);
-  if (filters.remote === "true")  query = query.eq("is_remote", true);
-  else if (filters.remote === "false") query = query.eq("is_remote", false);
-  else if (filters.remote === "null")  query = query.is("is_remote", null);
-
-  const { data, count, error } = await query;
-  if (error) throw new Error(error.message);
-
-  return { jobs: (data ?? []) as Job[], total: count ?? 0 };
+  const normalized = normalizeFilters(filters);
+  return fetchJobsCached(
+    normalized.tech,
+    normalized.source,
+    normalized.remote,
+    normalized.seniority,
+    normalized.sort,
+    normalized.page,
+  );
 }
 
 // Calls the get_homepage_stats() Supabase RPC.
 // All aggregation runs in the database — no job rows are transferred to the client.
 // See scripts/migrate_stats_rpc.sql for the SQL definition and how to apply it.
-async function fetchStats(): Promise<Stats> {
+const fetchStatsCached = unstable_cache(async (): Promise<Stats> => {
   const { data, error } = await supabase.rpc("get_homepage_stats");
 
   if (error) {
@@ -138,31 +174,62 @@ async function fetchStats(): Promise<Stats> {
     workplaceCounts: db.workplace_counts  ?? {},
     lastUpdated:     db.last_updated      ?? null,
   };
+}, ["homepage-stats-v1"], { revalidate: CACHE_SECONDS });
+
+async function fetchStats(): Promise<Stats> {
+  return fetchStatsCached();
 }
 
 // Calls the get_contextual_facets() Supabase RPC.
 // Each facet count is computed with all OTHER active filters applied — never
 // double-counting the facet's own filter — so counts reflect what the user
 // would get by clicking that value.  All NULL params → global totals.
-async function fetchContextualFacets(filters: SearchParams): Promise<FacetCounts> {
-  const { data, error } = await supabase.rpc("get_contextual_facets", {
-    p_tech:      filters.tech      ?? null,
-    p_source:    filters.source    ?? null,
-    p_remote:    filters.remote    ?? null,
-    p_seniority: filters.seniority ?? null,
-  });
+const fetchContextualFacetsCached = unstable_cache(
+  async (
+    tech: string,
+    source: string,
+    remote: string,
+    seniority: string,
+  ): Promise<FacetCounts> => {
+    const { data, error } = await supabase.rpc("get_contextual_facets", {
+      p_tech:      tech      || null,
+      p_source:    source    || null,
+      p_remote:    remote    || null,
+      p_seniority: seniority || null,
+    });
 
-  if (error) {
-    console.error("[fetchContextualFacets] RPC error:", error.message);
-    return { sourceCounts: {}, seniorityCounts: {}, workplaceCounts: {} };
+    if (error) {
+      console.error("[fetchContextualFacets] RPC error:", error.message);
+      return { sourceCounts: {}, seniorityCounts: {}, workplaceCounts: {} };
+    }
+
+    const db = (data ?? {}) as DbFacetCounts;
+    return {
+      sourceCounts:    db.source_counts    ?? {},
+      seniorityCounts: db.seniority_counts ?? {},
+      workplaceCounts: db.workplace_counts ?? {},
+    };
+  },
+  ["homepage-facets-v1"],
+  { revalidate: CACHE_SECONDS },
+);
+
+async function fetchContextualFacets(filters: SearchParams, stats: Stats): Promise<FacetCounts> {
+  const normalized = normalizeFilters(filters);
+  if (!normalized.tech && !normalized.source && !normalized.remote && !normalized.seniority) {
+    return {
+      sourceCounts:    stats.sourceCounts,
+      seniorityCounts: stats.seniorityCounts,
+      workplaceCounts: stats.workplaceCounts,
+    };
   }
 
-  const db = (data ?? {}) as DbFacetCounts;
-  return {
-    sourceCounts:    db.source_counts    ?? {},
-    seniorityCounts: db.seniority_counts ?? {},
-    workplaceCounts: db.workplace_counts ?? {},
-  };
+  return fetchContextualFacetsCached(
+    normalized.tech,
+    normalized.source,
+    normalized.remote,
+    normalized.seniority,
+  );
 }
 
 export default async function Page({
@@ -173,11 +240,11 @@ export default async function Page({
   const filters = await searchParams;
   const page    = Math.max(1, parseInt(filters.page ?? "1", 10));
 
-  const [{ jobs, total }, stats, facets] = await Promise.all([
+  const [{ jobs, total }, stats] = await Promise.all([
     fetchJobs(filters),
     fetchStats(),
-    fetchContextualFacets(filters),
   ]);
+  const facets = await fetchContextualFacets(filters, stats);
 
   // Ensure every known source and workplace option has an explicit count (0 if
   // the combination yields no results) so FilterChip always shows a number.

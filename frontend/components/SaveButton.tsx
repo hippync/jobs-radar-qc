@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 
 /* ── localStorage contract (must stay in sync with SavedPageClient.tsx) ── */
 const STORAGE_KEY = "jobs-radar-qc:saved";
+const SAVED_CHANGE = "jobs-radar-qc:saved-change";
 
 type Column = "watching" | "applied" | "interviewing" | "archived";
 
@@ -20,11 +21,24 @@ interface SavedJob {
   savedAt: number;
 }
 
+let rawCache: string | null = null;
+let jobsCache: SavedJob[] = [];
+let idCache = new Set<string>();
+const EMPTY_SAVED_IDS = new Set<string>();
+
 function loadSaved(): SavedJob[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
+    if (raw === rawCache) return jobsCache;
+
+    rawCache = raw;
+    jobsCache = raw ? JSON.parse(raw) : [];
+    idCache = new Set(jobsCache.map((job) => job.id));
+    return jobsCache;
   } catch {
+    rawCache = null;
+    jobsCache = [];
+    idCache = new Set<string>();
     return [];
   }
 }
@@ -32,7 +46,27 @@ function loadSaved(): SavedJob[] {
 function persistSaved(jobs: SavedJob[]): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(jobs));
+    rawCache = null;
+    window.dispatchEvent(new Event(SAVED_CHANGE));
   } catch {}
+}
+
+function subscribeSaved(cb: () => void): () => void {
+  window.addEventListener(SAVED_CHANGE, cb);
+  window.addEventListener("storage", cb);
+  return () => {
+    window.removeEventListener(SAVED_CHANGE, cb);
+    window.removeEventListener("storage", cb);
+  };
+}
+
+function getSavedIds(): Set<string> {
+  loadSaved();
+  return idCache;
+}
+
+function getServerSavedIds(): Set<string> {
+  return EMPTY_SAVED_IDS;
 }
 
 /* ── Props ──────────────────────────────────────────────────────────────── */
@@ -58,24 +92,14 @@ export default function SaveButton({
   first_seen_at,
   tech_stack,
 }: SaveButtonProps) {
-  // Start as false (safe for SSR). useEffect syncs from localStorage after hydration.
-  const [saved, setSaved] = useState(false);
-
-  useEffect(() => {
-    // Reading localStorage in an effect is the correct SSR pattern: the lazy
-    // useState initializer would cause a server/client hydration mismatch because
-    // `window` is unavailable during server render. The linter rule is suppressed
-    // for this reason — this is intentional, not an anti-pattern.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setSaved(loadSaved().some((j) => j.id === id));
-  }, [id]);
+  const savedIds = useSyncExternalStore(subscribeSaved, getSavedIds, getServerSavedIds);
+  const saved = savedIds.has(id);
 
   function toggle() {
     const jobs = loadSaved();
 
     if (saved) {
       persistSaved(jobs.filter((j) => j.id !== id));
-      setSaved(false);
     } else {
       const entry: SavedJob = {
         id,
@@ -91,7 +115,6 @@ export default function SaveButton({
       };
       // Prepend so the newest saved job appears first on /saved
       persistSaved([entry, ...jobs.filter((j) => j.id !== id)]);
-      setSaved(true);
     }
   }
 
