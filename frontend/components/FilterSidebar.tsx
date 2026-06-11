@@ -16,7 +16,7 @@ const SENIORITY_OPTIONS = [
 
 const WORKPLACE_OPTIONS = [
   { value: "true",  label: "Remote" },
-  { value: "null",  label: "Hybrid" },
+  { value: "null",  label: "Hybride / Non spécifié", tooltip: "Inclut les offres hybrides et celles sans information de localisation" },
   { value: "false", label: "On-site" },
 ];
 
@@ -75,16 +75,19 @@ function FilterChip({
   count,
   active,
   onClick,
+  tooltip,
 }: {
   label: string;
   count?: number;
   active: boolean;
   onClick: () => void;
+  tooltip?: string;
 }) {
   return (
     <button
       onClick={onClick}
       aria-pressed={active}
+      title={tooltip}
       className="flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-left text-sm transition-colors"
       style={{
         background: active ? "var(--accent-12)" : "transparent",
@@ -198,6 +201,7 @@ export default function FilterSidebar({
                 count={workplaceCounts[opt.value]}
                 active={currentRemote === opt.value}
                 onClick={() => toggle("remote", opt.value)}
+                tooltip={"tooltip" in opt ? opt.tooltip : undefined}
               />
             ))}
           </div>
