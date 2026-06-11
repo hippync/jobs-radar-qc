@@ -116,12 +116,12 @@ export default function AboutPage() {
           </p>
         </Section>
 
-        {/* Why these 3 sources */}
-        <Section title="Why Greenhouse, Lever, and Workable?" label="Sources">
+        {/* Why these 4 sources */}
+        <Section title="Why Greenhouse, Lever, Workable, and Workday?" label="Sources">
           <p>
-            These three platforms are widely adopted among scale-ups and mid-market tech companies
-            in Quebec. Their APIs are public, stable, and well-structured — making them more reliable
-            than scraping generalist boards.
+            These four platforms are widely adopted among scale-ups, mid-market, and enterprise
+            tech companies in Quebec. Their APIs are public, stable, and well-structured —
+            making them more reliable than scraping generalist boards.
           </p>
           <p>
             They are also the systems most likely to host companies like Shopify, Lightspeed, Coveo,
@@ -129,7 +129,7 @@ export default function AboutPage() {
             a spec file to the repository.
           </p>
           <div className="mt-2 flex flex-wrap gap-1.5">
-            {["Greenhouse", "Lever", "Workable"].map((s) => (
+            {["Greenhouse", "Lever", "Workable", "Workday"].map((s) => (
               <Chip key={s}>{s}</Chip>
             ))}
           </div>
