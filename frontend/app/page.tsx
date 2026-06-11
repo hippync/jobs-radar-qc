@@ -33,6 +33,7 @@ interface SearchParams {
   source?: string;
   remote?: string;
   seniority?: string;
+  sort?: string;
   page?: string;
 }
 
@@ -85,7 +86,7 @@ async function fetchJobs(filters: SearchParams): Promise<{ jobs: Job[]; total: n
   let query = supabase
     .from("active_qc_jobs")
     .select("*", { count: "exact" })
-    .order("first_seen_at", { ascending: false })
+    .order("first_seen_at", { ascending: filters.sort === "asc" })
     .range(from, to);
 
   if (filters.tech)      query = query.contains("tech_stack", [filters.tech]);
@@ -193,13 +194,28 @@ export default async function Page({
   const hasFilters = !!(filters.tech || filters.source || filters.remote || filters.seniority);
   const activeFilterCount = [filters.tech, filters.source, filters.remote, filters.seniority].filter(Boolean).length;
 
+  const currentSort = filters.sort === "asc" ? "asc" : "desc";
+
   function pageUrl(p: number) {
+    const q = new URLSearchParams();
+    if (filters.tech)             q.set("tech",      filters.tech);
+    if (filters.source)           q.set("source",    filters.source);
+    if (filters.remote)           q.set("remote",    filters.remote);
+    if (filters.seniority)        q.set("seniority", filters.seniority);
+    if (currentSort !== "desc")   q.set("sort",      currentSort);
+    if (p > 1) q.set("page", String(p));
+    const qs = q.toString();
+    return qs ? `?${qs}` : "/";
+  }
+
+  function sortUrl() {
     const q = new URLSearchParams();
     if (filters.tech)      q.set("tech",      filters.tech);
     if (filters.source)    q.set("source",    filters.source);
     if (filters.remote)    q.set("remote",    filters.remote);
     if (filters.seniority) q.set("seniority", filters.seniority);
-    if (p > 1) q.set("page", String(p));
+    const nextSort = currentSort === "asc" ? "desc" : "asc";
+    if (nextSort !== "desc") q.set("sort", nextSort);
     const qs = q.toString();
     return qs ? `?${qs}` : "/";
   }
@@ -292,19 +308,34 @@ export default async function Page({
         )}
 
         {/* Results header */}
-        <div className="mb-3 flex items-baseline gap-2">
-          <h1
-            className="text-sm font-semibold"
-            style={{ color: "var(--ink)", fontSize: 13 }}
+        <div className="mb-3 flex items-center justify-between">
+          <div className="flex items-baseline gap-2">
+            <h1
+              className="text-sm font-semibold"
+              style={{ color: "var(--ink)", fontSize: 13 }}
+            >
+              {hasFilters ? `${total} matching role${total !== 1 ? "s" : ""}` : `${total} active role${total !== 1 ? "s" : ""}`}
+            </h1>
+            <span
+              className="text-xs"
+              style={{ color: "var(--ink-mute)", fontFamily: "var(--font-mono)", fontSize: 10 }}
+            >
+              · {stats.companyCount} companies · updated daily
+            </span>
+          </div>
+          <a
+            href={sortUrl()}
+            title={currentSort === "asc" ? "Plus récents en premier" : "Plus anciens en premier"}
+            className="flex items-center gap-1 rounded-md px-2 py-1 text-xs transition-colors"
+            style={{
+              border: "1px solid var(--rule-soft)",
+              color: "var(--ink-soft)",
+              fontFamily: "var(--font-mono)",
+              fontSize: 11,
+            }}
           >
-            {hasFilters ? `${total} matching role${total !== 1 ? "s" : ""}` : `${total} active role${total !== 1 ? "s" : ""}`}
-          </h1>
-          <span
-            className="text-xs"
-            style={{ color: "var(--ink-mute)", fontFamily: "var(--font-mono)", fontSize: 10 }}
-          >
-            · {stats.companyCount} companies · updated daily
-          </span>
+            {currentSort === "asc" ? "↑" : "↓"} Date
+          </a>
         </div>
 
         {/* Jobs grid or empty state */}
