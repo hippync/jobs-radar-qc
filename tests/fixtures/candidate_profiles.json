@@ -1,0 +1,32 @@
+[
+  {
+    "id": "cccccccc-0001-0001-0001-000000000001",
+    "name": "senior_backend_python",
+    "skills": ["Python", "Django", "PostgreSQL", "Redis", "Docker", "AWS", "GitHub Actions"],
+    "seniority": "senior",
+    "remote_preference": "remote",
+    "preferred_locations": [],
+    "role_keywords": ["Backend Engineer", "Software Engineer"],
+    "summary": "5+ years of backend experience, primarily Python/Django with PostgreSQL and AWS deployment."
+  },
+  {
+    "id": "cccccccc-0002-0002-0002-000000000002",
+    "name": "mid_data_engineer",
+    "skills": ["Python", "Airflow", "BigQuery", "Databricks", "GCP"],
+    "seniority": "mid",
+    "remote_preference": "hybrid",
+    "preferred_locations": ["Montréal, QC"],
+    "role_keywords": ["Data Engineer"],
+    "summary": "3 years building data pipelines on GCP with Airflow and BigQuery."
+  },
+  {
+    "id": "cccccccc-0003-0003-0003-000000000003",
+    "name": "junior_frontend",
+    "skills": ["React", "TypeScript", "Next.js"],
+    "seniority": "junior",
+    "remote_preference": "any",
+    "preferred_locations": [],
+    "role_keywords": ["Frontend Developer", "Full-Stack Developer"],
+    "summary": "New graduate with project experience in React, TypeScript, and Next.js."
+  }
+]

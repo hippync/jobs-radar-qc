@@ -1,0 +1,30 @@
+[
+  {
+    "name": "junior_frontend.txt",
+    "text": "Jamie Roy\nRecent graduate, B.Sc. Computer Science, Universite de Montreal (2024)\n\nProjects:\n- Built a personal finance tracker using React and TypeScript, with a FastAPI backend and PostgreSQL for storage\n- Contributed to an open-source Vue.js component library over one semester\n\nExperience:\n- Software Engineering Intern, LocalStartupCo (May 2023 - Aug 2023)\n  - Wrote Python scripts to automate CSV report generation\n  - Built small internal tools with Flask and Docker\n\nSkills: React, TypeScript, Vue, FastAPI, PostgreSQL, Python, Flask, Docker\n\nLooking for junior frontend or full-stack roles, ideally remote.",
+    "expected": {
+      "skills": ["React", "TypeScript", "Vue", "FastAPI", "PostgreSQL", "Python", "Flask", "Docker"],
+      "seniority": "junior",
+      "remote_preference": "remote"
+    }
+  },
+  {
+    "name": "mid_backend.txt",
+    "text": "Priya Nair -- Backend Developer\n\nExperience:\nBackend Engineer, RouteWise Logistics (Mar 2021 - Present, ~4 yrs)\n- Build and maintain Node.js/Express services for shipment tracking, backed by MongoDB\n- Introduced Redis caching for high-traffic read endpoints\n- Deployed services to AWS using Docker and GitHub Actions for CI/CD\n\nSoftware Developer, WebForge (Jul 2019 - Feb 2021, ~1.7 yrs)\n- Built REST APIs in Node.js, wrote Jest test suites\n\nSkills: Node.js, Express, MongoDB, Redis, AWS, Docker, GitHub Actions, JavaScript, Jest",
+    "expected": {
+      "skills": ["Node.js", "Express", "MongoDB", "Redis", "AWS", "Docker", "GitHub Actions", "JavaScript", "Jest"],
+      "seniority": "mid",
+      "remote_preference": "any"
+    }
+  },
+  {
+    "name": "senior_platform.txt",
+    "text": "David Chen -- Principal Engineer\n\n12 years in infrastructure and platform engineering.\n\nPrincipal Engineer, ScaleGrid (2021-Present)\n- Own the Kubernetes platform strategy across 300+ services\n- Lead Terraform and Helm standardization across all teams\n- Drive observability adoption: Prometheus, Grafana\n\nSenior DevOps Engineer, NetCore Systems (2016-2021)\n- Built CI/CD pipelines in Jenkins, later migrated to GitHub Actions\n- Managed AWS infrastructure (EC2, RDS) with Ansible\n\nSkills: Kubernetes, Terraform, Helm, Prometheus, Grafana, Jenkins, GitHub Actions, AWS, Ansible, Python, Go\n\nOpen to hybrid roles in Montreal only -- not interested in fully remote.",
+    "expected": {
+      "skills": ["Kubernetes", "Terraform", "Helm", "Prometheus", "Grafana", "Jenkins", "GitHub Actions", "AWS", "Ansible", "Python", "Go"],
+      "seniority": "principal",
+      "remote_preference": "hybrid",
+      "preferred_locations": ["Montreal"]
+    }
+  }
+]

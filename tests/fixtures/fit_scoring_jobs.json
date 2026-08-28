@@ -1,0 +1,222 @@
+[
+  {
+    "id": "bbbbbbbb-0001-0001-0001-000000000001",
+    "title": "Senior Backend Engineer",
+    "company": "Broadsign",
+    "seniority": "senior",
+    "is_remote": true,
+    "location": "Remote (Canada)",
+    "tech_stack": ["Python", "Django", "PostgreSQL", "Redis", "Docker"],
+    "profile": "senior_backend_python",
+    "note": "clear-fit: full overlap, exact seniority, exact remote match"
+  },
+  {
+    "id": "bbbbbbbb-0002-0002-0002-000000000002",
+    "title": "Senior Python / AWS Engineer",
+    "company": "AppDirect",
+    "seniority": "senior",
+    "is_remote": true,
+    "location": "Remote (Canada)",
+    "tech_stack": ["Python", "PostgreSQL", "AWS", "GitHub Actions", "Docker"],
+    "profile": "senior_backend_python",
+    "note": "clear-fit: full overlap, exact seniority, exact remote match"
+  },
+  {
+    "id": "bbbbbbbb-0003-0003-0003-000000000003",
+    "title": "Data Engineer",
+    "company": "AlayaCare",
+    "seniority": "mid",
+    "is_remote": null,
+    "location": "Montreal, QC (hybrid)",
+    "tech_stack": ["Python", "Airflow", "GCP", "BigQuery"],
+    "profile": "mid_data_engineer",
+    "note": "clear-fit: full overlap, exact seniority, exact remote match (hybrid)"
+  },
+  {
+    "id": "bbbbbbbb-0004-0004-0004-000000000004",
+    "title": "GCP Data Platform Engineer",
+    "company": "Lightspeed",
+    "seniority": "mid",
+    "is_remote": null,
+    "location": "Montreal, QC (hybrid)",
+    "tech_stack": ["Airflow", "Databricks", "GCP", "Python"],
+    "profile": "mid_data_engineer",
+    "note": "clear-fit: full overlap, exact seniority, exact remote match (hybrid)"
+  },
+  {
+    "id": "bbbbbbbb-0005-0005-0005-000000000005",
+    "title": "Junior Frontend Developer",
+    "company": "Nuvei",
+    "seniority": "junior",
+    "is_remote": true,
+    "location": "Remote (Canada)",
+    "tech_stack": ["React", "TypeScript", "Next.js"],
+    "profile": "junior_frontend",
+    "note": "clear-fit: full overlap, exact seniority, candidate remote_preference is 'any'"
+  },
+  {
+    "id": "bbbbbbbb-0006-0006-0006-000000000006",
+    "title": "Frontend Engineer I",
+    "company": "Hopper",
+    "seniority": "junior",
+    "is_remote": null,
+    "location": "Montreal, QC (hybrid)",
+    "tech_stack": ["React", "Next.js", "TypeScript"],
+    "profile": "junior_frontend",
+    "note": "clear-fit: full overlap, exact seniority, candidate remote_preference is 'any'"
+  },
+  {
+    "id": "bbbbbbbb-0007-0007-0007-000000000007",
+    "title": "iOS Engineer",
+    "company": "Sonder",
+    "seniority": "mid",
+    "is_remote": false,
+    "location": "Montreal, QC (onsite)",
+    "tech_stack": ["Swift", "SwiftUI", "iOS"],
+    "profile": "senior_backend_python",
+    "note": "clear-miss: zero skill-category overlap (mobile vs. backend), no rescue possible"
+  },
+  {
+    "id": "bbbbbbbb-0008-0008-0008-000000000008",
+    "title": "Vue.js Frontend Engineer",
+    "company": "Coveo",
+    "seniority": "mid",
+    "is_remote": true,
+    "location": "Remote (Canada)",
+    "tech_stack": ["Vue", "TypeScript", "Tailwind"],
+    "profile": "senior_backend_python",
+    "note": "clear-miss: zero skill-category overlap (frontend vs. backend), no rescue possible"
+  },
+  {
+    "id": "bbbbbbbb-0009-0009-0009-000000000009",
+    "title": "Platform / SRE Engineer",
+    "company": "Poka",
+    "seniority": "staff",
+    "is_remote": false,
+    "location": "Quebec City, QC (onsite)",
+    "tech_stack": ["Kubernetes", "Terraform", "Helm", "Ansible", "Prometheus"],
+    "profile": "mid_data_engineer",
+    "note": "clear-miss: zero skill-category overlap (devops vs. data), no rescue possible"
+  },
+  {
+    "id": "bbbbbbbb-0010-0010-0010-000000000010",
+    "title": ".NET Consultant",
+    "company": "CGI",
+    "seniority": "senior",
+    "is_remote": false,
+    "location": "Montreal, QC (onsite)",
+    "tech_stack": [".NET", "C#", "Angular"],
+    "profile": "mid_data_engineer",
+    "note": "clear-miss: zero skill-category overlap, no rescue possible"
+  },
+  {
+    "id": "bbbbbbbb-0011-0011-0011-000000000011",
+    "title": "ML Research Scientist",
+    "company": "Element AI",
+    "seniority": "principal",
+    "is_remote": false,
+    "location": "Montreal, QC (onsite)",
+    "tech_stack": ["PyTorch", "TensorFlow", "LLM", "RAG"],
+    "profile": "junior_frontend",
+    "note": "clear-miss: zero skill-category overlap and large seniority gap, no rescue possible"
+  },
+  {
+    "id": "bbbbbbbb-0012-0012-0012-000000000012",
+    "title": "Embedded Systems Engineer",
+    "company": "Distech Controls",
+    "seniority": "senior",
+    "is_remote": false,
+    "location": "Montreal, QC (onsite)",
+    "tech_stack": ["C++", "Rust"],
+    "profile": "junior_frontend",
+    "note": "clear-miss: zero skill-category overlap, no rescue possible"
+  },
+  {
+    "id": "bbbbbbbb-0013-0013-0013-000000000013",
+    "title": "Backend Engineer",
+    "company": "Breather",
+    "seniority": "mid",
+    "is_remote": null,
+    "location": "Montreal, QC (hybrid)",
+    "tech_stack": ["Python", "PostgreSQL", "Docker", "Kafka"],
+    "profile": "senior_backend_python",
+    "note": "borderline: 3/4 skill overlap, one seniority band below, hybrid vs. remote preference"
+  },
+  {
+    "id": "bbbbbbbb-0014-0014-0014-000000000014",
+    "title": "Senior Data Engineer",
+    "company": "Local Logic",
+    "seniority": "senior",
+    "is_remote": null,
+    "location": "Montreal, QC (hybrid)",
+    "tech_stack": ["Python", "Airflow", "BigQuery", "Snowflake"],
+    "profile": "mid_data_engineer",
+    "note": "borderline: 3/4 skill overlap, one seniority band above, remote status already matches"
+  },
+  {
+    "id": "bbbbbbbb-0015-0015-0015-000000000015",
+    "title": "Frontend Developer",
+    "company": "Milk Moovement",
+    "seniority": "mid",
+    "is_remote": null,
+    "location": "Quebec City, QC (hybrid)",
+    "tech_stack": ["React", "Next.js", "Vue"],
+    "profile": "junior_frontend",
+    "note": "borderline: 2/3 exact overlap plus a same-category miss (Vue), one seniority band above"
+  },
+  {
+    "id": "bbbbbbbb-0016-0016-0016-000000000016",
+    "title": "Full-Stack Developer",
+    "company": "Busbud",
+    "seniority": "mid",
+    "is_remote": null,
+    "location": "Montreal, QC (hybrid)",
+    "tech_stack": ["React", "TypeScript", "Node.js", "Express"],
+    "profile": "junior_frontend",
+    "note": "borderline: 2/4 overlap (frontend only, backend half missing), one seniority band above"
+  },
+  {
+    "id": "bbbbbbbb-0017-0017-0017-000000000017",
+    "title": "Staff Data Platform Engineer",
+    "company": "Frank And Oak",
+    "seniority": "staff",
+    "is_remote": null,
+    "location": "Montreal, QC (hybrid)",
+    "tech_stack": ["Python", "Airflow", "GCP", "Kubernetes", "Terraform"],
+    "profile": "mid_data_engineer",
+    "note": "likely retry-fails: decent skill overlap but a 3-band seniority gap, wider than one retry widens"
+  },
+  {
+    "id": "bbbbbbbb-0018-0018-0018-000000000018",
+    "title": "Principal Backend Engineer",
+    "company": "Nexapp",
+    "seniority": "principal",
+    "is_remote": true,
+    "location": "Remote (Canada)",
+    "tech_stack": ["Python", "PostgreSQL", "Redis", "Docker", "Kubernetes"],
+    "profile": "senior_backend_python",
+    "note": "likely retry-fails: good skill/remote match but a 3-band seniority gap"
+  },
+  {
+    "id": "bbbbbbbb-0019-0019-0019-000000000019",
+    "title": "Lead Mobile Engineer",
+    "company": "SSENSE",
+    "seniority": "lead",
+    "is_remote": true,
+    "location": "Remote (Canada)",
+    "tech_stack": ["React Native", "TypeScript", "iOS"],
+    "profile": "junior_frontend",
+    "note": "likely retry-fails: mostly mismatched domain (mobile vs. web) plus a 3-band seniority gap"
+  },
+  {
+    "id": "bbbbbbbb-0020-0020-0020-000000000020",
+    "title": "Director of Engineering",
+    "company": "Dialogue",
+    "seniority": "director",
+    "is_remote": null,
+    "location": "Montreal, QC (hybrid)",
+    "tech_stack": ["Python", "AWS", "Kubernetes", "Terraform"],
+    "profile": "senior_backend_python",
+    "note": "likely retry-fails: management track vs. senior IC candidate, partial skill overlap"
+  }
+]

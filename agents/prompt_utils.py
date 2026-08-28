@@ -1,6 +1,7 @@
 """Shared utilities for prompt loading, hashing, and LLM response parsing.
 
-Used by scripts/test_enrichment.py (Step 0) and agents/enricher.py (Step 1).
+Used by scripts/test_enrichment.py (Step 0) and agents/enricher.py (Step 1),
+and by their resume-parsing siblings (agents/resume_parser.py).
 """
 
 from __future__ import annotations
@@ -9,6 +10,7 @@ import hashlib
 import json
 import re
 from pathlib import Path
+from typing import cast
 
 # Titles that belong to non-technical functions — enrichment is skipped entirely.
 # Covers common English and French patterns seen in Quebec postings.
@@ -85,6 +87,22 @@ def strip_html(html: str) -> str:
     return re.sub(r"\s+", " ", text).strip()
 
 
+_JSON_OBJECT_RE = re.compile(r"\{.*\}", re.DOTALL)
+
+
+def _extract_json_object(content: str) -> dict:
+    """Find and parse the first JSON object in a Claude text response.
+
+    Raises ValueError if no valid JSON object is found. Shared by every
+    parse_*_response function below — none of them do field-level validation,
+    that's each caller's Pydantic model's job.
+    """
+    json_match = _JSON_OBJECT_RE.search(content)
+    if not json_match:
+        raise ValueError(f"no JSON object in response: {content[:120]!r}")
+    return cast(dict, json.loads(json_match.group()))
+
+
 def parse_llm_response(content: str) -> tuple[list[str], list[str]]:
     """Parse Claude's JSON response into (known, unknown) tech lists.
 
@@ -93,11 +111,7 @@ def parse_llm_response(content: str) -> tuple[list[str], list[str]]:
 
     Raises ValueError if no valid JSON object is found.
     """
-    json_match = re.search(r"\{.*\}", content, re.DOTALL)
-    if not json_match:
-        raise ValueError(f"no JSON object in response: {content[:120]!r}")
-
-    data = json.loads(json_match.group())
+    data = _extract_json_object(content)
     technologies = data.get("technologies")
     if not isinstance(technologies, list):
         raise ValueError(f"'technologies' key missing or not a list in: {data}")
@@ -114,3 +128,65 @@ def parse_llm_response(content: str) -> tuple[list[str], list[str]]:
             known.append(item)
 
     return known, unknown
+
+
+# ─── Resume parsing (agents/resume_parser.py) ─────────────────────────────────
+
+_RESUME_PROMPT_PATH = Path(__file__).parent / "prompts" / "resume_parsing.md"
+
+
+def render_resume_parsing_prompt() -> str:
+    """Return the resume-parsing system prompt with the canonical tech list injected."""
+    template = _RESUME_PROMPT_PATH.read_text()
+    canonical = _load_canonical()
+    return template.replace("{{canonical_tech_list}}", _format_canonical_list(canonical))
+
+
+def compute_resume_parsing_prompt_hash() -> str:
+    """SHA-256[:8] of the rendered resume-parsing prompt (raw bytes, no normalization).
+
+    Hash covers both the prompt template and the canonical list — changes to
+    either invalidate stored candidate_profiles.prompt_hash values.
+    """
+    rendered = render_resume_parsing_prompt()
+    return hashlib.sha256(rendered.encode()).hexdigest()[:8]
+
+
+def parse_resume_response(content: str) -> dict:
+    """Parse Claude's JSON response into a raw candidate profile dict.
+
+    Raises ValueError if no valid JSON object is found. Field-level validation
+    (types, enum membership) is the caller's job via agents.resume_parser.ParsedResume.
+    """
+    return _extract_json_object(content)
+
+
+# ─── Fit scoring (agents/fit_scorer.py) ───────────────────────────────────────
+
+_FIT_SCORING_PROMPT_PATH = Path(__file__).parent / "prompts" / "fit_scoring.md"
+
+
+def render_fit_scoring_prompt() -> str:
+    """Return the fit-scoring system prompt. No template placeholders — the
+    job/profile/criteria are passed in the user message per call, not baked
+    into the system prompt."""
+    return _FIT_SCORING_PROMPT_PATH.read_text()
+
+
+def compute_fit_scoring_prompt_hash() -> str:
+    """SHA-256[:8] of the fit-scoring system prompt.
+
+    Stored per row in job_matches.prompt_hash — changing the prompt
+    invalidates the comparability of previously stored scores.
+    """
+    rendered = render_fit_scoring_prompt()
+    return hashlib.sha256(rendered.encode()).hexdigest()[:8]
+
+
+def parse_fit_score_response(content: str) -> dict:
+    """Parse Claude's JSON response into a raw {score, reasons} dict.
+
+    Raises ValueError if no valid JSON object is found. Field-level validation
+    is the caller's job via agents.fit_scorer.FitScoreResult.
+    """
+    return _extract_json_object(content)
