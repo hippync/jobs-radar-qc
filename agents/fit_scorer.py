@@ -25,13 +25,18 @@ import asyncio
 import json
 import os
 import time
-from typing import Literal, TypedDict, cast
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+from typing import TYPE_CHECKING, Literal, TypedDict, cast
 
 import anthropic
 import structlog
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 from langgraph.graph import END, START, StateGraph
 from pydantic import BaseModel, Field
+
+if TYPE_CHECKING:
+    from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 
 from agents.prompt_utils import (
     compute_fit_scoring_prompt_hash,
@@ -45,7 +50,7 @@ _MAX_RETRIES = 3
 _DEFAULT_MAX_ATTEMPTS = 2
 
 # Thresholds — see docs/fit-scoring-agent.md for the rationale behind each number.
-_ALERT_THRESHOLD = 75
+ALERT_THRESHOLD = 75
 _RETRY_THRESHOLD = 50
 
 Decision = Literal["alert", "skip"]
@@ -72,11 +77,11 @@ class FitScoreResult(BaseModel):
     reasons: list[str] = Field(default_factory=list)
 
 
-def _default_criteria() -> dict:
+def default_criteria() -> dict:
     return {"seniority_band": 0, "remote_strict": True, "segment_credit": False}
 
 
-def _build_scoring_message(job: dict, profile: dict, criteria: dict) -> str:
+def build_scoring_message(job: dict, profile: dict, criteria: dict) -> str:
     seniority_note = (
         "Exact seniority match required."
         if criteria["seniority_band"] == 0
@@ -150,7 +155,7 @@ async def score_fit(state: FitState) -> dict:
     start = time.monotonic()
     model = os.getenv("FIT_SCORING_MODEL", "claude-haiku-4-5-20251001")
     system_prompt = render_fit_scoring_prompt()
-    user_message = _build_scoring_message(state["job"], state["profile"], state["criteria"])
+    user_message = build_scoring_message(state["job"], state["profile"], state["criteria"])
 
     client = anthropic.AsyncAnthropic(api_key=_require_api_key())
     result, usage = await _call_with_retry(client, model, system_prompt, user_message)
@@ -224,7 +229,7 @@ def skip(state: FitState) -> dict:
 
 def route_after_score(state: FitState) -> str:
     score = state["fit_score"] or 0
-    if score >= _ALERT_THRESHOLD:
+    if score >= ALERT_THRESHOLD:
         return "send_alert"
     if score >= _RETRY_THRESHOLD and state["attempt"] < state["max_attempts"]:
         return "broaden_and_retry"
@@ -234,7 +239,26 @@ def route_after_score(state: FitState) -> str:
 # ─── Graph assembly ─────────────────────────────────────────────────────────
 
 
-def _build_graph(checkpointer: AsyncSqliteSaver):
+@asynccontextmanager
+async def _checkpointer(conn_string: str) -> AsyncIterator[AsyncSqliteSaver | AsyncPostgresSaver]:
+    """Pick a checkpointer by connection-string scheme.
+
+    Lambda's filesystem doesn't persist across invocations, so production
+    (conn_string is a postgres:// URL, e.g. SUPABASE_DB_URL) needs a real
+    Postgres-backed checkpointer. Local dev and scripts/test_fit_scoring.py
+    keep passing a plain file path, which stays on AsyncSqliteSaver unchanged.
+    """
+    if conn_string.startswith(("postgres://", "postgresql://")):
+        from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+
+        async with AsyncPostgresSaver.from_conn_string(conn_string) as saver:
+            yield saver
+    else:
+        async with AsyncSqliteSaver.from_conn_string(conn_string) as saver:
+            yield saver
+
+
+def _build_graph(checkpointer: AsyncSqliteSaver | AsyncPostgresSaver):
     graph = StateGraph(FitState)
     graph.add_node("score_fit", score_fit)
     graph.add_node("broaden_and_retry", broaden_and_retry)
@@ -280,7 +304,7 @@ async def score_job_fit(
         "profile": profile,
         "attempt": 0,
         "max_attempts": max_attempts,
-        "criteria": _default_criteria(),
+        "criteria": default_criteria(),
         "fit_score": None,
         "fit_reasons": [],
         "decision": None,
@@ -289,7 +313,7 @@ async def score_job_fit(
         "trace": [],
     }
 
-    async with AsyncSqliteSaver.from_conn_string(resolved_checkpoint_db) as checkpointer:
+    async with _checkpointer(resolved_checkpoint_db) as checkpointer:
         compiled = _build_graph(checkpointer)
         config = {"configurable": {"thread_id": thread_id}}
         final_state = await compiled.ainvoke(initial_state, config=config)
@@ -308,7 +332,13 @@ async def run_and_persist(job: dict, profile: dict) -> FitState:
 
     prompt_hash = compute_fit_scoring_prompt_hash()
     thread_id = f"{job['id']}:{profile['id']}"
-    final_state = await score_job_fit(job, profile, prompt_hash, thread_id=thread_id)
+    final_state = await score_job_fit(
+        job,
+        profile,
+        prompt_hash,
+        thread_id=thread_id,
+        checkpoint_db=os.environ.get("SUPABASE_DB_URL"),
+    )
 
     client = get_client()
     client.table("job_matches").upsert(

@@ -45,3 +45,10 @@ out/
 
 # OS
 Thumbs.db
+
+# Terraform
+infra/terraform/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example

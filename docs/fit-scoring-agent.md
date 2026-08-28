@@ -1,6 +1,6 @@
 # Resume-to-Job Fit Scoring Agent
 
-An on-demand agent that scores how well a parsed candidate profile fits a job, using a LangGraph state machine with a bounded retry loop. Built in two local phases — resume parsing (Phase 1) and the scoring graph (Phase 2) — before any AWS deployment.
+An on-demand agent that scores how well a parsed candidate profile fits a job, using a LangGraph state machine with a bounded retry loop. Built in three phases: resume parsing (Phase 1), the local scoring graph (Phase 2), and AWS deployment (Phase 3) — a container-image Lambda serving both an on-demand Function URL path and a weekly Anthropic Batch API path.
 
 ---
 
@@ -8,7 +8,7 @@ An on-demand agent that scores how well a parsed candidate profile fits a job, u
 
 [CLAUDE.md](../CLAUDE.md) defines two layers for the existing job-ingestion system: Layer 1 (daily, deterministic, never calls an LLM) and Layer 2 (weekly, LLM-based enrichment). This agent is neither — it's a third, independent concern:
 
-- **Triggered on-demand**, not by a cron schedule (later, via a Lambda Function URL hit from `/matches`).
+- **Triggered on-demand**, not by a cron schedule — a Lambda Function URL hit from `/matches` (Phase 4). The weekly batch path (below) is the one exception, and it's a re-scoring pass, not the primary trigger.
 - **Owns `candidate_profiles` and `job_matches` exclusively.** It never reads or writes `jobs.tech_stack` or `jobs.enriched_tech_stack` — it only reads `jobs`/`active_qc_jobs` (read-only) to score against.
 - **A failure here doesn't affect Layers 1 or 2**, and vice versa — same failure-isolation principle, applied to a third independent system rather than a variation on the first two.
 
@@ -78,7 +78,10 @@ These are starting values tuned against the 20-job fixture set in `tests/fixture
 
 ## Checkpointing
 
-`agents/fit_scorer.py` uses `AsyncSqliteSaver` (the async variant is required — the graph's nodes are async, since `score_fit` calls `anthropic.AsyncAnthropic`). Each `(job, profile)` pair gets its own `thread_id`, so re-invoking `score_job_fit()` with the same job/profile/checkpoint-db resumes from the last checkpoint rather than restarting and re-spending a Haiku call. The dry-run harness (`scripts/test_fit_scoring.py`) points the checkpointer at a throwaway temp file per run, so fixture runs never accumulate state across invocations. The production path (`run_and_persist()`) defaults to `agents/.fit_scorer_checkpoints.sqlite`, overridable via `FIT_SCORER_CHECKPOINT_DB`; Phase 3 swaps this for a Postgres checkpointer against Supabase.
+`agents/fit_scorer.py`'s `score_job_fit()` picks a checkpointer by connection-string scheme (`_checkpointer()`): a `postgres://`/`postgresql://` string uses `AsyncPostgresSaver`, anything else uses `AsyncSqliteSaver` (both async variants — the graph's nodes are async, since `score_fit` calls `anthropic.AsyncAnthropic`). Each `(job, profile)` pair gets its own `thread_id`, so re-invoking `score_job_fit()` with the same job/profile/checkpoint-db resumes from the last checkpoint rather than restarting and re-spending a Haiku call.
+
+- **Local dev / `scripts/test_fit_scoring.py`** — unaffected by the Postgres addition. The dry-run harness points the checkpointer at a throwaway temp SQLite file per run, so fixture runs never accumulate state or touch a database.
+- **Production (Lambda)** — Lambda's filesystem doesn't persist across invocations, so a local SQLite file isn't viable. `run_and_persist()` passes `SUPABASE_DB_URL` (read from SSM at cold start, see Deployment below) as `checkpoint_db`, routing to `AsyncPostgresSaver` against Supabase's pooled Postgres connection. The checkpoint tables are created once via `python -m scripts.setup_checkpointer` — not on every cold start, since `AsyncPostgresSaver.setup()` does DDL checks that are wasted work once the tables exist.
 
 ## Logging
 
@@ -87,3 +90,30 @@ Every node transition emits a structlog event: `score_fit_done` (attempt, score,
 ## No DB writes in the graph itself
 
 All four nodes are pure state transformers. `agents/fit_scorer.py` never imports `storage.supabase_client` at module level — the import is scoped inside `run_and_persist()`, the thin wrapper that upserts a `job_matches` row after the graph completes. `scripts/test_fit_scoring.py` calls `score_job_fit()` directly and never calls `run_and_persist()`, so the dry-run harness is structurally incapable of writing to Supabase, not just flag-gated against it.
+
+---
+
+## Deployment (Phase 3)
+
+One container-image Lambda (`agents/lambda_handler.py`), two trigger shapes, dispatched by event structure:
+
+```
+Function URL (HTTP) ──┐
+                       ├──> agents/lambda_handler.py::handler()
+EventBridge (submit) ──┤
+EventBridge (poll)  ───┘
+```
+
+- **On-demand** — `POST {"resume_text": "..."}` to the Function URL. Parses the resume, persists a `candidate_profiles` row, scores it against the `MATCH_JOB_LIMIT` most recent active jobs (default 30) concurrently (bounded by `SCORING_CONCURRENCY`, default 5, to stay under Anthropic rate limits), and returns the ranked matches. This is what `/matches` (Phase 4) calls.
+- **Secrets** (`ANTHROPIC_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_DB_URL`) are read from SSM Parameter Store once at cold start and written into `os.environ` — every downstream module keeps reading them via the same `os.getenv` calls it already uses locally. `agents/lambda_handler.py` is the only module that knows SSM exists. Already-set env vars are left alone, which is what makes local [Lambda Runtime Interface Emulator](https://github.com/aws/aws-lambda-runtime-interface-emulator) testing work without AWS credentials.
+- **Infrastructure** is Terraform, in `infra/terraform/` — see `infra/RUNBOOK.md` for the exact apply order (AWS Budget alert first and confirmed, before anything invokable exists).
+
+### Weekly batch path
+
+`agents/batch_scorer.py` handles the Anthropic Batches API mechanics. Two constraints shaped its design:
+
+1. **A Lambda invocation caps at 15 minutes; a batch can take longer.** So submit and poll are two separate EventBridge-scheduled invocations of the same Lambda (`{"trigger": "weekly-submit"}` at 01:00 UTC Sunday, `{"trigger": "weekly-poll"}` at 04:00 UTC), not one invocation that waits. The in-flight batch's ID is handed off between them via an SSM parameter (`pending-batch-id`) rather than a new table — reusing infrastructure already in the stack for secrets. **Known limitation:** if a batch takes longer than the week until the next submit fires, that next submit overwrites the SSM parameter before the previous batch is ever polled and persisted. Anthropic batches typically complete well within this window; this is a documented risk, not solved with more moving parts (a queue, a second table) for a portfolio-scale project.
+2. **Batch requests are fixed upfront — no mid-batch branching.** So the weekly path can't run `broaden_and_retry`; it's a single strict-criteria pass per `(job, profile)` pair (`agents.fit_scorer.default_criteria()`, unchanged), reusing the exact same prompt-building logic as the on-demand path's first attempt (`agents.fit_scorer.build_scoring_message`) so the two paths are directly comparable. A score that would have qualified for a retry on the on-demand path (50–74) just resolves to `skip` here — the same outcome as the on-demand path's `max_attempts_exhausted`, since batch mode is effectively "already at max attempts."
+
+**Who gets re-scored:** every `candidate_profiles` row against every active job not yet scored at the current prompt hash — there's no subscription/consent flag yet, because that's explicitly Phase 6 (accounts) territory, not built. `send_alert`'s on-demand equivalent (`decision = "alert"` on a `job_matches` row) stays exactly what it already was: a flag on a database row, not a notification sent anywhere. There's no delivery channel or consent mechanism yet for the weekly path to notify anyone — it only re-scores and records. Wiring actual delivery is Phase 6's job.
+

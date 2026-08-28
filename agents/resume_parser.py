@@ -16,7 +16,7 @@ import asyncio
 import json
 import os
 from pathlib import Path
-from typing import Literal
+from typing import Literal, cast
 
 import anthropic
 import structlog
@@ -114,6 +114,37 @@ async def parse_resume(resume_text: str) -> tuple[ParsedResume, str]:
         cache_read=getattr(usage, "cache_read_input_tokens", 0) or 0,
     )
     return profile, prompt_hash
+
+
+def persist_candidate_profile(profile: ParsedResume, prompt_hash: str) -> str:
+    """Insert a parsed profile into candidate_profiles and return its id.
+
+    Not used by scripts/test_resume_parsing.py — kept separate, with the
+    Supabase import scoped inside this function, so the dry-run harness can
+    import agents.resume_parser without ever touching the database. Mirrors
+    agents.fit_scorer.run_and_persist()'s pattern.
+    """
+    from storage.supabase_client import get_client
+
+    client = get_client()
+    response = (
+        client.table("candidate_profiles")
+        .insert(
+            {
+                "skills": profile.skills,
+                "seniority": profile.seniority,
+                "preferences": {
+                    "remote_preference": profile.remote_preference,
+                    "preferred_locations": profile.preferred_locations,
+                    "role_keywords": profile.role_keywords,
+                    "summary": profile.summary,
+                },
+                "prompt_hash": prompt_hash,
+            }
+        )
+        .execute()
+    )
+    return cast(str, cast(dict, response.data[0])["id"])
 
 
 async def _main() -> None:
