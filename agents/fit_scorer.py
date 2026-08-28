@@ -247,12 +247,25 @@ async def _checkpointer(conn_string: str) -> AsyncIterator[AsyncSqliteSaver | As
     (conn_string is a postgres:// URL, e.g. SUPABASE_DB_URL) needs a real
     Postgres-backed checkpointer. Local dev and scripts/test_fit_scoring.py
     keep passing a plain file path, which stays on AsyncSqliteSaver unchanged.
+
+    Connects manually rather than via AsyncPostgresSaver.from_conn_string()
+    (which hardcodes prepare_threshold=0 — "prepare on first use", not
+    "never prepare"). Supabase's Supavisor pooler runs in transaction mode
+    and recycles backend connections across unrelated client sessions, so a
+    server-side prepared statement name from one session collides with
+    another's (psycopg.errors.DuplicatePreparedStatement). prepare_threshold=
+    None actually disables prepared statements, which transaction-mode
+    pooling requires.
     """
     if conn_string.startswith(("postgres://", "postgresql://")):
         from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+        from psycopg import AsyncConnection
+        from psycopg.rows import dict_row
 
-        async with AsyncPostgresSaver.from_conn_string(conn_string) as saver:
-            yield saver
+        async with await AsyncConnection.connect(
+            conn_string, autocommit=True, prepare_threshold=None, row_factory=dict_row
+        ) as conn:
+            yield AsyncPostgresSaver(conn=conn)
     else:
         async with AsyncSqliteSaver.from_conn_string(conn_string) as saver:
             yield saver

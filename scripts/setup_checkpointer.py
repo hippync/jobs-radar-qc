@@ -17,6 +17,8 @@ import sys
 
 from dotenv import load_dotenv
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+from psycopg import AsyncConnection
+from psycopg.rows import dict_row
 
 
 async def main() -> None:
@@ -25,8 +27,14 @@ async def main() -> None:
         print("ERROR: SUPABASE_DB_URL is not set.", file=sys.stderr)
         sys.exit(1)
 
-    async with AsyncPostgresSaver.from_conn_string(db_url) as checkpointer:
-        await checkpointer.setup()
+    # prepare_threshold=None, not the library default of 0 — Supabase's
+    # Supavisor pooler (transaction mode) recycles backend connections across
+    # unrelated sessions, so a server-side prepared statement from one
+    # session collides with another's. See agents/fit_scorer.py::_checkpointer.
+    async with await AsyncConnection.connect(
+        db_url, autocommit=True, prepare_threshold=None, row_factory=dict_row
+    ) as conn:
+        await AsyncPostgresSaver(conn=conn).setup()
 
     print("Checkpoint tables created (or already present).")
 

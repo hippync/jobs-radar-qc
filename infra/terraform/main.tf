@@ -34,7 +34,7 @@ locals {
 resource "aws_budgets_budget" "fit_scorer" {
   name         = "${var.project_name}-budget"
   budget_type  = "COST"
-  limit_amount = "1"
+  limit_amount = tostring(var.budget_limit_usd)
   limit_unit   = "USD"
   time_unit    = "MONTHLY"
 
@@ -159,6 +159,7 @@ resource "aws_lambda_function" "fit_scorer" {
   image_uri     = var.image_uri
   memory_size   = var.lambda_memory_mb
   timeout       = var.lambda_timeout_s
+  architectures = ["arm64"] # cheaper + faster than x86_64; image must be built for the same arch
 
   environment {
     variables = {

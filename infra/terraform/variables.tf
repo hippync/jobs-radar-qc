@@ -1,7 +1,7 @@
 variable "aws_region" {
-  description = "AWS region to deploy into"
+  description = "AWS region to deploy into — ca-central-1 (Montreal) for latency to Quebec users and data residency"
   type        = string
-  default     = "us-east-1"
+  default     = "ca-central-1"
 }
 
 variable "project_name" {
@@ -41,6 +41,12 @@ variable "supabase_url" {
 variable "budget_email" {
   description = "Email notified when the AWS budget alert fires"
   type        = string
+}
+
+variable "budget_limit_usd" {
+  description = "Monthly AWS budget limit in USD — the alert fires once actual spend exceeds this"
+  type        = number
+  default     = 5
 }
 
 variable "cors_allow_origin" {
