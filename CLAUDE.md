@@ -20,6 +20,11 @@ A spec-driven ATS aggregator for the Quebec tech scene. Two independent layers: 
 
 The `active_qc_jobs` Supabase view merges both columns (`tech_stack || enriched_tech_stack`) for the frontend.
 
+**Layer 3 — On-demand, resume-to-job fit scoring (`agents/fit_scorer.py`, `agents/resume_parser.py`)**
+- Triggered per-request (later, via a Lambda Function URL), not cron-driven
+- Owns `candidate_profiles` and `job_matches` exclusively — never reads or writes `tech_stack`/`enriched_tech_stack`
+- Failure here doesn't affect Layers 1 or 2. See `docs/fit-scoring-agent.md`.
+
 ---
 
 ## Key invariants

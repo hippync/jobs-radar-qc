@@ -166,25 +166,25 @@
   },
   {
     "id": "bbbbbbbb-0016-0016-0016-000000000016",
-    "title": "Full-Stack Developer",
+    "title": "Frontend Engineer",
     "company": "Busbud",
-    "seniority": "mid",
-    "is_remote": null,
-    "location": "Montreal, QC (hybrid)",
-    "tech_stack": ["React", "TypeScript", "Node.js", "Express"],
+    "seniority": "senior",
+    "is_remote": true,
+    "location": "Remote (Canada)",
+    "tech_stack": ["React", "Next.js", "GraphQL"],
     "profile": "junior_frontend",
-    "note": "borderline: 2/4 overlap (frontend only, backend half missing), one seniority band above"
+    "note": "borderline attempt: 2/3 skill overlap plus a 2-band seniority gap. In practice this scored well under the retry threshold on the first pass (~35) and skipped without retrying — a hard seniority gap combined with a skill gap tends to be conservative enough that the model never reaches the borderline band at all."
   },
   {
     "id": "bbbbbbbb-0017-0017-0017-000000000017",
-    "title": "Staff Data Platform Engineer",
+    "title": "Lead Data Engineer",
     "company": "Frank And Oak",
-    "seniority": "staff",
+    "seniority": "lead",
     "is_remote": null,
     "location": "Montreal, QC (hybrid)",
-    "tech_stack": ["Python", "Airflow", "GCP", "Kubernetes", "Terraform"],
+    "tech_stack": ["Python", "Airflow", "BigQuery", "Snowflake"],
     "profile": "mid_data_engineer",
-    "note": "likely retry-fails: decent skill overlap but a 3-band seniority gap, wider than one retry widens"
+    "note": "borderline attempt: identical skill/remote pattern to job 14 (which retried into an alert), but with a 2-band instead of 1-band seniority gap. Scored ~32 and skipped without retrying, well below job 14's ~60 first-pass score despite the otherwise-identical inputs — evidence the model's seniority-gap penalty isn't linear in band count, and that hand-tuning a fixture to land in a specific score band is unreliable given real scoring variance."
   },
   {
     "id": "bbbbbbbb-0018-0018-0018-000000000018",
@@ -195,7 +195,7 @@
     "location": "Remote (Canada)",
     "tech_stack": ["Python", "PostgreSQL", "Redis", "Docker", "Kubernetes"],
     "profile": "senior_backend_python",
-    "note": "likely retry-fails: good skill/remote match but a 3-band seniority gap"
+    "note": "strong skill/remote match despite a 3-band seniority gap — scored exactly 75 on the first pass, right at the alert threshold, so it alerted without ever retrying. A useful boundary case for tuning the threshold."
   },
   {
     "id": "bbbbbbbb-0019-0019-0019-000000000019",
@@ -206,7 +206,7 @@
     "location": "Remote (Canada)",
     "tech_stack": ["React Native", "TypeScript", "iOS"],
     "profile": "junior_frontend",
-    "note": "likely retry-fails: mostly mismatched domain (mobile vs. web) plus a 3-band seniority gap"
+    "note": "mismatched domain (mobile vs. web) plus a 3-band seniority gap — scored well below the retry threshold (~18) and skipped immediately"
   },
   {
     "id": "bbbbbbbb-0020-0020-0020-000000000020",
@@ -217,6 +217,6 @@
     "location": "Montreal, QC (hybrid)",
     "tech_stack": ["Python", "AWS", "Kubernetes", "Terraform"],
     "profile": "senior_backend_python",
-    "note": "likely retry-fails: management track vs. senior IC candidate, partial skill overlap"
+    "note": "management track vs. senior IC candidate, plus partial skill overlap — scored well below the retry threshold (~18) and skipped immediately"
   }
 ]
