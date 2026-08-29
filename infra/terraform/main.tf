@@ -182,6 +182,17 @@ resource "aws_lambda_function_url" "fit_scorer" {
   }
 }
 
+# authorization_type = "NONE" above only sets the Function URL's own auth
+# mode — the function still needs a resource-based policy statement
+# explicitly allowing unauthenticated invocation, or every call 403s.
+resource "aws_lambda_permission" "public_function_url" {
+  statement_id           = "AllowPublicFunctionUrlInvoke"
+  action                 = "lambda:InvokeFunctionUrl"
+  function_name          = aws_lambda_function.fit_scorer.function_name
+  principal              = "*"
+  function_url_auth_type = "NONE"
+}
+
 # ─── EventBridge Scheduler — weekly batch path ─────────────────────────────
 
 resource "aws_iam_role" "scheduler_invoke" {
