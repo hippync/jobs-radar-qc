@@ -81,8 +81,8 @@ export default function JobCard({ job }: { job: Job }) {
           <LogoPlaceholder company={job.company} />
           <div className="min-w-0 flex-1">
             <p
-              className="truncate text-xs font-medium uppercase tracking-wide"
-              style={{ color: "var(--ink-mute)", fontFamily: "var(--font-mono)", fontSize: 10 }}
+              className="truncate text-xs font-semibold uppercase tracking-wide"
+              style={{ color: "var(--ink-soft)", fontFamily: "var(--font-mono)", fontSize: 11 }}
               title={job.company}
             >
               {job.company}
