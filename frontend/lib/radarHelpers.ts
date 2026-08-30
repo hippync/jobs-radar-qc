@@ -1,7 +1,19 @@
 /**
  * radarHelpers.ts — shared pure helpers for the Tech Stack Radar
  *
- * Mirrors core/canonical_tech_stack.json (version 2).
+ * CANONICAL mirrors the tech lists in core/canonical_tech_stack.json
+ * (version 2) exactly, category by category — every tech in the JSON
+ * must appear here, or it silently vanishes from the /trends radar chart
+ * (RadarChartClient only builds sector buckets for selected categories;
+ * anything classified "other" is never selectable and never rendered).
+ *
+ * One intentional deviation: core's "data_ai" category is called "data"
+ * here, and everywhere else in the frontend (the --cat-data CSS token,
+ * the ?cats=data URL param, SEGMENT_DEFAULT_CATS). That rename predates
+ * this file and is already load-bearing in shipped UI and shareable
+ * /trends links, so it's kept rather than reverted to match core's key
+ * name — only the tech *lists* need to match, not the slug string.
+ *
  * If the canonical JSON is bumped, update CANONICAL below and
  * the ALL_CAT_SLUGS / CATEGORY_LABELS constants accordingly.
  */
@@ -86,41 +98,51 @@ export const CANONICAL: CanonicalStack = {
   version: "2",
   categories: {
     languages: [
-      "Python", "Java", "TypeScript", "JavaScript", "C#", "Go",
-      "SQL", "Kotlin", "Swift", "Rust",
+      "Python", "Java", "TypeScript", "JavaScript", "C#", "Go", "SQL",
+      "Kotlin", "Swift", "Rust", "Ruby", "PHP", "Scala", "Dart", "R",
+      "Elixir", "C++",
     ],
     frontend: [
       "React", "Next.js", "Angular", "Vue", "Tailwind", "Redux", "Svelte",
+      "Vite", "tRPC", "Remix", "Storybook",
     ],
     backend: [
       "Spring Boot", "Node.js", "Express", "NestJS", ".NET",
       "Django", "FastAPI", "GraphQL", "REST", "gRPC",
+      "Rails", "Laravel", "Flask", "ASP.NET", "Celery", "Gin",
     ],
     databases: [
       "PostgreSQL", "MySQL", "MongoDB", "Redis",
       "DynamoDB", "Snowflake", "Elasticsearch", "ClickHouse",
+      "BigQuery", "Cassandra", "Firebase", "Supabase", "SQLite",
     ],
     cloud: [
       "AWS", "Azure", "GCP", "Linux", "Nginx", "Cloudflare",
+      "Vercel", "DigitalOcean", "Heroku",
     ],
     devops: [
       "Docker", "Kubernetes", "Terraform", "Helm",
       "GitHub Actions", "Jenkins", "ArgoCD",
       "Prometheus", "Grafana", "Ansible",
+      "GitLab CI", "CircleCI", "Pulumi", "Vault",
     ],
+    // Named "data_ai" in core/canonical_tech_stack.json — see file header.
     data: [
       "Pandas", "Spark", "Databricks", "Airflow",
       "TensorFlow", "PyTorch", "LangChain", "OpenAI",
       "Vector DB", "dbt", "Kafka", "MLflow",
+      "NumPy", "scikit-learn", "Hugging Face", "Flink", "RabbitMQ", "Weights & Biases",
     ],
     mobile: [
       "React Native", "Flutter", "SwiftUI", "Android", "iOS",
     ],
     testing: [
       "Jest", "Cypress", "Playwright", "Selenium", "JUnit", "Postman",
+      "Vitest", "pytest", "Mocha", "RSpec",
     ],
     ai_concepts: [
-      "LLM", "RAG",
+      "LLM", "RAG", "AI Agents", "Prompt Engineering", "Fine-tuning",
+      "Embeddings", "Semantic Search", "NLP", "Computer Vision", "GenAI",
     ],
   },
 };
