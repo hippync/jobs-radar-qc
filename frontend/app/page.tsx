@@ -323,6 +323,11 @@ export default async function Page({
             workplaceCounts={workplaceCounts}
           />
         </Suspense>
+
+        {/* Save-as-alert CTA */}
+        <Suspense>
+          <AlertRuleEditor variant="sidebar-cta" />
+        </Suspense>
       </aside>
 
       {/* ── Main content ──────────────────────────────────────────────── */}
@@ -369,14 +374,9 @@ export default async function Page({
           </div>
         )}
 
-        {/* Results header — sticky below the fixed top nav (45px) so the
-         * count and "Save as alert" CTA stay visible while scrolling (#134).
-         * background matches the page so scrolling cards don't show through. */}
-        <div
-          className="sticky z-10 mb-3 flex flex-wrap items-center justify-between gap-2 py-2"
-          style={{ top: 45, background: "var(--bg)" }}
-        >
-          <div className="flex flex-wrap items-baseline gap-2">
+        {/* Results header */}
+        <div className="mb-3 flex items-center justify-between">
+          <div className="flex items-baseline gap-2">
             <h1
               className="text-sm font-semibold"
               style={{ color: "var(--ink)", fontSize: 13 }}
@@ -389,9 +389,6 @@ export default async function Page({
             >
               · {stats.companyCount} companies · updated daily
             </span>
-            <Suspense>
-              <AlertRuleEditor variant="results-header" />
-            </Suspense>
           </div>
           <a
             href={sortUrl()}

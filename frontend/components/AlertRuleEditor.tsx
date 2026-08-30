@@ -54,10 +54,10 @@ function buildSummary(params: URLSearchParams): string {
 
 interface Props {
   /**
-   * "results-header" — homepage results-header inline CTA (issue #134)
-   * "saved-button"   — /saved "+ Add alert" pill button
+   * "sidebar-cta"  — homepage desktop sidebar dashed-box CTA
+   * "saved-button" — /saved "+ Add alert" pill button
    */
-  variant: "results-header" | "saved-button";
+  variant: "sidebar-cta" | "saved-button";
 }
 
 export default function AlertRuleEditor({ variant }: Props) {
@@ -136,22 +136,22 @@ export default function AlertRuleEditor({ variant }: Props) {
 
   return (
     <>
-      {variant === "results-header" ? (
+      {variant === "sidebar-cta" ? (
         <button
           type="button"
           onClick={openModal}
-          title="Get notified when new roles match this search."
-          className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs transition-colors"
+          className="mt-6 block w-full rounded-md px-3 py-3 text-left text-xs"
           style={{
-            border: "1px solid var(--accent)",
+            border: "1.5px dashed var(--accent)",
             color: "var(--accent)",
             background: "var(--accent-12)",
-            fontSize: 11,
-            fontWeight: 500,
             cursor: "pointer",
           }}
         >
-          ★ Save as alert
+          <p className="font-semibold" style={{ fontSize: 11 }}>★ Save as alert</p>
+          <p className="mt-0.5" style={{ color: "var(--ink-soft)", fontSize: 10 }}>
+            Get notified when new roles match this search.
+          </p>
         </button>
       ) : (
         <button
