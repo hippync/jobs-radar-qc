@@ -33,6 +33,18 @@ _NON_TECH_TITLE_RE = re.compile(
     r"|accountant|comptable|controller|bookkeeper"
     r"|administrative\s+(?:assistant|coordinator)|assistant(?:e)?\s+administratif(?:ve)?"
     r"|receptionist|réceptionniste"
+    r"|nurs(?:e|ing)|infirmi(?:er|ère)|pharmacist|pharmacien(?:ne)?"
+    r"|teaching\s+assistant|assistant(?:e)?\s+d'enseignement"
+    r"|professor|professeur(?:e)?|lecturer|charg[eé](?:e)?\s+de\s+cours"
+    r"|librarian|biblioth[eé]caire"
+    r"|structural\s+engineer|civil\s+engineer|environmental\s+engineer|geotechnical\s+engineer"
+    r"|transportation\s+engineer"
+    r"|ing[eé]nieur(?:e)?\s+(?:en\s+)?(?:structure|civil(?:e)?|environnement(?:al)?|g[eé]otechnique)"
+    r"|wealth\s+(?:advisor|manager|management)|financial\s+advisor|investment\s+advisor"
+    r"|insurance\s+advisor|portfolio\s+manager|investment\s+analyst"
+    r"|conseill(?:er|ère)\s+(?:en\s+)?(?:gestion\s+de\s+patrimoine|financi(?:er|ère)|placement|assurance)"
+    r"|actuary|actuaire|underwrit(?:er|ing)|souscripteur(?:trice)?"
+    r"|claims\s+(?:adjuster|analyst|specialist)|branch\s+manager|teller|caissier(?:ère)?"
     r")\b",
     re.IGNORECASE,
 )
