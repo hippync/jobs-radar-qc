@@ -2,6 +2,19 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTransition, useState } from "react";
+import { ALL_CAT_SLUGS, CANONICAL, CATEGORY_LABELS, buildTechToCatMap } from "@/lib/radarHelpers";
+
+const OTHER_CAT = "other";
+const TECH_CAT_ORDER = [...ALL_CAT_SLUGS, OTHER_CAT];
+const TECH_TO_CAT = buildTechToCatMap(CANONICAL);
+
+function techCategory(tech: string): string {
+  return TECH_TO_CAT[tech] ?? OTHER_CAT;
+}
+
+function techCatLabel(cat: string): string {
+  return CATEGORY_LABELS[cat as keyof typeof CATEGORY_LABELS] ?? "Other";
+}
 
 const SENIORITY_OPTIONS = [
   { value: "internship", label: "Intern" },
@@ -133,6 +146,16 @@ export default function FilterSidebar({
     tech:      true,
   });
 
+  const initialTechs = (params.get("tech") ?? "").split(",").map((t) => t.trim()).filter(Boolean);
+  const [techCatOpen, setTechCatOpen] = useState<Record<string, boolean>>(() => {
+    const activeCats = new Set(initialTechs.map(techCategory));
+    return Object.fromEntries(TECH_CAT_ORDER.map((cat) => [cat, activeCats.has(cat)]));
+  });
+
+  function toggleTechCat(cat: string) {
+    setTechCatOpen((s) => ({ ...s, [cat]: !s[cat] }));
+  }
+
   function toggle(key: string, value: string) {
     const next = new URLSearchParams(params.toString());
     if (next.get(key) === value) {
@@ -174,6 +197,10 @@ export default function FilterSidebar({
   const filteredTechs = techOptions.filter((t) =>
     t.toLowerCase().includes(techSearch.toLowerCase())
   );
+
+  const techsByCategory: Record<string, string[]> = {};
+  for (const cat of TECH_CAT_ORDER) techsByCategory[cat] = [];
+  for (const t of filteredTechs) techsByCategory[techCategory(t)].push(t);
 
   return (
     <aside
@@ -271,24 +298,58 @@ export default function FilterSidebar({
               }}
               aria-label="Search technologies"
             />
-            <div className="flex max-h-52 flex-col gap-0.5 overflow-y-auto">
-              {filteredTechs.slice(0, 60).map((t) => (
-                <FilterChip
-                  key={t}
-                  label={t}
-                  active={currentTechs.includes(t)}
-                  onClick={() => toggleTech(t)}
-                />
-              ))}
-              {filteredTechs.length === 0 && (
-                <p
-                  className="px-2 py-1 text-xs"
-                  style={{ color: "var(--ink-mute)" }}
-                >
-                  No match
-                </p>
-              )}
-            </div>
+            {techSearch ? (
+              <div className="flex max-h-64 flex-col gap-0.5 overflow-y-auto">
+                {filteredTechs.slice(0, 60).map((t) => (
+                  <FilterChip
+                    key={t}
+                    label={t}
+                    active={currentTechs.includes(t)}
+                    onClick={() => toggleTech(t)}
+                  />
+                ))}
+                {filteredTechs.length === 0 && (
+                  <p
+                    className="px-2 py-1 text-xs"
+                    style={{ color: "var(--ink-mute)" }}
+                  >
+                    No match
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="flex max-h-96 flex-col gap-1 overflow-y-auto">
+                {TECH_CAT_ORDER.filter((cat) => techsByCategory[cat].length > 0).map((cat) => (
+                  <div key={cat}>
+                    <button
+                      onClick={() => toggleTechCat(cat)}
+                      aria-expanded={techCatOpen[cat]}
+                      className="flex w-full items-center justify-between rounded-md px-2 py-1 text-left transition-colors"
+                      style={{ color: "var(--ink-mute)" }}
+                    >
+                      <span style={{ fontSize: 10.5, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                        {techCatLabel(cat)}
+                      </span>
+                      <span className="tabular" style={{ fontSize: 9, fontFamily: "var(--font-mono)" }}>
+                        {techsByCategory[cat].length}
+                      </span>
+                    </button>
+                    {techCatOpen[cat] && (
+                      <div className="flex flex-col gap-0.5 pl-1">
+                        {techsByCategory[cat].map((t) => (
+                          <FilterChip
+                            key={t}
+                            label={t}
+                            active={currentTechs.includes(t)}
+                            onClick={() => toggleTech(t)}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>
