@@ -1,5 +1,6 @@
 import { Job } from "@/lib/types";
 import SaveButton from "./SaveButton";
+import { AlertMatchRing, AlertMatchChip } from "./AlertMatchHighlight";
 
 const SENIORITY_LABEL: Record<string, string> = {
   internship: "Intern",
@@ -66,7 +67,7 @@ export default function JobCard({ job }: { job: Job }) {
 
   return (
     <div
-      className="group flex flex-col rounded-md"
+      className="group relative flex flex-col rounded-md"
       style={{
         background: "var(--surface)",
         border: "1px solid var(--rule-soft)",
@@ -75,6 +76,7 @@ export default function JobCard({ job }: { job: Job }) {
         transition: "border-color 120ms ease-out, box-shadow 120ms ease-out",
       }}
     >
+      <AlertMatchRing job={job} />
       <div className="flex flex-col gap-2 p-4 pb-3">
         {/* ── Header: logo + company + location + age ── */}
         <div className="flex items-start gap-2">
@@ -162,6 +164,7 @@ export default function JobCard({ job }: { job: Job }) {
           >
             {remoteLabel(job.is_remote)}
           </span>
+          <AlertMatchChip job={job} />
         </div>
 
         {/* ── Tech chips ── */}
