@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, useSyncExternalStore } from "react";
+import { Suspense, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { KanbanCard } from "@/components/KanbanCard";
 import type { SavedJob, Column } from "@/components/KanbanCard";
+import AlertRuleEditor from "@/components/AlertRuleEditor";
+import { useAlerts, removeAlert, toggleAlert, type AlertCadence } from "@/lib/alertsStore";
 
 /* ── Storage keys ─────────────────────────────────────────────────────── */
 const STORAGE_KEY = "jobs-radar-qc:saved";
@@ -111,6 +113,13 @@ function ageFromTs(ts: number): string {
   if (diff === 1) return "yesterday";
   return `${diff}d`;
 }
+
+/* ── Alert cadence labels ─────────────────────────────────────────────── */
+const CADENCE_LABEL: Record<AlertCadence, string> = {
+  instant: "Instant",
+  daily_09: "Daily · 09:00",
+  weekly_mon: "Weekly · Mon",
+};
 
 /* ── Column config ────────────────────────────────────────────────────── */
 const COLUMNS: Array<{ key: Column; label: string; color: string }> = [
@@ -363,6 +372,9 @@ export default function SavedPageClient() {
   const [draggingId, setDraggingId]   = useState<string | null>(null);
   const [dragOverCol, setDragOverCol] = useState<Column | null>(null);
 
+  /* Saved alerts (issue #126) — jobs-radar-qc:alerts, see lib/alertsStore.ts */
+  const alerts = useAlerts();
+
   /* ── Move + remove ──
    * Write directly to storage; persistSaved/persistView dispatch a custom
    * DOM event that notifies the useSyncExternalStore subscriber, which
@@ -447,12 +459,11 @@ export default function SavedPageClient() {
   ) as Record<Column, number>;
 
   /*
-   * Stats — computed synchronously from `saved` state, no useEffect.
+   * Stats — computed synchronously from `saved` / `alerts` state, no useEffect.
    *
-   * activeAlerts: placeholder 0 until issue #25 (AlertRuleEditor) ships.
    * lastMatchText: most recent savedAt timestamp → "today", "yesterday", "Nd".
    */
-  const activeAlerts: number = 0; /* placeholder: #25 not shipped */
+  const activeAlerts = alerts.filter((a) => a.enabled).length;
   const latestSavedAt  = saved.length
     ? Math.max(...saved.map((j) => j.savedAt))
     : null;
@@ -566,35 +577,10 @@ export default function SavedPageClient() {
               </button>
             </div>
 
-            {/*
-             * + Add alert — disabled placeholder until issue #25 ships.
-             *
-             * Shown always so the layout is stable; grayed via opacity.
-             * aria-disabled conveys the disabled state to screen readers
-             * without hiding the element. The native `disabled` attribute
-             * prevents click events.
-             */}
-            <button
-              type="button"
-              disabled
-              aria-label="Add alert — coming soon"
-              title="Alert rules — coming soon"
-              style={{
-                padding: "4px 14px",
-                fontSize: 12,
-                fontWeight: 500,
-                background: "var(--accent)",
-                color: "var(--on-accent)",
-                border: "none",
-                borderRadius: 6,
-                cursor: "not-allowed",
-                opacity: 0.45,
-                minHeight: 30,
-                whiteSpace: "nowrap",
-              }}
-            >
-              + Add alert
-            </button>
+            {/* + Add alert — opens the AlertRuleEditor modal (issue #126). */}
+            <Suspense>
+              <AlertRuleEditor variant="saved-button" />
+            </Suspense>
           </div>
         </div>
 
@@ -804,6 +790,96 @@ export default function SavedPageClient() {
           })}
         </div>
       )}
+
+      {/* ── Active alerts banner (issue #126) ────────────────────────────── */}
+      <section className="mt-8" aria-label="Active alerts">
+        <h2 style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)", margin: "0 0 8px" }}>
+          Active alerts
+        </h2>
+        {alerts.length === 0 ? (
+          <p style={{ fontSize: 12, color: "var(--ink-mute)", margin: 0 }}>
+            No alerts yet — save a search from the homepage, or use &ldquo;+ Add alert&rdquo; above.
+          </p>
+        ) : (
+          <ul className="flex flex-col gap-2">
+            {alerts.map((alert) => (
+              <li
+                key={alert.id}
+                className="flex items-center gap-3 rounded-md px-3 py-2"
+                style={{
+                  border: "1px solid var(--rule-soft)",
+                  background: "var(--surface)",
+                  opacity: alert.enabled ? 1 : 0.5,
+                  transition: "opacity 120ms ease-out",
+                }}
+              >
+                <div className="min-w-0 flex-1">
+                  <p
+                    className="truncate"
+                    style={{ fontSize: 12.5, fontWeight: 500, color: "var(--ink)" }}
+                    title={alert.name}
+                  >
+                    {alert.name}
+                  </p>
+                  <p
+                    className="truncate"
+                    style={{ fontSize: 11, color: "var(--ink-mute)", fontFamily: "var(--font-mono)" }}
+                  >
+                    {CADENCE_LABEL[alert.cron]} · {alert.channel === "email" ? "Email" : "Slack"}: {alert.channelTarget}
+                  </p>
+                </div>
+
+                {alert.unreadCount > 0 && (
+                  <span
+                    className="shrink-0 rounded-full px-2 py-0.5"
+                    style={{ background: "var(--hilite-new)", color: "var(--ink)", fontSize: 10, fontWeight: 600 }}
+                  >
+                    +{alert.unreadCount} new
+                  </span>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => toggleAlert(alert.id)}
+                  aria-pressed={alert.enabled}
+                  aria-label={`${alert.enabled ? "Disable" : "Enable"} alert ${alert.name}`}
+                  className="shrink-0"
+                  style={{
+                    padding: "3px 10px",
+                    fontSize: 11,
+                    fontWeight: 500,
+                    color: alert.enabled ? "var(--on-accent)" : "var(--ink-soft)",
+                    background: alert.enabled ? "var(--accent)" : "var(--bg-2)",
+                    border: "1px solid " + (alert.enabled ? "var(--accent)" : "var(--rule-soft)"),
+                    borderRadius: 6,
+                    cursor: "pointer",
+                  }}
+                >
+                  {alert.enabled ? "On" : "Off"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => removeAlert(alert.id)}
+                  aria-label={`Delete alert ${alert.name}`}
+                  className="shrink-0"
+                  style={{
+                    padding: "3px 8px",
+                    fontSize: 12,
+                    color: "var(--ink-mute)",
+                    background: "transparent",
+                    border: "1px solid var(--rule-soft)",
+                    borderRadius: 6,
+                    cursor: "pointer",
+                  }}
+                >
+                  ×
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
     </main>
   );
 }

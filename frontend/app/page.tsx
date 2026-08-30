@@ -10,6 +10,7 @@ import KpiStrip from "@/components/KpiStrip";
 import FilterSidebar from "@/components/FilterSidebar";
 import ActiveFilterChips from "@/components/ActiveFilterChips";
 import MobileFilterDrawer from "@/components/MobileFilterDrawer";
+import AlertRuleEditor from "@/components/AlertRuleEditor";
 
 export const metadata: Metadata = {
   title: "Tech Jobs in Montreal and Quebec",
@@ -324,19 +325,9 @@ export default async function Page({
         </Suspense>
 
         {/* Save-as-alert CTA */}
-        <div
-          className="mt-6 rounded-md px-3 py-3 text-xs"
-          style={{
-            border: "1.5px dashed var(--accent)",
-            color: "var(--accent)",
-            background: "var(--accent-12)",
-          }}
-        >
-          <p className="font-semibold" style={{ fontSize: 11 }}>★ Save as alert</p>
-          <p className="mt-0.5" style={{ color: "var(--ink-soft)", fontSize: 10 }}>
-            Get email notifications when new roles match this search.
-          </p>
-        </div>
+        <Suspense>
+          <AlertRuleEditor variant="sidebar-cta" />
+        </Suspense>
       </aside>
 
       {/* ── Main content ──────────────────────────────────────────────── */}
