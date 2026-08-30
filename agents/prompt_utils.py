@@ -45,6 +45,12 @@ _NON_TECH_TITLE_RE = re.compile(
     r"|conseill(?:er|ère)\s+(?:en\s+)?(?:gestion\s+de\s+patrimoine|financi(?:er|ère)|placement|assurance)"
     r"|actuary|actuaire|underwrit(?:er|ing)|souscripteur(?:trice)?"
     r"|claims\s+(?:adjuster|analyst|specialist)|branch\s+manager|teller|caissier(?:ère)?"
+    r"|gestionnaire\s+(?:en\s+)?marketing"
+    r"|agent(?:[(./·][\wÀ-ÿ]*\)?)?\s+(?:de\s+)?m[eé]thodes"
+    r"|concepteur(?:[(./·][\wÀ-ÿ]*\)?)?\s+cabine|cabin\s+designer"
+    r"|pr[eé]pos[eé](?:e)?|warehouse\s+(?:attendant|associate|worker)|entrep[oô]t"
+    r"|client\s+financial\s+services|financial\s+services\s+agent"
+    r"|advisor,\s*(?:personal|corporate)|internal\s+audit|corporate\s+accounting"
     r")\b",
     re.IGNORECASE,
 )

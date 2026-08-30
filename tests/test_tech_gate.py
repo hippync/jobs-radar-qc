@@ -96,6 +96,34 @@ class TestNonTechTitles:
             "Claims Adjuster",
             "Branch Manager",
             "Teller",
+            # Round 2 — found via manual spot-check of live Supabase data after
+            # round 1 shipped (see #128): French word-order marketing, aerospace
+            # mechanical design/test roles (SOGECLAIR), warehouse/production
+            # roles (Saputo), and bank/insurance front-line + internal-finance
+            # titles (Desjardins/PSP Investments).
+            "Gestionnaire en Marketing",
+            "Gestionnaire Marketing",
+            "Agent Méthodes-FTC (Contrôle fonctionnel tests mécaniques)",
+            "Agent Méthodes - Support production (systèmes avioniques)",
+            "Concepteur cabine",
+            "Cabin Designer",
+            # Exact live-title regression: Quebec inclusive-language markers
+            # ("(e)", ".trice") sit as punctuation-wrapped infixes between the
+            # base word and the next word — a plain (?:e)?/(?:trice)? suffix
+            # attached directly to the stem does not tolerate the "(" or "."
+            # in between. Found by re-querying live Supabase data after the
+            # first round-2 patterns shipped (they looked clean only because
+            # the audit script reused the same buggy is_non_tech_title()).
+            "Agent(e) Méthodes-FTC (Contrôle fonctionnel tests mécaniques)/Methods Specialist",
+            "Agent(e) de Méthodes - Support aux opérations (shift weekend)",
+            "Concepteur.trice Cabine",
+            "Préposé, entrepôt II",
+            "Préposée au service à la clientèle",
+            "Warehouse Attendant",
+            "Client Financial Services Agent",
+            "Senior Advisor, Personal",
+            "Advisor, Corporate Accounting and Financial Reporting",
+            "Senior Manager, Internal Audit",
         ],
     )
     def test_non_tech_titles_are_gated(self, title):
@@ -126,6 +154,12 @@ class TestNonTechTitles:
             "Engineering Manager",
             "Product Manager",
             "Product Designer",
+            # Regression: "financial reporting" is deliberately NOT a standalone
+            # gate pattern — it's a common business-domain qualifier on genuine
+            # engineering team names, unlike the comma-led "Advisor, Corporate
+            # Accounting and Financial Reporting" title it was added to catch.
+            "Backend Engineer, Financial Reporting Platform",
+            "Software Engineer, Structural Health Monitoring",
         ],
     )
     def test_tech_titles_pass_through(self, title):
