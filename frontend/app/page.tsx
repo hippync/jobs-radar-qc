@@ -298,7 +298,57 @@ export default async function Page({
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-7xl flex-1 px-4 py-6">
+    <>
+      {/* ── Results toolbar — full-width sticky bar below the fixed top nav
+       * (45px). Lives outside <main> so its background spans edge-to-edge,
+       * including over the sidebar column: previously it was nested inside
+       * the content column only, so once stuck the sidebar's own sticky
+       * content (which sticks at a different offset) showed through beside
+       * it instead of scrolling underneath (#134 follow-up). */}
+      <div
+        className="sticky z-30 border-b"
+        style={{ top: 45, background: "var(--bg)", borderColor: "var(--rule-soft)" }}
+      >
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-2 px-4 py-2">
+          <div className="flex flex-wrap items-baseline gap-2">
+            <h1
+              className="text-sm font-semibold"
+              style={{ color: "var(--ink)", fontSize: 13 }}
+            >
+              {hasFilters ? `${total} matching role${total !== 1 ? "s" : ""}` : `${total} active role${total !== 1 ? "s" : ""}`}
+            </h1>
+            <span
+              className="text-xs"
+              style={{ color: "var(--ink-mute)", fontFamily: "var(--font-mono)", fontSize: 10 }}
+            >
+              · {stats.companyCount} companies · updated daily
+            </span>
+            <Suspense>
+              <AlertRuleEditor variant="results-header" />
+            </Suspense>
+          </div>
+          <a
+            href={sortUrl()}
+            aria-label={
+              currentSort === "asc"
+                ? "↑ Date — sorted oldest first, click for newest first"
+                : "↓ Date — sorted newest first, click for oldest first"
+            }
+            title={currentSort === "asc" ? "Plus récents en premier" : "Plus anciens en premier"}
+            className="flex items-center gap-1 rounded-md px-2 py-1 text-xs transition-colors"
+            style={{
+              border: "1px solid var(--rule-soft)",
+              color: "var(--ink-soft)",
+              fontFamily: "var(--font-mono)",
+              fontSize: 11,
+            }}
+          >
+            {currentSort === "asc" ? "↑" : "↓"} Date
+          </a>
+        </div>
+      </div>
+
+      <main className="mx-auto flex w-full max-w-7xl flex-1 px-4 py-6">
       {/* ── Desktop sidebar ───────────────────────────────────────────── */}
       <aside
         className="hidden w-56 shrink-0 pr-6 lg:block sticky top-4 self-start max-h-[calc(100vh-2rem)] overflow-y-auto"
@@ -368,50 +418,6 @@ export default async function Page({
             </Suspense>
           </div>
         )}
-
-        {/* Results header — sticky below the fixed top nav (45px) so the
-         * count and "Save as alert" CTA stay visible while scrolling (#134).
-         * background matches the page so scrolling cards don't show through. */}
-        <div
-          className="sticky z-10 mb-3 flex flex-wrap items-center justify-between gap-2 py-2"
-          style={{ top: 45, background: "var(--bg)" }}
-        >
-          <div className="flex flex-wrap items-baseline gap-2">
-            <h1
-              className="text-sm font-semibold"
-              style={{ color: "var(--ink)", fontSize: 13 }}
-            >
-              {hasFilters ? `${total} matching role${total !== 1 ? "s" : ""}` : `${total} active role${total !== 1 ? "s" : ""}`}
-            </h1>
-            <span
-              className="text-xs"
-              style={{ color: "var(--ink-mute)", fontFamily: "var(--font-mono)", fontSize: 10 }}
-            >
-              · {stats.companyCount} companies · updated daily
-            </span>
-            <Suspense>
-              <AlertRuleEditor variant="results-header" />
-            </Suspense>
-          </div>
-          <a
-            href={sortUrl()}
-            aria-label={
-              currentSort === "asc"
-                ? "↑ Date — sorted oldest first, click for newest first"
-                : "↓ Date — sorted newest first, click for oldest first"
-            }
-            title={currentSort === "asc" ? "Plus récents en premier" : "Plus anciens en premier"}
-            className="flex items-center gap-1 rounded-md px-2 py-1 text-xs transition-colors"
-            style={{
-              border: "1px solid var(--rule-soft)",
-              color: "var(--ink-soft)",
-              fontFamily: "var(--font-mono)",
-              fontSize: 11,
-            }}
-          >
-            {currentSort === "asc" ? "↑" : "↓"} Date
-          </a>
-        </div>
 
         {/* Jobs grid or empty state */}
         {jobs.length === 0 ? (
@@ -507,5 +513,6 @@ export default async function Page({
         )}
       </div>
     </main>
+    </>
   );
 }
