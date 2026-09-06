@@ -449,21 +449,28 @@ export default async function Page({
             {page > 1 ? (
               <a
                 href={pageUrl(page - 1)}
-                className="rounded-md px-4 py-2 text-sm transition-colors"
+                className="flex items-center justify-center rounded-md px-4 text-sm transition-colors"
                 aria-label="Go to previous page"
                 style={{
                   border: "1px solid var(--rule-soft)",
                   color: "var(--ink-soft)",
+                  minWidth: 44,
+                  minHeight: 44,
                 }}
               >
                 ← Prev
               </a>
             ) : (
               <span
-                className="rounded-md px-4 py-2 text-sm"
+                className="flex items-center justify-center rounded-md px-4 text-sm"
                 aria-disabled="true"
                 aria-label="Previous page (unavailable)"
-                style={{ border: "1px solid transparent", color: "var(--ink-mute)" }}
+                style={{
+                  border: "1px solid transparent",
+                  color: "var(--ink-mute)",
+                  minWidth: 44,
+                  minHeight: 44,
+                }}
               >
                 ← Prev
               </span>
@@ -481,21 +488,28 @@ export default async function Page({
             {page < totalPages ? (
               <a
                 href={pageUrl(page + 1)}
-                className="rounded-md px-4 py-2 text-sm transition-colors"
+                className="flex items-center justify-center rounded-md px-4 text-sm transition-colors"
                 aria-label="Go to next page"
                 style={{
                   border: "1px solid var(--rule-soft)",
                   color: "var(--ink-soft)",
+                  minWidth: 44,
+                  minHeight: 44,
                 }}
               >
                 Next →
               </a>
             ) : (
               <span
-                className="rounded-md px-4 py-2 text-sm"
+                className="flex items-center justify-center rounded-md px-4 text-sm"
                 aria-disabled="true"
                 aria-label="Next page (unavailable)"
-                style={{ border: "1px solid transparent", color: "var(--ink-mute)" }}
+                style={{
+                  border: "1px solid transparent",
+                  color: "var(--ink-mute)",
+                  minWidth: 44,
+                  minHeight: 44,
+                }}
               >
                 Next →
               </span>
