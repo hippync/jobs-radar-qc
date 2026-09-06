@@ -19,10 +19,10 @@ const SOURCE_LABEL: Record<string, string> = {
   workable: "Workable",
 };
 
-function remoteLabel(is_remote: boolean | null): string {
+function remoteLabel(is_remote: boolean | null): string | null {
   if (is_remote === true)  return "Remote";
   if (is_remote === false) return "On-site";
-  return "Hybride / NS";
+  return null;
 }
 
 function age(iso: string | null): { text: string; fresh: boolean } {
@@ -155,18 +155,19 @@ export default function JobCard({ job }: { job: Job }) {
               {SENIORITY_LABEL[job.seniority]}
             </span>
           )}
-          <span
-            className="inline-flex items-center rounded-full px-2 py-0.5 text-xs"
-            style={{
-              background: "var(--bg-2)",
-              color: "var(--ink-soft)",
-              border: "1px solid var(--rule-soft)",
-              fontSize: 11,
-            }}
-            title={job.is_remote === null ? "Hybride ou sans information de localisation" : undefined}
-          >
-            {remoteLabel(job.is_remote)}
-          </span>
+          {remoteLabel(job.is_remote) && (
+            <span
+              className="inline-flex items-center rounded-full px-2 py-0.5 text-xs"
+              style={{
+                background: "var(--bg-2)",
+                color: "var(--ink-soft)",
+                border: "1px solid var(--rule-soft)",
+                fontSize: 11,
+              }}
+            >
+              {remoteLabel(job.is_remote)}
+            </span>
+          )}
           <AlertMatchChip job={job} />
         </div>
 
