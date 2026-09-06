@@ -2,6 +2,7 @@ import { Job } from "@/lib/types";
 import SaveButton from "./SaveButton";
 import { AlertMatchRing, AlertMatchChip } from "./AlertMatchHighlight";
 import TechChips from "./TechChips";
+import { detectLanguage } from "@/lib/language";
 import { CANONICAL, buildTechToCatMap } from "@/lib/radarHelpers";
 
 const TECH_TO_CAT = buildTechToCatMap(CANONICAL);
@@ -90,6 +91,7 @@ function LogoPlaceholder({ company }: { company: string }) {
 export default function JobCard({ job }: { job: Job }) {
   const { text: ageText, fresh } = age(job.first_seen_at);
   const CHIP_MAX = 4;
+  const lang = detectLanguage(job.title);
 
   return (
     <div
@@ -189,6 +191,20 @@ export default function JobCard({ job }: { job: Job }) {
               }}
             >
               {remoteLabel(job.is_remote)}
+            </span>
+          )}
+          {lang && (
+            <span
+              className="inline-flex items-center rounded-full px-2 py-0.5 text-xs"
+              style={{
+                background: "var(--bg-2)",
+                color: "var(--ink-soft)",
+                border: "1px solid var(--rule-soft)",
+                fontSize: 11,
+              }}
+              title={lang === "fr" ? "Listing in French" : "Listing in English"}
+            >
+              {lang.toUpperCase()}
             </span>
           )}
           <AlertMatchChip job={job} />
