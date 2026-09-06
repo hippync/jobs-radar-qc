@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useTransition } from "react";
+import { useFilterTransition } from "./FilterTransitionProvider";
 
 const SENIORITY_LABEL: Record<string, string> = {
   internship: "Intern",
@@ -28,7 +28,7 @@ interface Chip {
 export default function ActiveFilterChips() {
   const router = useRouter();
   const params = useSearchParams();
-  const [isPending, startTransition] = useTransition();
+  const { isPending, startFilterTransition: startTransition } = useFilterTransition();
 
   const chips: Chip[] = [];
 

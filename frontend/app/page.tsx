@@ -11,6 +11,8 @@ import FilterSidebar from "@/components/FilterSidebar";
 import ActiveFilterChips from "@/components/ActiveFilterChips";
 import MobileFilterDrawer from "@/components/MobileFilterDrawer";
 import AlertRuleEditor from "@/components/AlertRuleEditor";
+import { FilterTransitionProvider } from "@/components/FilterTransitionProvider";
+import KpiLoadingBar from "@/components/KpiLoadingBar";
 
 export const metadata: Metadata = {
   title: "Tech Jobs in Montreal and Quebec",
@@ -298,6 +300,7 @@ export default async function Page({
   }
 
   return (
+    <FilterTransitionProvider>
     <main className="mx-auto flex w-full max-w-7xl flex-1 px-4 py-6">
       {/* ── Desktop sidebar ───────────────────────────────────────────── */}
       <aside
@@ -333,7 +336,8 @@ export default async function Page({
       {/* ── Main content ──────────────────────────────────────────────── */}
       <div className="min-w-0 flex-1">
         {/* KPI strip */}
-        <div className="mb-5">
+        <div className="relative mb-5">
+          <KpiLoadingBar />
           <KpiStrip
             activeRoles={stats.companyCount > 0 ? total : 0}
             newToday={stats.newTodayCount}
@@ -518,5 +522,6 @@ export default async function Page({
         )}
       </div>
     </main>
+    </FilterTransitionProvider>
   );
 }

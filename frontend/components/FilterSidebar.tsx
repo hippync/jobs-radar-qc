@@ -1,8 +1,9 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useTransition, useState } from "react";
+import { useState } from "react";
 import { ALL_CAT_SLUGS, CANONICAL, CATEGORY_LABELS, buildTechToCatMap } from "@/lib/radarHelpers";
+import { useFilterTransition } from "./FilterTransitionProvider";
 
 const OTHER_CAT = "other";
 const TECH_CAT_ORDER = [...ALL_CAT_SLUGS, OTHER_CAT];
@@ -136,7 +137,7 @@ export default function FilterSidebar({
 }: Props) {
   const router = useRouter();
   const params = useSearchParams();
-  const [isPending, startTransition] = useTransition();
+  const { isPending, startFilterTransition: startTransition } = useFilterTransition();
   const [techSearch, setTechSearch] = useState("");
 
   const [sections, setSections] = useState({
