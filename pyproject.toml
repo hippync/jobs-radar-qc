@@ -13,9 +13,7 @@ authors = [{ name = "Hansy" }]
 
 dependencies = [
     "httpx>=0.27.0",
-    "beautifulsoup4>=4.12.0",
     "lxml>=5.1.0",
-    "pydantic>=2.6.0",
     "python-dotenv>=1.0.0",
     "supabase>=2.4.0",
     "structlog>=24.1.0",
