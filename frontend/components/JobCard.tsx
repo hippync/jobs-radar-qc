@@ -1,6 +1,29 @@
 import { Job } from "@/lib/types";
 import SaveButton from "./SaveButton";
 import { AlertMatchRing, AlertMatchChip } from "./AlertMatchHighlight";
+import TechChips from "./TechChips";
+import { CANONICAL, buildTechToCatMap } from "@/lib/radarHelpers";
+
+const TECH_TO_CAT = buildTechToCatMap(CANONICAL);
+
+/**
+ * Category priority for surfacing "distinctive" tech tags first (issue
+ * #139) — cloud/devops infra (AWS, Docker, CI/CD, Terraform...) shows up on
+ * nearly every listing, so it's pushed toward the "+N" overflow in favor of
+ * languages, frameworks, and other tags that actually differentiate a role.
+ */
+const DISTINCTIVENESS_ORDER = [
+  "languages", "ai_concepts", "databases", "mobile", "frontend",
+  "backend", "data", "testing", "other", "devops", "cloud",
+];
+
+function sortByDistinctiveness(techs: string[]): string[] {
+  const rank = (t: string) => {
+    const idx = DISTINCTIVENESS_ORDER.indexOf(TECH_TO_CAT[t] ?? "other");
+    return idx === -1 ? DISTINCTIVENESS_ORDER.length : idx;
+  };
+  return [...techs].sort((a, b) => rank(a) - rank(b));
+}
 
 const SENIORITY_LABEL: Record<string, string> = {
   internship: "Intern",
@@ -172,32 +195,7 @@ export default function JobCard({ job }: { job: Job }) {
         </div>
 
         {/* ── Tech chips ── */}
-        {job.tech_stack.length > 0 && (
-          <div className="flex flex-wrap gap-1">
-            {job.tech_stack.slice(0, CHIP_MAX).map((t) => (
-              <span
-                key={t}
-                className="inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium"
-                style={{
-                  background: "var(--bg-2)",
-                  color: "var(--ink-soft)",
-                  border: "1px solid var(--rule-soft)",
-                  fontSize: 11,
-                }}
-              >
-                {t}
-              </span>
-            ))}
-            {job.tech_stack.length > CHIP_MAX && (
-              <span
-                className="self-center text-xs"
-                style={{ color: "var(--ink-mute)", fontFamily: "var(--font-mono)", fontSize: 10 }}
-              >
-                +{job.tech_stack.length - CHIP_MAX}
-              </span>
-            )}
-          </div>
-        )}
+        <TechChips techs={sortByDistinctiveness(job.tech_stack)} max={CHIP_MAX} />
       </div>
 
       {/* ── Footer: view link ── */}
