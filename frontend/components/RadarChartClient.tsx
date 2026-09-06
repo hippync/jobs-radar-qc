@@ -11,7 +11,6 @@ import {
 
 const CX = 280, CY = 240, R = 200;
 const RINGS = [0.95, 0.68, 0.42, 0.18];
-const RING_LABELS = ["Niche", "Common", "Popular", "Most in demand"];
 
 interface TooltipState {
   name: string;

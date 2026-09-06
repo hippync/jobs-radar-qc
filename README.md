@@ -229,7 +229,6 @@ agents/
     tech_extraction.md  # Versioned system prompt template
 
 core/
-  canonical_schema.json     # Unified Job model (JSON Schema draft-07)
   canonical_tech_stack.json # 76 canonical tech names across 10 categories (v2)
   segment_rules.py          # Role segment classification rules (Python mirror of segmentHelpers.ts)
 
