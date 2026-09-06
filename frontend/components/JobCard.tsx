@@ -27,10 +27,13 @@ function remoteLabel(is_remote: boolean | null): string {
 
 function age(iso: string | null): { text: string; fresh: boolean } {
   if (!iso) return { text: "", fresh: false };
-  const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000);
-  if (diff === 0) return { text: "today",     fresh: true };
-  if (diff === 1) return { text: "yesterday", fresh: true };
-  return               { text: `${diff}d`,   fresh: false };
+  const diffMs    = Date.now() - new Date(iso).getTime();
+  const diffHours = Math.floor(diffMs / 3_600_000);
+  const diffDays  = Math.floor(diffMs / 86_400_000);
+  const fresh     = diffDays <= 1;
+  if (diffHours < 1)  return { text: "just now",       fresh };
+  if (diffHours < 24) return { text: `${diffHours}h ago`, fresh };
+  return                     { text: `${diffDays}d ago`,  fresh };
 }
 
 /* Company logo placeholder — first 2 initials in a fixed-size box */
