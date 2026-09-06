@@ -4,6 +4,7 @@ import Link from "next/link";
 import "./globals.css";
 import BottomTabBar from "@/components/BottomTabBar";
 import SearchPalette from "@/components/SearchPalette";
+import TopNavLinks from "@/components/TopNavLinks";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -80,34 +81,7 @@ export default function RootLayout({
             {/* Nav links + search */}
             <div className="flex items-center gap-4 lg:gap-5">
               {/* Main nav — hidden on mobile, BottomTabBar handles these routes */}
-              <Link
-                href="/"
-                className="hidden lg:inline text-sm transition-colors"
-                style={{ color: "var(--ink-soft)" }}
-              >
-                Jobs
-              </Link>
-              <Link
-                href="/trends"
-                className="hidden lg:inline text-sm transition-colors"
-                style={{ color: "var(--ink-soft)" }}
-              >
-                Radar
-              </Link>
-              <Link
-                href="/saved"
-                className="hidden lg:inline text-sm transition-colors"
-                style={{ color: "var(--ink-soft)" }}
-              >
-                Saved
-              </Link>
-              <Link
-                href="/about"
-                className="hidden lg:inline text-sm transition-colors"
-                style={{ color: "var(--ink-soft)" }}
-              >
-                About
-              </Link>
+              <TopNavLinks />
               <a
                 href="https://github.com/hippync/jobs-radar-qc"
                 target="_blank"
