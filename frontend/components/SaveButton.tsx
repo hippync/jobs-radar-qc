@@ -1,25 +1,11 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
+import type { SavedJob } from "./KanbanCard";
 
 /* ── localStorage contract (must stay in sync with SavedPageClient.tsx) ── */
 const STORAGE_KEY = "jobs-radar-qc:saved";
 const SAVED_CHANGE = "jobs-radar-qc:saved-change";
-
-type Column = "watching" | "applied" | "interviewing" | "archived";
-
-interface SavedJob {
-  id: string;
-  company: string;
-  title: string;
-  source: string;
-  source_url: string;
-  location: string | null;
-  first_seen_at: string;
-  tech_stack: string[];
-  column: Column;
-  savedAt: number;
-}
 
 let rawCache: string | null = null;
 let jobsCache: SavedJob[] = [];

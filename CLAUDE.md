@@ -60,7 +60,7 @@ The engine (`pipeline/extractor.py`) is generic. **Adding a company = edit `sche
 Jobs on `/trends` can be filtered by market archetype. Classification is computed at query time from `tech_stack` — no DB column, no LLM call.
 
 Rules live in two files that **must be kept in sync**:
-- `core/segment_rules.py` — Python (used by scripts and tests)
+- `core/segment_rules.py` — Python; classification actually runs only in `segmentHelpers.ts`, this module has no production caller and exists solely as the test-enforced spec `test_segmentation.py` pins the TS implementation against
 - `frontend/lib/segmentHelpers.ts` — TypeScript (used by the Next.js frontend)
 
 Priority order (first match wins):
