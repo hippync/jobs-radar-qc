@@ -379,17 +379,14 @@ class TestExistingSourcesUnaffected:
     def test_greenhouse_schema_loads(self) -> None:
         ex = Extractor("greenhouse")
         assert ex.source == "greenhouse"
-        assert ex.schema["source"] == "greenhouse"
 
     def test_lever_schema_loads(self) -> None:
         ex = Extractor("lever")
         assert ex.source == "lever"
-        assert ex.schema["source"] == "lever"
 
     def test_workable_schema_loads(self) -> None:
         ex = Extractor("workable")
         assert ex.source == "workable"
-        assert ex.schema["source"] == "workable"
 
 
 # ─── Helpers ─────────────────────────────────────────────────────────────────

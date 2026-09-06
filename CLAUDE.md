@@ -115,7 +115,7 @@ ruff check . && ruff format . && mypy .
 - Python 3.12, line length 100 (`pyproject.toml`)
 - `from __future__ import annotations` on every Python file
 - `structlog` for all logging — never `print()` in `pipeline/`, `agents/`, `storage/`
-- Pydantic v2 for model validation
+- No model-validation library — plain dicts and functions, shapes documented via type hints
 - `pytest-asyncio` with `asyncio_mode = "auto"` — no `@pytest.mark.asyncio` needed
 
 ---

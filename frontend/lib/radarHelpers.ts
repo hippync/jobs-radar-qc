@@ -151,35 +151,6 @@ export const CANONICAL: CanonicalStack = {
 // Pure helpers
 // ---------------------------------------------------------------------------
 
-/** Returns all tech names for a canonical category slug. */
-export function getTechsForCategory(
-  cat: string,
-  canonical: CanonicalStack,
-): string[] {
-  return canonical.categories[cat] ?? [];
-}
-
-/**
- * Builds a map from tech name to human-readable sector label for the
- * given selected categories.
- *
- * Techs not in any selected category are absent from the map; callers
- * should treat a missing key as "outside selected sectors".
- */
-export function buildSectorMap(
-  selectedCats: string[],
-  canonical: CanonicalStack,
-): Record<string, string> {
-  const map: Record<string, string> = {};
-  for (const cat of selectedCats) {
-    const label = CATEGORY_LABELS[cat as CatSlug] ?? cat;
-    for (const tech of getTechsForCategory(cat, canonical)) {
-      map[tech] = label;
-    }
-  }
-  return map;
-}
-
 /**
  * Parse and validate the ?cats= URL parameter.
  *

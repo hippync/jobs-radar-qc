@@ -11,7 +11,7 @@
   The extractor injects `company` and `company_slug` from the schema.json company entry
   before applying these rules — they are not present in the Greenhouse API response.
 -->
-<extraction source="greenhouse" version="1">
+<extraction>
 
   <!-- ═══════════════════════════════════════════════════════
        CONSTANTS — stamped uniformly on every record
@@ -30,11 +30,11 @@
     <field name="external_id"      from="id"                 type="string"   />
     <field name="title"            from="title"              type="string"   />
     <field name="source_url"       from="absolute_url"       type="string"   />
-    <field name="location"         from="location.name"      type="string"   nullable="true" />
-    <field name="department"       from="departments.0.name" type="string"   nullable="true" />
-    <field name="description_html" from="content"            type="string"   nullable="true"
+    <field name="location"         from="location.name"      type="string" />
+    <field name="department"       from="departments.0.name" type="string" />
+    <field name="description_html" from="content"            type="string"
            empty_as_null="true" />
-    <field name="posted_at"        from="updated_at"         type="datetime" nullable="true" />
+    <field name="posted_at"        from="updated_at"         type="datetime" />
   </fields>
 
   <!-- ═══════════════════════════════════════════════════════
@@ -50,7 +50,7 @@
     </field>
 
     <!-- is_remote: true=fully remote, false=on-site, null=hybrid or unknown -->
-    <field name="is_remote" type="bool" default="null" nullable="true">
+    <field name="is_remote" type="bool" default="null">
       <!-- Hybrid → null (checked before generic remote to avoid false positive) -->
       <match source="location" pattern="(?i)\bhybrid(e)?\b"                           value="null" />
       <!-- Explicit remote signal -->
@@ -62,7 +62,7 @@
     </field>
 
     <!-- seniority: derived from title keywords, first-match wins -->
-    <field name="seniority" type="string" default="null" nullable="true">
+    <field name="seniority" type="string" default="null">
       <match source="title" pattern="(?i)\b(intern|stage|stagiaire|internship)\b"          value="internship" />
       <match source="title" pattern="(?i)\b(junior|jr\.?|d[eé]butant)\b"                   value="junior" />
       <match source="title" pattern="(?i)\b(staff)\b"                                      value="staff" />
@@ -74,7 +74,7 @@
     </field>
 
     <!-- employment_type: derived from title keywords, first-match wins -->
-    <field name="employment_type" type="string" default="null" nullable="true">
+    <field name="employment_type" type="string" default="null">
       <match source="title" pattern="(?i)\b(intern|stage|stagiaire)\b"        value="internship" />
       <match source="title" pattern="(?i)\b(contract|contractuel|freelance)\b" value="contract" />
       <match source="title" pattern="(?i)\b(part.?time|temps\s+partiel)\b"    value="part-time" />

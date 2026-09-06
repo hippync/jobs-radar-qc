@@ -29,8 +29,6 @@ export const SEGMENT_LABELS: Record<string, string> = {
 
 export const VALID_SEGMENTS = new Set(Object.keys(SEGMENT_LABELS));
 
-export type SegmentSlug = keyof typeof SEGMENT_LABELS;
-
 /**
  * All segment slugs in display order for the SegmentFilter UI.
  * Ordered by market relevance for the Quebec tech scene, not by precedence.
