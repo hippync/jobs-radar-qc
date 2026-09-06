@@ -1,8 +1,5 @@
 {
-  "source": "workday",
-  "display_name": "Workday",
   "endpoint": {
-    "method": "POST",
     "url_template": null,
     "request_body": {
       "appliedFacets": {},
@@ -13,7 +10,6 @@
     "response_format": "json",
     "jobs_path": "jobPostings",
     "rate_limit": {
-      "requests_per_second": 2,
       "delay_between_companies_ms": 500
     }
   },
@@ -68,8 +64,6 @@
     }
   ],
   "validation": {
-    "required_fields": ["title", "_external_id"],
-    "min_jobs_per_company": 0,
-    "warn_if_empty": true
+    "required_fields": ["title", "_external_id"]
   }
 }

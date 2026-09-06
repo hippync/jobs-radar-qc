@@ -14,7 +14,7 @@
   _workplace_type and _commitment are intermediate fields — they are
   used by derived rules but ignored by the storage layer.
 -->
-<extraction source="lever" version="2">
+<extraction>
 
   <constants>
     <constant name="source"    value="lever" />
@@ -25,21 +25,21 @@
     <field name="external_id"      from="id"                    type="string"   />
     <field name="title"            from="text"                  type="string"   />
     <field name="source_url"       from="hostedUrl"             type="string"   />
-    <field name="location"         from="categories.location"   type="string"   nullable="true" />
-    <field name="department"       from="categories.department" type="string"   nullable="true" />
+    <field name="location"         from="categories.location"   type="string" />
+    <field name="department"       from="categories.department" type="string" />
     <!--
       concat_array="lists" array_field="content": appends the HTML content of every
       list section (e.g. "What we're looking for") to the main description body.
       Without this, technologies mentioned only in requirements lists are missed.
     -->
-    <field name="description_html" from="description"           type="string"   nullable="true"
+    <field name="description_html" from="description"           type="string"
            empty_as_null="true"
            concat_array="lists" array_field="content" />
-    <field name="posted_at"        from="createdAt"             type="unix_ms"  nullable="true" />
+    <field name="posted_at"        from="createdAt"             type="unix_ms" />
 
     <!-- Intermediate fields for derivation — not written to DB -->
-    <field name="_workplace_type"  from="workplaceType"              type="string" nullable="true" />
-    <field name="_commitment"      from="categories.commitment"      type="string" nullable="true" />
+    <field name="_workplace_type"  from="workplaceType"              type="string" />
+    <field name="_commitment"      from="categories.commitment"      type="string" />
   </fields>
 
   <derived>
@@ -51,7 +51,7 @@
     </field>
 
     <!-- workplaceType is the authoritative signal; fall back to location string -->
-    <field name="is_remote" type="bool" default="null" nullable="true">
+    <field name="is_remote" type="bool" default="null">
       <match source="_workplace_type" pattern="(?i)^remote$"   value="true"  />
       <match source="_workplace_type" pattern="(?i)^hybrid$"   value="null"  />
       <match source="_workplace_type" pattern="(?i)^on.?site$" value="false" />
@@ -59,14 +59,14 @@
     </field>
 
     <!-- employment_type: normalize Lever commitment values to canonical enum -->
-    <field name="employment_type" type="string" default="null" nullable="true">
+    <field name="employment_type" type="string" default="null">
       <match source="_commitment" pattern="(?i)full.?time"                          value="full-time"   />
       <match source="_commitment" pattern="(?i)part.?time"                          value="part-time"   />
       <match source="_commitment" pattern="(?i)(contract|consultant|fixed.?term)"   value="contract"    />
       <match source="_commitment" pattern="(?i)(intern|stage|stagiaire)"            value="internship"  />
     </field>
 
-    <field name="seniority" type="string" default="null" nullable="true">
+    <field name="seniority" type="string" default="null">
       <match source="title" pattern="(?i)\b(intern|stage|stagiaire|internship)\b"          value="internship" />
       <match source="title" pattern="(?i)\b(junior|jr\.?|d[eé]butant)\b"                   value="junior"     />
       <match source="title" pattern="(?i)\b(staff)\b"                                      value="staff"      />

@@ -19,7 +19,7 @@
   - posted_at is a date only (midnight UTC)
   - employment_type is often missing (— → null)
 -->
-<extraction source="workable" version="2">
+<extraction>
 
   <constants>
     <constant name="source"             value="workable" />
@@ -37,16 +37,16 @@
 
     <!-- description_html is injected by the extractor from the .md detail page
          before extraction runs; overrides the null constant above. -->
-    <field name="description_html" from="description_html" type="string" nullable="true" />
+    <field name="description_html" from="description_html" type="string" />
 
     <!-- Direct column mappings -->
     <field name="title"            from="title"            type="string" />
-    <field name="department"       from="department"       type="string" nullable="true" />
-    <field name="location"         from="location"         type="string" nullable="true" />
-    <field name="posted_at"        from="_posted_raw"      type="date"   nullable="true" />
+    <field name="department"       from="department"       type="string" />
+    <field name="location"         from="location"         type="string" />
+    <field name="posted_at"        from="_posted_raw"      type="date" />
 
     <!-- Intermediate field for derivation — not written to DB -->
-    <field name="_employment_raw"  from="_employment_raw"  type="string" nullable="true" />
+    <field name="_employment_raw"  from="_employment_raw"  type="string" />
   </fields>
 
   <derived>
@@ -58,21 +58,21 @@
     </field>
 
     <!-- Workplace type is embedded in the location string: "City, Country (Hybrid)" -->
-    <field name="is_remote" type="bool" default="null" nullable="true">
+    <field name="is_remote" type="bool" default="null">
       <match source="location" pattern="(?i)\(remote\)"   value="true"  />
       <match source="location" pattern="(?i)\(hybrid\)"   value="null"  />
       <match source="location" pattern="(?i)\(on.?site\)" value="false" />
     </field>
 
     <!-- employment_type: normalize Workable Type column values -->
-    <field name="employment_type" type="string" default="null" nullable="true">
+    <field name="employment_type" type="string" default="null">
       <match source="_employment_raw" pattern="(?i)full.?time"           value="full-time"  />
       <match source="_employment_raw" pattern="(?i)part.?time"           value="part-time"  />
       <match source="_employment_raw" pattern="(?i)(contract|temp)"      value="contract"   />
       <match source="_employment_raw" pattern="(?i)(intern|stage)"       value="internship" />
     </field>
 
-    <field name="seniority" type="string" default="null" nullable="true">
+    <field name="seniority" type="string" default="null">
       <match source="title" pattern="(?i)\b(intern|stage|stagiaire|internship)\b"          value="internship" />
       <match source="title" pattern="(?i)\b(junior|jr\.?|d[eé]butant)\b"                   value="junior"     />
       <match source="title" pattern="(?i)\b(staff)\b"                                      value="staff"      />
