@@ -228,8 +228,7 @@ def main() -> None:
     print(f"ID:      {raw_id}")
 
     root = _load_spec(source)
-    spec_version = root.get("version", "?")
-    print(f"Spec:    specs/{source}/extraction.xml  version={spec_version}")
+    print(f"Spec:    specs/{source}/extraction.xml")
 
     job_data = _build_job_data(root, raw)
     records = _debug_keywords(root, job_data)
