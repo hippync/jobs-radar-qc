@@ -11,7 +11,7 @@
 
 Jobs Radar QC is an open-source, spec-driven job market radar that tracks Quebec tech roles directly from ATS platforms, extracts the technologies companies are hiring for, and visualizes stack demand over time.
 
-| 45 companies tracked | 76 canonical technologies | ~1M tokens/week | ~90% prompt cache hit rate |
+| 51 companies tracked | 123 canonical technologies | ~1M tokens/week | ~41% prompt cache hit rate |
 |---|---|---|---|
 | across 4 ATS platforms | in extraction stack | LLM enrichment volume | ~$2/week saved vs baseline |
 
@@ -30,10 +30,10 @@ Jobs Radar QC is an open-source, spec-driven job market radar that tracks Quebec
 ## Current coverage
 
 - 4 ATS platforms: Greenhouse, Lever, Workable, Workday
-- 45 Quebec tech companies tracked
+- 51 Quebec tech companies tracked
 - Daily automated fetch via GitHub Actions
 - Weekly LLM enrichment (Claude Haiku, Sundays)
-- 76 canonical technologies tracked across 10 categories (v2)
+- 123 canonical technologies tracked across 10 categories (v2)
 - Active job trends at `/trends`
 - ~41% prompt cache hit rate — ~$2/week saved vs uncached baseline (observed in production)
 
@@ -41,7 +41,7 @@ Jobs Radar QC is an open-source, spec-driven job market radar that tracks Quebec
 
 ## Why this exists
 
-I'm a software engineering student doing an internship in Quebec. Every week I spent 20–30 minutes manually checking a dozen company career pages to track what the Quebec tech market was actually hiring for. Not what LinkedIn says — what's live on Greenhouse, Lever, and Workable right now. This project automates that, and adds a tech-stack radar so I can see which technologies are growing without reading every posting.
+I'm a software engineering student doing an internship in Quebec. Every week I spent 20–30 minutes manually checking a dozen company career pages to track what the Quebec tech market was actually hiring for. Not what LinkedIn says — what's live on Greenhouse, Lever, Workable, and Workday right now. This project automates that, and adds a tech-stack radar so I can see which technologies are growing without reading every posting.
 
 ---
 
@@ -51,7 +51,7 @@ Tech job hunting in Quebec means checking 50+ company career pages and job board
 
 ## What this does
 
-Jobs Radar QC pulls open roles from major ATS platforms (Greenhouse, Lever, Workable), deduplicates them, normalizes the data into a unified schema, and surfaces:
+Jobs Radar QC pulls open roles from major ATS platforms (Greenhouse, Lever, Workable, Workday), deduplicates them, normalizes the data into a unified schema, and surfaces:
 
 - What's hiring in Montreal/Quebec right now, filterable by tech stack, seniority, and remote
 - A [Tech Stack Radar](docs/tech-stack-radar.md) — which technologies appear most across active roles
@@ -60,7 +60,7 @@ Jobs Radar QC pulls open roles from major ATS platforms (Greenhouse, Lever, Work
 
 ## Why not just use LinkedIn?
 
-LinkedIn is useful but noisy: sponsored posts, stale listings, aggregated data you can't verify. This project reads from company ATS pages directly. Greenhouse, Lever, and Workable are the sources companies actually manage. If a job is on their ATS, it's real and it's open.
+LinkedIn is useful but noisy: sponsored posts, stale listings, aggregated data you can't verify. This project reads from company ATS pages directly. Greenhouse, Lever, Workable, and Workday are the sources companies actually manage. If a job is on their ATS, it's real and it's open.
 
 ---
 
@@ -100,12 +100,12 @@ The Python engine in `pipeline/` is generic and reads any spec. **Adding a new c
                     pipeline/orchestrator.py
                     (runs all specs in parallel)
                                 │
-                    ┌───────────┼───────────┐
-                    ▼           ▼           ▼
-                  Greenhouse  Lever     Workable  …
-                  (extractor)(extractor)(extractor)
-                    │           │           │
-                    └───────────┴───────────┘
+                    ┌───────────┼───────────┬───────────┐
+                    ▼           ▼           ▼           ▼
+                  Greenhouse  Lever     Workable    Workday
+                  (extractor)(extractor)(extractor)(extractor)
+                    │           │           │           │
+                    └───────────┴───────────┴───────────┘
                                 │
                       Canonical Job schema
                       (is_qc, is_remote,
@@ -206,8 +206,7 @@ Horizontal bars are a single `<div>` with `style={{ width: X% }}` via Tailwind. 
 | Layer | Technology |
 |---|---|
 | Fetch | Python 3.12, httpx (async) |
-| Parse | lxml, BeautifulSoup |
-| Validate | Pydantic v2 |
+| Parse | lxml |
 | Storage | PostgreSQL via Supabase |
 | Pipeline | GitHub Actions (daily + weekly crons) |
 | Enrichment | Claude Haiku (Anthropic API) |
@@ -229,15 +228,15 @@ agents/
     tech_extraction.md  # Versioned system prompt template
 
 core/
-  canonical_tech_stack.json # 76 canonical tech names across 10 categories (v2)
-  segment_rules.py          # Role segment classification rules (Python mirror of segmentHelpers.ts)
+  canonical_tech_stack.json # 123 canonical tech names across 10 categories (v2)
+  segment_rules.py          # Role segment classification rules — test-enforced parity spec for segmentHelpers.ts, no production caller
 
 specs/
-  greenhouse/               # 14 QC companies (Broadsign, AppDirect, AlayaCare, Valtech, Workleap, ShareGate, Epic Games, Speechify, AON3D, LATYS, GURUS Solutions, Samsara, Ivalua, Toboggan Labs)
+  greenhouse/               # 17 QC companies (Broadsign, AppDirect, AlayaCare, Valtech, Workleap, ShareGate, Epic Games, Speechify, AON3D, LATYS, GURUS Solutions, Samsara, Ivalua, Toboggan Labs, Lightspeed Commerce, Dialogue Health Technologies, KRAFTON Montréal Studio)
     source.md               # API docs, rate limits, known quirks
     schema.json             # Endpoint config + company list
     extraction.xml          # Field mappings + derivation rules
-  lever/                    # 14 QC companies (Plusgrade, Mirego, Osedea, Spiria, Behaviour Interactive, Wattpad, Kogniz, Xsolla, Mistral AI, Spreedly, Telesat, Swapcard, Kabam, TrackTik)
+  lever/                    # 17 QC companies (Plusgrade, Mirego, Osedea, Spiria, Behaviour Interactive, Wattpad, Kogniz, Xsolla, Mistral AI, Spreedly, Telesat, Swapcard, Kabam, TrackTik, Mistplay, Valiantys, Ludia)
     source.md
     schema.json
     extraction.xml
@@ -245,7 +244,7 @@ specs/
     source.md
     schema.json
     extraction.xml
-  workday/                  # 8 QC companies
+  workday/                  # 8 QC companies (Desjardins, Intact Financial, CAE, McGill University, Cogeco, AtkinsRéalis, Saputo, PSP Investments)
     source.md
     schema.json
     extraction.xml
@@ -261,22 +260,33 @@ scripts/
   debug_extraction.py       # Per-technology debug output for a single job URL
 
 tests/
-  fixtures/                 # Sample jobs + real Lever API responses for offline tests
+  fixtures/                    # Sample jobs + real API responses for offline tests
   test_enrichment_parsing.py
   test_extractor_tech_gate.py
-  test_lever_regression.py  # Regression tests for extraction accuracy (BHVR, Plusgrade)
+  test_lever_regression.py     # Regression tests for extraction accuracy (BHVR, Plusgrade)
+  test_new_keyword_coverage.py
   test_prompt_hash.py
+  test_segmentation.py         # Parity spec for core/segment_rules.py
   test_tech_gate.py
+  test_workable_detail_fetch.py
+  test_workday_extraction.py
 
 frontend/                   # Next.js 16 — App Router
   app/
     page.tsx                # Job list with filters + pagination
     trends/page.tsx         # Tech Stack Radar (Server Component, 1h ISR)
-  components/               # JobCard, JobFilters, SegmentFilter
+    saved/page.tsx          # Saved jobs — Kanban board (watching/applied/interviewing/archived)
+    api/search/route.ts     # Full-database job search endpoint
+    api/radar/route.ts      # Standalone SVG export of the radar (embeddable)
+  components/               # JobCard, FilterSidebar, MobileFilterDrawer, AlertRuleEditor,
+                             # SaveButton, KanbanCard, RadarChartClient, SegmentFilter, SourceBadge
   lib/
     supabase.ts             # Supabase client
     segmentHelpers.ts       # Role segment classification + helpers (mirrors segment_rules.py)
     radarData.ts            # Server-side radar data fetching with segment filter
+    radarHelpers.ts         # Canonical tech list mirror + radar geometry/SVG helpers
+    alertsStore.ts          # localStorage-backed "save as alert" rules
+    types.ts                # Job type — mirrors the active_qc_jobs view's column list exactly
 ```
 
 ---
@@ -285,8 +295,8 @@ frontend/                   # Next.js 16 — App Router
 
 | Component | Status |
 |---|---|
-| Greenhouse spec | ✅ Live — 14 QC companies |
-| Lever spec | ✅ Live — 14 QC companies |
+| Greenhouse spec | ✅ Live — 17 QC companies |
+| Lever spec | ✅ Live — 17 QC companies |
 | Workable spec | ✅ Live — 9 QC companies |
 | Workday spec | ✅ Live — 8 QC companies |
 | Extraction pipeline | ✅ Live |
@@ -296,6 +306,8 @@ frontend/                   # Next.js 16 — App Router
 | Tech Stack Radar (/trends) | ✅ Live |
 | Role segment filter | ✅ Live — 7 market archetypes |
 | Enrichment agent | ✅ Live — weekly Sundays 9 AM EDT |
+| Saved jobs + alert rules | ✅ Live — client-side only, no email/Slack delivery yet |
+| Resume/job-fit scoring | 🚧 In progress — built, not yet merged to `main` |
 
 ---
 
@@ -388,14 +400,15 @@ Copy `specs/_template/` to `specs/your-ats/`, then fill in the three files follo
 ## Roadmap
 
 **v1 — Market visibility** _(live)_
-- ATS aggregation (Greenhouse, Lever, Workable)
+- ATS aggregation (Greenhouse, Lever, Workable, Workday)
 - Tech stack filters and seniority detection
 - Tech Stack Radar (`/trends`)
 - Weekly LLM enrichment with prompt hash versioning
+- Saved jobs Kanban board (watching/applied/interviewing/archived) and saved-search alert rules — stored client-side, with matching new roles highlighted on your next visit
 
-**v2 — Personal matching** _(planned)_
-- Resume/profile upload and job fit scoring
-- Email/Slack alerts for new matching roles
+**v2 — Personal matching** _(in progress)_
+- Resume/profile upload and LLM job-fit scoring — LangGraph-based Lambda pipeline built, not yet merged to `main` (blocked on an AWS new-account Function URL restriction; scoring works via direct IAM invoke today)
+- Actual email/Slack **delivery** for saved alert rules — the rule storage and match-highlighting UI are live, but nothing yet sends a real notification on a schedule
 - 30-day trend deltas on the radar
 - More ATS coverage: Ashby, BambooHR
 

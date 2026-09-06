@@ -46,20 +46,20 @@ Rules are evaluated in priority order (Mobile → FinTech → AI/ML → Cloud/Pl
 
 ## Canonical technology list
 
-76 technologies tracked across 10 categories (v2). Adding a technology to this list invalidates all stored prompt hashes and triggers a full re-enrichment on the next Sunday run.
+123 technologies tracked across 10 categories (v2). Adding a technology to this list invalidates all stored prompt hashes and triggers a full re-enrichment on the next Sunday run.
 
 | Category | Technologies |
 |---|---|
-| Languages | Python, Java, TypeScript, JavaScript, C#, Go, SQL, Kotlin, Swift, Rust |
-| Frontend | React, Next.js, Angular, Vue, Tailwind, Redux, Svelte |
-| Backend | Spring Boot, Node.js, Express, NestJS, .NET, Django, FastAPI, GraphQL, REST, gRPC |
-| Databases | PostgreSQL, MySQL, MongoDB, Redis, DynamoDB, Snowflake, Elasticsearch, ClickHouse |
-| Cloud | AWS, Azure, GCP, Linux, Nginx, Cloudflare |
-| DevOps | Docker, Kubernetes, Terraform, Helm, GitHub Actions, Jenkins, ArgoCD, Prometheus, Grafana, Ansible |
-| Data & AI | Pandas, Spark, Databricks, Airflow, TensorFlow, PyTorch, LangChain, OpenAI, Vector DB, dbt, Kafka, MLflow |
+| Languages | Python, Java, TypeScript, JavaScript, C#, Go, SQL, Kotlin, Swift, Rust, Ruby, PHP, Scala, Dart, R, Elixir, C++ |
+| Frontend | React, Next.js, Angular, Vue, Tailwind, Redux, Svelte, Vite, tRPC, Remix, Storybook |
+| Backend | Spring Boot, Node.js, Express, NestJS, .NET, Django, FastAPI, GraphQL, REST, gRPC, Rails, Laravel, Flask, ASP.NET, Celery, Gin |
+| Databases | PostgreSQL, MySQL, MongoDB, Redis, DynamoDB, Snowflake, Elasticsearch, ClickHouse, BigQuery, Cassandra, Firebase, Supabase, SQLite |
+| Cloud | AWS, Azure, GCP, Linux, Nginx, Cloudflare, Vercel, DigitalOcean, Heroku |
+| DevOps | Docker, Kubernetes, Terraform, Helm, GitHub Actions, Jenkins, ArgoCD, Prometheus, Grafana, Ansible, GitLab CI, CircleCI, Pulumi, Vault |
+| Data | Pandas, Spark, Databricks, Airflow, TensorFlow, PyTorch, LangChain, OpenAI, Vector DB, dbt, Kafka, MLflow, NumPy, scikit-learn, Hugging Face, Flink, RabbitMQ, Weights & Biases |
 | Mobile | React Native, Flutter, SwiftUI, Android, iOS |
-| Testing | Jest, Cypress, Playwright, Selenium, JUnit, Postman |
-| AI Concepts | LLM, RAG |
+| Testing | Jest, Cypress, Playwright, Selenium, JUnit, Postman, Vitest, pytest, Mocha, RSpec |
+| AI Concepts | LLM, RAG, AI Agents, Prompt Engineering, Fine-tuning, Embeddings, Semantic Search, NLP, Computer Vision, GenAI |
 
 The canonical list lives in [`core/canonical_tech_stack.json`](../core/canonical_tech_stack.json).
 
@@ -76,28 +76,11 @@ The canonical list lives in [`core/canonical_tech_stack.json`](../core/canonical
 
 ---
 
-## Planned UI polish
+## Reading the radar
 
-Update the radar legend and reading instructions.
+A full-width "how to read" strip sits below the radar circle with three plain-language cues: **bigger bubble = more jobs**, **closer to center = stronger demand**, **click to filter roles**. Earlier versions also labeled the four concentric rings ("Niche," "Common," "Popular," "Most in demand") — those were removed for adding visual clutter without much extra clarity, so demand is communicated only through bubble position and size now.
 
-Current issue: the bottom legend "size = job count · proximity to center = rank · click to filter" feels too technical, too subtle, and visually disconnected from the radar. It should be easier to understand for a first-time visitor.
-
-Replace the old bottom text legend with a compact "How to read" guide using this copy:
-
-- Bigger bubble = more jobs
-- Closer to center = stronger demand
-- Click to filter roles
-
-Also include the demand zones:
-
-- Most in demand
-- Popular
-- Common
-- Niche
-
-Preferred layout: place a small "How to read" card inside the radar area near the bottom-left corner, with the three short reading guide lines.
-
-Design constraints: remove the old bottom text legend, keep the guide subtle but more readable than the current legend, make it clear that bubble size and position mean different things, avoid technical wording like "rank" or "proximity", and preserve the existing minimalist dark dashboard aesthetic.
+The guide is UI-only — the downloadable/embeddable SVG (`renderRadarSvg()`, served via `/api/radar?format=svg`) renders without it, since a static image embedded elsewhere (e.g. a GitHub README) has no interactive "click to filter" affordance to explain.
 
 ---
 
