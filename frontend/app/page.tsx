@@ -33,6 +33,10 @@ export const metadata: Metadata = {
 const PAGE_SIZE = 30;
 const CACHE_SECONDS = 900;
 
+// Matches the Job interface (frontend/lib/types.ts) field for field.
+const JOB_SELECT =
+  "id,source,company,title,location,department,source_url,is_remote,seniority,employment_type,tech_stack,posted_at,first_seen_at";
+
 interface SearchParams {
   tech?: string;
   source?: string;
@@ -109,7 +113,7 @@ const fetchJobsCached = unstable_cache(
 
     let query = supabase
       .from("active_qc_jobs")
-      .select("*", { count: "exact" })
+      .select(JOB_SELECT, { count: "exact" })
       .order("first_seen_at", { ascending: sort === "asc" })
       .range(from, to);
 
