@@ -93,7 +93,7 @@ export default function JobCard({ job }: { job: Job }) {
 
   return (
     <div
-      className="group relative flex flex-col rounded-md"
+      className="group relative flex min-w-0 flex-col rounded-md"
       style={{
         background: "var(--surface)",
         border: "1px solid var(--rule-soft)",
