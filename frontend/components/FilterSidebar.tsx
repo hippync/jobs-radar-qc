@@ -17,11 +17,14 @@ function techCatLabel(cat: string): string {
   return CATEGORY_LABELS[cat as keyof typeof CATEGORY_LABELS] ?? "Other";
 }
 
-const SENIORITY_OPTIONS = [
+const SENIORITY_DEFAULT = [
   { value: "internship", label: "Intern" },
   { value: "junior",     label: "Junior" },
   { value: "senior",     label: "Senior" },
   { value: "lead",       label: "Lead" },
+];
+
+const SENIORITY_MORE = [
   { value: "staff",      label: "Staff" },
   { value: "principal",  label: "Principal" },
   { value: "manager",    label: "Manager" },
@@ -151,6 +154,13 @@ export default function FilterSidebar({
     advanced:  params.has("source"),
   });
 
+  /* Off by default — 8 flat seniority levels was too much (#145). Except
+   * when the active filter is already one of the collapsed levels (e.g. a
+   * shared link), so it isn't hidden from where the user could change it. */
+  const [seniorityExpanded, setSeniorityExpanded] = useState(
+    () => SENIORITY_MORE.some((o) => o.value === params.get("seniority")),
+  );
+
   const initialTechs = (params.get("tech") ?? "").split(",").map((t) => t.trim()).filter(Boolean);
   const [techCatOpen, setTechCatOpen] = useState<Record<string, boolean>>(() => {
     const activeCats = new Set(initialTechs.map(techCategory));
@@ -245,7 +255,7 @@ export default function FilterSidebar({
         />
         {sections.seniority && (
           <div className="mt-1 flex flex-col gap-0.5">
-            {SENIORITY_OPTIONS.filter((o) => (seniorityCounts[o.value] ?? 0) > 0).map((opt) => (
+            {SENIORITY_DEFAULT.filter((o) => (seniorityCounts[o.value] ?? 0) > 0).map((opt) => (
               <FilterChip
                 key={opt.value}
                 label={opt.label}
@@ -254,6 +264,25 @@ export default function FilterSidebar({
                 onClick={() => toggle("seniority", opt.value)}
               />
             ))}
+            {seniorityExpanded &&
+              SENIORITY_MORE.filter((o) => (seniorityCounts[o.value] ?? 0) > 0).map((opt) => (
+                <FilterChip
+                  key={opt.value}
+                  label={opt.label}
+                  count={seniorityCounts[opt.value]}
+                  active={currentSeniority === opt.value}
+                  onClick={() => toggle("seniority", opt.value)}
+                />
+              ))}
+            <button
+              type="button"
+              onClick={() => setSeniorityExpanded((v) => !v)}
+              aria-expanded={seniorityExpanded}
+              className="mt-0.5 self-start px-2.5 text-xs transition-colors"
+              style={{ color: "var(--ink-mute)", fontSize: 11 }}
+            >
+              {seniorityExpanded ? "Show fewer" : "More levels"}
+            </button>
           </div>
         )}
       </div>
