@@ -140,10 +140,14 @@ export default function FilterSidebar({
   const [techSearch, setTechSearch] = useState("");
 
   const [sections, setSections] = useState({
-    source:    true,
     workplace: true,
     seniority: true,
     tech:      true,
+    /* Off by default — ATS source names (Greenhouse/Lever/...) are
+     * backend-facing language most job seekers don't care about (#141).
+     * Except when a source filter is already active (e.g. a shared link),
+     * so it isn't hidden from the sidebar where the user could change it. */
+    advanced:  params.has("source"),
   });
 
   const initialTechs = (params.get("tech") ?? "").split(",").map((t) => t.trim()).filter(Boolean);
@@ -208,28 +212,6 @@ export default function FilterSidebar({
       style={{ opacity: isPending ? 0.5 : 1, transition: "opacity 120ms" }}
       aria-label="Job filters"
     >
-      {/* Source */}
-      <div style={{ borderBottom: "1px solid var(--rule-soft)", paddingBottom: 8, marginBottom: 4 }}>
-        <SectionHeader
-          title="Source"
-          open={sections.source}
-          onToggle={() => toggleSection("source")}
-        />
-        {sections.source && (
-          <div className="mt-1 flex flex-col gap-0.5">
-            {sourceOptions.map((s) => (
-              <FilterChip
-                key={s}
-                label={s.charAt(0).toUpperCase() + s.slice(1)}
-                count={sourceCounts[s]}
-                active={currentSource === s}
-                onClick={() => toggle("source", s)}
-              />
-            ))}
-          </div>
-        )}
-      </div>
-
       {/* Workplace */}
       <div style={{ borderBottom: "1px solid var(--rule-soft)", paddingBottom: 8, marginBottom: 4 }}>
         <SectionHeader
@@ -276,7 +258,7 @@ export default function FilterSidebar({
       </div>
 
       {/* Tech */}
-      <div>
+      <div style={{ borderBottom: "1px solid var(--rule-soft)", paddingBottom: 8, marginBottom: 4 }}>
         <SectionHeader
           title="Technology"
           open={sections.tech}
@@ -350,6 +332,36 @@ export default function FilterSidebar({
                 ))}
               </div>
             )}
+          </div>
+        )}
+      </div>
+
+      {/* Advanced — source (ATS) filter. Off by default: Greenhouse / Lever /
+       * Workable / Workday is backend-facing language most job seekers
+       * don't care about (#141). */}
+      <div>
+        <SectionHeader
+          title="Advanced"
+          open={sections.advanced}
+          onToggle={() => toggleSection("advanced")}
+        />
+        {sections.advanced && (
+          <div className="mt-1 flex flex-col gap-0.5">
+            <p
+              className="px-2.5 py-0.5 text-xs font-semibold uppercase tracking-widest"
+              style={{ color: "var(--ink-mute)", fontSize: 9.5 }}
+            >
+              Source
+            </p>
+            {sourceOptions.map((s) => (
+              <FilterChip
+                key={s}
+                label={s.charAt(0).toUpperCase() + s.slice(1)}
+                count={sourceCounts[s]}
+                active={currentSource === s}
+                onClick={() => toggle("source", s)}
+              />
+            ))}
           </div>
         )}
       </div>
