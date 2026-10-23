@@ -104,8 +104,25 @@
 }
 
 /* ── Base ─────────────────────────────────────────────────────────────── */
+/*
+ * color-scheme tells the browser to draw native UI (scrollbars, form
+ * controls) in the matching theme — without it, Chrome on Windows paints
+ * light classic scrollbars on the dark theme.
+ */
+:root {
+  color-scheme: light dark;
+}
+
 html {
   height: 100%;
+}
+
+/*
+ * Token-colored scrollbars for non-overlay platforms (Windows, Linux).
+ * macOS overlay scrollbars are unaffected visually.
+ */
+* {
+  scrollbar-color: var(--rule) transparent;
 }
 
 body {
