@@ -8,7 +8,9 @@ interface KpiStripProps {
 }
 
 /** Converts an ISO timestamp to a human-readable relative string, server-side.
- *  Returns the formatted text and whether the timestamp is considered stale (> 25h). */
+ *  Returns the formatted text and whether the timestamp is considered stale (>= 36h).
+ *  36h, not 25h: GitHub Actions routinely starts the daily cron 4–6h late, so a
+ *  tighter threshold flags a healthy pipeline as delayed. */
 function formatRelativeTime(isoString: string): { text: string; stale: boolean } {
   const diffMs      = Date.now() - new Date(isoString).getTime();
   const diffMinutes = Math.floor(diffMs / 60_000);
@@ -26,7 +28,7 @@ function formatRelativeTime(isoString: string): { text: string; stale: boolean }
     text = rtf.format(-diffDays, "day");
   }
 
-  return { text, stale: diffHours >= 25 };
+  return { text, stale: diffHours >= 36 };
 }
 
 interface CardProps {

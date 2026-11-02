@@ -58,7 +58,7 @@ python -m agents.enricher --limit 50
 cd frontend && npm install && npm run dev
 ```
 
-In production, both jobs run on GitHub Actions: [`daily_fetch.yml`](../.github/workflows/daily_fetch.yml) every day at 12:17 UTC and [`weekly_enrich.yml`](../.github/workflows/weekly_enrich.yml) on Sundays at 13:00 UTC. They need the same secrets as `.env`.
+In production, both jobs run on GitHub Actions: [`daily_fetch.yml`](../.github/workflows/daily_fetch.yml) every day at 12:17 UTC (with a 00:17 UTC backup run) and [`weekly_enrich.yml`](../.github/workflows/weekly_enrich.yml) on Sundays at 13:00 UTC. They need the same secrets as `.env`.
 
 ## 4. Test and lint
 

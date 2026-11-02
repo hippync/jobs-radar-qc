@@ -65,7 +65,7 @@ The Python engine in `pipeline/` is generic and reads any spec. **Adding a new c
 
 ## The two layers
 
-**Layer 1: daily and deterministic (`pipeline/`).** Runs every day at 12:17 UTC. It never makes an LLM call, so an Anthropic outage can't affect the feed. It writes `tech_stack` from rule-based extraction and never touches `enriched_tech_stack`.
+**Layer 1: daily and deterministic (`pipeline/`).** Runs every day at 12:17 UTC, with a 00:17 UTC backup run because GitHub often delays or drops scheduled workflows. It never makes an LLM call, so an Anthropic outage can't affect the feed. It writes `tech_stack` from rule-based extraction and never touches `enriched_tech_stack`.
 
 **Layer 2: weekly and probabilistic (`agents/`).** Runs on Sundays at 13:00 UTC. It writes `enriched_tech_stack` and `enriched_prompt_hash` only, and never overwrites `tech_stack`. If it fails, the daily feed is unaffected.
 

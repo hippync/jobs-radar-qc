@@ -3,7 +3,13 @@ name: Daily fetch
 on:
   schedule:
     - cron: "17 12 * * *" # 12:17 UTC = 8:17 AM EDT — avoid top-of-hour GitHub Actions load
+    - cron: "17 0 * * *"  # 00:17 UTC backup — GitHub delays or drops scheduled runs; upserts are idempotent
   workflow_dispatch:       # allow manual trigger from GitHub UI
+
+# A delayed run can overlap the next one; queue instead of running two fetches at once.
+concurrency:
+  group: daily-fetch
+  cancel-in-progress: false
 
 jobs:
   fetch:
